@@ -46,6 +46,15 @@ Compte initial : celui de `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`admin@gac
 
 Pile complète en conteneurs : `docker compose up --build` → http://localhost:8080.
 
+## Dépannage (Docker)
+
+| Symptôme | Cause probable | Solution |
+|---|---|---|
+| `getaddrinfo ENOTFOUND postgres` dans le journal de l'API | l'API ne trouve pas le service `postgres` : base arrêtée, ou conteneurs sur des réseaux Docker différents | `docker compose down` puis `docker compose up --build` ; vérifier `docker compose ps -a` et `docker network ls` ; l'API réessaie pendant 60 s (`DB_WAIT_SECONDS`) avant d'abandonner avec un message qui nomme l'hôte |
+| `ECONNREFUSED` vers la base | la base démarre encore (premier lancement : initialisation) | attendre ; l'API réessaie seule |
+| Anciennes données ou mot de passe qui ne change pas | le volume `pgdata` garde l'ancienne base | `docker compose down -v` (efface la base) |
+| Port 5432, 3001 ou 8080 déjà pris | un autre programme (PostgreSQL installé en local, par exemple) | l'arrêter, ou changer le port à gauche du `:` dans `docker-compose.yml` |
+
 ## Qualité
 
 ```bash

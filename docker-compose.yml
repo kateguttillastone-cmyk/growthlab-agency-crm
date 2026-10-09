@@ -11,13 +11,17 @@ services:
       POSTGRES_DB: gac
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
+    # -h 127.0.0.1 : test par le réseau (TCP). Sans lui, pg_isready répond via le socket local, que le serveur
+    # TEMPORAIRE de l'initialisation (premier démarrage) accepte déjà : l'API démarrait alors trop tôt.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gac"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U gac -d gac"]
       interval: 5s
       retries: 10
 
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
+    # l'API attend aussi la base par elle-même (jusqu'à DB_WAIT_SECONDS) ; ceci la relance si elle tombe malgré tout
+    restart: on-failure
     depends_on:
       postgres: { condition: service_healthy }
     environment:
@@ -29,11 +33,20 @@ services:
       SWAGGER: "true"
       COOKIE_SECURE: "false"
       PORT: 3001
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3001/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
     ports: ["3001:3001"]
 
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
-    depends_on: [api]
+    restart: on-failure
+    # nginx résout « api » au démarrage : il ne doit démarrer que lorsque l'API répond
+    depends_on:
+      api: { condition: service_healthy }
     ports: ["8080:8080"]
 
 volumes:
