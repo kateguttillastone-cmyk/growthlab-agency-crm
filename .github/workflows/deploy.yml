@@ -1,0 +1,41 @@
+name: Déploiement
+
+# Se déclenche quand le CI est VERT après un push sur dev (serveur de test) ou main (production).
+# Un push sur ces branches = une pull request fusionnée.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Déployer ${{ github.event.workflow_run.head_branch }}
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Production protégée : si l'environnement « production » exige une approbation (Settings → Environments),
+    # le déploiement attend un relecteur. L'environnement « test » n'en exige pas.
+    environment: ${{ github.event.workflow_run.head_branch == 'main' && 'production' || 'test' }}
+    # Un déploiement à la fois par branche, sans en annuler un en cours
+    concurrency:
+      group: deploy-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+    steps:
+      - name: Déployer sur le serveur
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_NAME: ${{ secrets.DEPLOY_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # la clé est restreinte côté serveur : elle ne peut lancer que deploy/deploy.sh avec « main » ou « dev »
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "$USER_NAME@$HOST" "$BRANCH"

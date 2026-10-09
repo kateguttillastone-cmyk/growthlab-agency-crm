@@ -1,0 +1,45 @@
+# Sert l'application (SPA) et relaie /api/ vers l'API (le préfixe est retiré).
+# Le HTTPS et l'adresse publique sont gérés en amont (Caddy) ; ici : cache, en-têtes de sécurité, repli SPA.
+server {
+  listen 8080;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  gzip on;
+  gzip_types text/css application/javascript application/json image/svg+xml;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  # Aucun script ni style en ligne, aucune ressource tierce : une CSP stricte suffit.
+  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+  location /api/ {
+    proxy_pass ${API_UPSTREAM}/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_set_header X-Request-Id $request_id;
+    proxy_read_timeout 60s;
+    client_max_body_size 2m;
+  }
+
+  # fichiers à empreinte : cache longue durée
+  location /assets/ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    add_header X-Content-Type-Options "nosniff" always;
+  }
+
+  # repli SPA ; index.html n'est jamais mis en cache pour que les nouvelles versions apparaissent
+  location / {
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    try_files $uri /index.html;
+  }
+}

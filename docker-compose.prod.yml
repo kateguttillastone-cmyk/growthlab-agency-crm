@@ -1,0 +1,96 @@
+# Production (branche main) et test (branche dev) sur le VPS. Lancement :
+#   docker compose -p growthlab     -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#   docker compose -p growthlab-dev -f docker-compose.prod.yml --env-file .env.dev  up -d --build
+#
+# Le HTTPS est assuré par le Caddy du serveur (voir deploy/Caddyfile) : un seul point d'entrée, le conteneur
+# « web » sur 127.0.0.1:WEB_PORT, qui sert l'application et relaie /api vers l'API. L'API et la base ne sont
+# jamais publiées sur le réseau de l'hôte.
+# Ports : production 3020, test 3120 (à adapter si un autre projet les utilise sur le même serveur).
+#
+# Exploitation (docs/09-exploitation.md) : limites de mémoire par conteneur (POSTGRES_MEM, API_MEM, WEB_MEM),
+# contrôles de santé, journaux de taille bornée.
+name: growthlab
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gac
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définir POSTGRES_PASSWORD}
+      POSTGRES_DB: gac
+    # Réglage de départ pour un VPS de 4 Go (à revoir avec les mesures, docs/09-exploitation.md).
+    # Les requêtes de plus de 500 ms sont écrites dans les journaux ; pg_stat_statements classe les plus coûteuses.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+    mem_limit: ${POSTGRES_MEM:-1g}
+    logging: *logging
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gac -d gac"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://gac:${POSTGRES_PASSWORD}@postgres:5432/gac
+      APP_ORIGIN: https://${DOMAIN:?définir DOMAIN}
+      APP_VERSION: ${APP_VERSION:-dev}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?définir SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?définir SEED_ADMIN_PASSWORD}
+      SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-1000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Plafond du tas de Node, sous la limite du conteneur
+      NODE_OPTIONS: --max-old-space-size=${API_HEAP_MB:-192}
+    mem_limit: ${API_MEM:-384m}
+    logging: *logging
+    # /health répond 200 si l'API ET la base répondent. start_period : les migrations s'appliquent au démarrage.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 60s
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      API_UPSTREAM: http://api:3001
+    mem_limit: ${WEB_MEM:-128m}
+    logging: *logging
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports: ["127.0.0.1:${WEB_PORT:-3020}:8080"]
+
+volumes:
+  pgdata:

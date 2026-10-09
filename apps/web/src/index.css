@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-600: #6d28d9;
+  --color-brand-700: #5b21b6;
+  --color-ink: #210b2c;
+}
+
+html {
+  color-scheme: light;
+}
+body {
+  @apply bg-brand-50 font-sans text-ink antialiased;
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}

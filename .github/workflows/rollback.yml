@@ -1,0 +1,45 @@
+name: Retour arrière
+
+# Manuel (Actions → Retour arrière → Run workflow). Redéploie la dernière version qui a démarré correctement
+# (ou le commit indiqué) sur l'environnement choisi. Les migrations ne sont PAS annulées : elles sont conçues
+# pour rester compatibles avec la version précédente (docs/09-exploitation.md).
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement"
+        type: choice
+        options: [dev, main]
+        default: dev
+      sha:
+        description: "Commit cible (vide = dernière version saine)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: ${{ inputs.environment == 'main' && 'production' || 'test' }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Retour arrière sur le serveur
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          SHA: ${{ inputs.sha }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER_NAME: ${{ secrets.DEPLOY_USER }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{7,40}$ || -z "$SHA" ]] || { echo "SHA invalide"; exit 2; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "$USER_NAME@$HOST" "rollback $TARGET_ENV $SHA"

@@ -1,0 +1,23 @@
+# À AJOUTER à /etc/caddy/Caddyfile (le Caddy installé sur l'hôte), puis : sudo systemctl reload caddy.
+# Prérequis : enregistrements DNS A (crm, dev.crm) vers l'IP du serveur. Remplacer les domaines d'exemple.
+# Un seul point d'entrée par environnement : le conteneur « web » (application + relais /api vers l'API).
+# Caddy remplace l'en-tête X-Forwarded-For par l'adresse réelle du client : l'API s'en sert (limitation de
+# débit, journal d'audit) avec TRUST_PROXY activé en production.
+
+crm.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3020
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+# Environnement de test (branche dev) : .env.dev avec WEB_PORT=3120
+dev.crm.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3120
+	header {
+		-Server
+	}
+}

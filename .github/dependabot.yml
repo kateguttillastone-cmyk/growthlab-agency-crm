@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    target-branch: dev
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    target-branch: dev
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule: { interval: monthly }
+    target-branch: dev
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule: { interval: monthly }
+    target-branch: dev
