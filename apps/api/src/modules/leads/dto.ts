@@ -55,6 +55,7 @@ export function toSummary({ lead, company, contact, message, blockedReason }: Jo
         message.subject && message.subject.length > 120 ? message.subject.slice(0, 120) : message.subject,
       promptVersion: message.promptVersion,
       blockedReason,
+      addressCheck: contact?.emailCheck ?? null,
     },
   };
 }

@@ -190,3 +190,17 @@ erDiagram
   (avant → après, `bulk` si groupée).
 - Gabarit unique côté serveur (`apps/api/src/mail/template.ts`) : l'aperçu de l'interface et l'envoi futur l'utilisent tous
   deux. Expéditeur, agenda et signature : variables `MAIL_FROM_NAME`, `MAIL_FROM_ADDRESS`, `MAIL_AGENDA_TEXT`, `MAIL_SIGNATURE`.
+
+## Fiabilité des adresses (phase 4b)
+
+- `contacts.email_check` (`valid`, `invalid_syntax`, `no_mail_server`, `disposable`) et `email_checked_at` ; `null` = pas encore
+  contrôlée. Un contrôle reste valable 30 jours.
+- `POST /emails/address-check` (responsables, 10 appels/min, 300 adresses maximum par appel) contrôle les contacts dont l'e-mail
+  n'est ni envoyé ni rejeté : syntaxe, liste courte de domaines jetables, puis DNS du domaine (MX, à défaut A/AAAA ; « MX nul » =
+  aucun courrier). Un domaine n'est interrogé qu'une fois par appel. **Une panne DNS ne condamne jamais une adresse** : elle reste
+  « à contrôler ».
+- Une adresse `invalid_syntax`, `no_mail_server` ou `disposable` **ne peut pas être validée** (unitaire ni groupée) ; un e-mail déjà
+  validé vers elle repasse « Pas Validé » (`lead_events` : `reason`). Le rejet reste possible.
+- Limite assumée : on écarte les cas certains, on ne prouve pas qu'une boîte existe. Les rebonds réels (webhooks Brevo, lot 4c)
+  alimentent `suppressions`. Un fournisseur de vérification de boîtes pourra s'ajouter derrière la même interface si le taux de
+  rebond le justifie.

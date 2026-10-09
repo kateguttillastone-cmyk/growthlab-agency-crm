@@ -1,8 +1,11 @@
 import {
+  ADDRESS_CHECK_LABELS,
+  type AddressCheckResult,
   type BulkEmailResult,
   type EmailPreview,
   type EmailStats,
   emailWarnings,
+  isBlockingCheck,
   type LeadDetail,
   type LeadSummary,
   type Page,
@@ -157,6 +160,11 @@ export function EmailsPage() {
                       {contactName(l.contact) || "Sans contact"} · {l.qualification ?? "Non qualifié"}
                     </span>
                     <span className="mt-1 block truncate">{l.email?.subject ?? "(sans objet)"}</span>
+                    {l.email?.addressCheck && isBlockingCheck(l.email.addressCheck) && (
+                      <span className="mt-1 mr-1 inline-block rounded bg-red-100 px-2 py-0.5 text-xs text-red-900">
+                        Adresse inutilisable ({ADDRESS_CHECK_LABELS[l.email.addressCheck]})
+                      </span>
+                    )}
                     {l.email?.blockedReason && (
                       <span className="mt-1 inline-block rounded bg-red-100 px-2 py-0.5 text-xs text-red-900">
                         Adresse exclue ({BLOCKED_LABELS[l.email.blockedReason]})
@@ -191,6 +199,8 @@ export function EmailsPage() {
         </section>
       </div>
 
+      <AddressCheckPanel stats={stats.data} onDone={refresh} />
+
       {filters.tab === "review" && <BulkPanel filters={effective} onDone={refresh} />}
 
       {stats.data && stats.data.byPrompt.length > 0 && <PromptTable stats={stats.data} />}
@@ -214,12 +224,14 @@ function StatsCards({ stats }: { stats: EmailStats | undefined }) {
   const cards = [
     ["À relire", stats?.toReview],
     ["Sans adresse valable", stats?.toReviewNoRecipient],
+    ["Adresses à contrôler", stats?.addressUnchecked],
+    ["Adresses inutilisables", stats?.addressInvalid],
     ["Validés, non envoyés", stats?.validatedNotSent],
     ["Rejetés", stats?.rejected],
     ["Envoyés", stats?.sent],
   ] as const;
   return (
-    <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+    <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
       {cards.map(([label, n]) => (
         <div key={label} className="rounded-2xl bg-white p-4 shadow-sm">
           <dt className="text-xs text-ink/70">{label}</dt>
@@ -331,15 +343,18 @@ function ReviewPanel({
   const sent = lead.data.email?.status !== null && lead.data.email?.status !== undefined;
   const blocked = lead.data.email?.blockedReason ?? null;
   const email = lead.data.contact?.email ?? null;
+  const check = lead.data.email?.addressCheck ?? null;
   const cannotValidate = sent
     ? "Déjà envoyé"
     : !email
       ? "Pas d'adresse e-mail"
       : blocked
         ? `Adresse exclue (${BLOCKED_LABELS[blocked]})`
-        : !subject.trim() || !body.trim()
-          ? "Objet et corps à renseigner"
-          : null;
+        : check && isBlockingCheck(check)
+          ? `Adresse inutilisable (${ADDRESS_CHECK_LABELS[check]})`
+          : !subject.trim() || !body.trim()
+            ? "Objet et corps à renseigner"
+            : null;
   const warnings = emailWarnings({ subject, body });
   const validation = lead.data.email?.validation;
 
@@ -352,6 +367,12 @@ function ReviewPanel({
         {message.promptVersion ? ` · prompt ${message.promptVersion}` : ""}
       </p>
       <ErrorAlert message={error} />
+      {check && isBlockingCheck(check) && (
+        <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+          L'adresse {email} est inutilisable ({ADDRESS_CHECK_LABELS[check]}) : elle ne peut pas être validée.
+          Rejetez cet e-mail ou corrigez l'adresse.
+        </p>
+      )}
       {blocked && (
         <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
           Cette adresse est dans la liste d'exclusion ({BLOCKED_LABELS[blocked]}) : elle ne peut pas être
@@ -551,6 +572,66 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
         <p role="status" className="mt-4 text-sm font-semibold">
           {applied} e-mail(s) {target === "Validé" ? "validés" : "rejetés"}.
         </p>
+      )}
+    </Card>
+  );
+}
+
+function AddressCheckPanel({
+  stats,
+  onDone,
+}: {
+  stats: EmailStats | undefined;
+  onDone: () => Promise<void>;
+}) {
+  const [result, setResult] = useState<AddressCheckResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      setResult(await api<AddressCheckResult>("/emails/address-check", { method: "POST", body: {} }));
+      await onDone();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="Fiabilité des adresses">
+      <p className="mb-3 max-w-3xl text-sm text-ink/70">
+        Avant d'envoyer, on vérifie chaque adresse : forme correcte, adresse jetable, et domaine capable de
+        recevoir du courrier. Une adresse inutilisable ne peut pas être validée ; un e-mail déjà validé vers
+        une telle adresse repart en relecture. Le contrôle porte sur 300 adresses à la fois et reste valable
+        30 jours. Il ne dit pas qu'une boîte précise existe : il écarte seulement les cas certains.
+      </p>
+      <ErrorAlert message={error} />
+      <Button disabled={busy || stats?.addressUnchecked === 0} onClick={run}>
+        {busy
+          ? "Contrôle en cours…"
+          : `Vérifier les adresses (${stats?.addressUnchecked ?? "…"} à contrôler)`}
+      </Button>
+      {result && (
+        <div role="status" className="mt-4 rounded-lg bg-brand-50 p-4 text-sm">
+          <p className="font-semibold">
+            {result.checked} adresse(s) contrôlée(s) : {result.valid} utilisable(s),{" "}
+            {Object.values(result.invalid).reduce((a, b) => a + b, 0)} inutilisable(s).
+          </p>
+          {Object.entries(result.invalid).map(([k, n]) => (
+            <p key={k}>
+              {n} : {ADDRESS_CHECK_LABELS[k as keyof typeof ADDRESS_CHECK_LABELS] ?? k}
+            </p>
+          ))}
+          {result.revoked > 0 && <p>{result.revoked} e-mail(s) validé(s) remis à relire.</p>}
+          {result.indeterminate > 0 && (
+            <p>{result.indeterminate} adresse(s) à recontrôler plus tard (le serveur DNS n'a pas répondu).</p>
+          )}
+          {result.remaining > 0 && <p>Il reste {result.remaining} adresse(s) à contrôler : relancez.</p>}
+        </div>
       )}
     </Card>
   );
