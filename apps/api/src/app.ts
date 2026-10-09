@@ -9,6 +9,7 @@ import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from "fast
 import type { Config } from "./config";
 import type { Db } from "./db/client";
 import { type DnsResolver, systemResolver } from "./mail/address-check";
+import { brevoSender, type MailSender } from "./mail/brevo";
 import { auditRoutes } from "./modules/audit/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { callsRoutes } from "./modules/calls/routes";
@@ -17,23 +18,42 @@ import { emailsRoutes } from "./modules/emails/routes";
 import { healthRoutes } from "./modules/health/routes";
 import { importsRoutes } from "./modules/imports/routes";
 import { leadsRoutes } from "./modules/leads/routes";
+import { sendingRoutes } from "./modules/sending/routes";
+import { sendingPublicRoutes } from "./modules/sending/webhooks";
 import { usersRoutes } from "./modules/users/routes";
 import { registerAuth } from "./plugins/auth";
 import { registerErrorHandling } from "./plugins/errors";
 import { registerOriginCheck } from "./plugins/origin-check";
 
+/** Remplace les jetons secrets d'une adresse (webhook, désinscription) par « ... ». */
+export function maskSecretPaths(url: string | undefined): string | undefined {
+  return url?.replace(/^(\/(?:webhooks\/brevo|unsubscribe)\/)[^/?#]+/, "$1…");
+}
+
 export interface AppDeps {
   config: Config;
   db: Db;
   dnsResolver?: DnsResolver;
+  mailSender?: MailSender | null;
 }
 
-export async function buildApp({ config, db, dnsResolver }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
     logger: {
       level: config.NODE_ENV === "test" ? "silent" : config.LOG_LEVEL,
       redact: ["req.headers.cookie", "req.headers.authorization", 'res.headers["set-cookie"]'],
+      serializers: {
+        // le jeton du webhook et ceux de désinscription (qui contiennent une adresse) ne doivent pas finir dans les journaux
+        req(req) {
+          return {
+            method: req.method,
+            url: maskSecretPaths(req.url),
+            host: req.host,
+            remoteAddress: req.ip,
+          };
+        },
+      },
       ...(config.LOG_PRETTY
         ? {
             transport: {
@@ -53,6 +73,10 @@ export async function buildApp({ config, db, dnsResolver }: AppDeps): Promise<Fa
   app.decorate("config", config);
   app.decorate("db", db);
   app.decorate("dnsResolver", dnsResolver ?? systemResolver);
+  app.decorate(
+    "mailSender",
+    mailSender !== undefined ? mailSender : config.BREVO_API_KEY ? brevoSender(config.BREVO_API_KEY) : null,
+  );
 
   registerErrorHandling(app);
 
@@ -95,6 +119,8 @@ export async function buildApp({ config, db, dnsResolver }: AppDeps): Promise<Fa
   await app.register(emailsRoutes);
   await app.register(callsRoutes);
   await app.register(dashboardRoutes);
+  await app.register(sendingRoutes);
+  await app.register(sendingPublicRoutes);
   await app.register(importsRoutes);
 
   return app;

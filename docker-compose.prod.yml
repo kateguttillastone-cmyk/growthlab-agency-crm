@@ -67,6 +67,17 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       MAIL_AGENDA_TEXT: ${MAIL_AGENDA_TEXT:-}
       MAIL_SIGNATURE: ${MAIL_SIGNATURE:-}
+      MAIL_OPTOUT_TEXT: ${MAIL_OPTOUT_TEXT:-}
+      # Envoi planifié : désactivé tant que SEND_MODE n'est pas « prod » (voir docs/12-envoi-brevo.md)
+      SEND_MODE: ${SEND_MODE:-off}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET:-}
+      UNSUBSCRIBE_SECRET: ${UNSUBSCRIBE_SECRET:-}
+      SEND_TEST_RECIPIENT: ${SEND_TEST_RECIPIENT:-}
+      SEND_DAILY_CAP: ${SEND_DAILY_CAP:-50}
+      SEND_INTERVAL_SECONDS: ${SEND_INTERVAL_SECONDS:-45}
+      SEND_SLOTS: ${SEND_SLOTS:-mon@14:00,tue@09:00,wed@09:00,thu@09:00}
+      SEND_WINDOW_MINUTES: ${SEND_WINDOW_MINUTES:-120}
       SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-1000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Plafond du tas de Node, sous la limite du conteneur

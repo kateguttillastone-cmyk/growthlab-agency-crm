@@ -9,6 +9,19 @@ const id = {
 };
 
 describe("gabarit d'e-mail", () => {
+  it("ajoute la mention d'opposition en dernier, échappée", () => {
+    const m = renderEmail(
+      { subject: "x", body: "Bonjour,\n\nTexte." },
+      { ...id, optOutText: "Répondez « stop » <ici>" },
+    );
+    expect(m.paragraphs.at(-1)).toEqual({ type: "footer", lines: ["Répondez « stop » <ici>"] });
+    expect(m.html).toContain("&lt;ici&gt;");
+    expect(m.text.endsWith("Répondez « stop » <ici>")).toBe(true);
+    expect(
+      renderEmail({ subject: "x", body: "Bonjour" }, id).paragraphs.some((p) => p.type === "footer"),
+    ).toBe(false);
+  });
+
   it("insère l'agenda avant la formule de politesse, puis la signature", () => {
     const m = renderEmail({ subject: " Objet ", body: "Bonjour A,\n\nCorps.\n\nCordialement," }, id);
     expect(m.subject).toBe("Objet");

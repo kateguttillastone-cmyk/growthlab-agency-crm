@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseSlots } from "./mail/slots";
 
 const bool = z.enum(["true", "false", "1", "0"]).transform((v) => v === "true" || v === "1");
 
@@ -50,6 +51,45 @@ const schema = z.object({
   MAIL_AGENDA_TEXT: optionalText("calendly.com/kateguttilla-growthlab-agencycom/30min"),
   MAIL_SIGNATURE: optionalText("Kate Guttilla STONE\nTraffic Manager"),
 
+  /** Mention d'opposition ajoutée en pied de chaque e-mail (vide = texte par défaut). */
+  MAIL_OPTOUT_TEXT: optionalText(
+    "Si vous ne souhaitez plus recevoir de messages de ma part, répondez simplement « stop » : votre adresse sera retirée de nos listes.",
+  ),
+
+  /** `off` : aucun envoi automatique (défaut). `prod` : envoi planifié aux prospects validés. */
+  SEND_MODE: z.enum(["off", "prod"]).default("off"),
+  /** Clé API Brevo (jamais journalisée ; à fournir par l'environnement du serveur uniquement). */
+  BREVO_API_KEY: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Jeton secret dans l'adresse du webhook Brevo : /webhooks/brevo/<jeton>. */
+  BREVO_WEBHOOK_SECRET: z
+    .string()
+    .min(24)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Secret de signature des liens de désinscription. */
+  UNSUBSCRIBE_SECRET: z
+    .string()
+    .min(32)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Boîte qui reçoit les e-mails de test (aperçu réel) ; jamais un prospect. */
+  SEND_TEST_RECIPIENT: z
+    .string()
+    .email()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Plafond d'envois par jour (heure de Paris) : monter progressivement pour protéger la réputation de l'expéditeur. */
+  SEND_DAILY_CAP: z.coerce.number().int().min(1).max(2000).default(50),
+  /** Délai minimal entre deux envois. */
+  SEND_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(3600).default(45),
+  /** Créneaux d'envoi (heure de Paris) : jour@HH:MM, séparés par des virgules. */
+  SEND_SLOTS: z.string().default("mon@14:00,tue@09:00,wed@09:00,thu@09:00"),
+  /** Durée pendant laquelle un créneau reste ouvert. */
+  SEND_WINDOW_MINUTES: z.coerce.number().int().min(5).max(720).default(120),
+
   SWAGGER: bool.default(false),
 
   /** Premier administrateur, créé au démarrage s'il n'existe pas (jamais modifié ensuite). */
@@ -81,6 +121,27 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const isProduction = c.NODE_ENV === "production";
   if (isProduction && c.APP_ORIGIN.startsWith("http://")) {
     throw new Error("Configuration invalide : APP_ORIGIN doit être en https:// en production");
+  }
+  if (c.SEND_MODE === "prod") {
+    const missing = [
+      ["BREVO_API_KEY", c.BREVO_API_KEY],
+      ["BREVO_WEBHOOK_SECRET", c.BREVO_WEBHOOK_SECRET],
+      ["UNSUBSCRIBE_SECRET", c.UNSUBSCRIBE_SECRET],
+      ["SEND_TEST_RECIPIENT", c.SEND_TEST_RECIPIENT],
+      // l'adresse d'expéditeur doit être choisie (et vérifiée chez Brevo), jamais prise par défaut
+      ["MAIL_FROM_ADDRESS", env.MAIL_FROM_ADDRESS?.trim()],
+    ]
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+    if (missing.length) {
+      throw new Error(`Configuration invalide : SEND_MODE=prod exige ${missing.join(", ")}`);
+    }
+    if (!c.APP_ORIGIN.startsWith("https://")) {
+      throw new Error(
+        "Configuration invalide : SEND_MODE=prod exige APP_ORIGIN en https:// (liens de désinscription)",
+      );
+    }
+    parseSlots(c.SEND_SLOTS); // lève une erreur claire si un créneau est mal écrit
   }
   return {
     ...c,

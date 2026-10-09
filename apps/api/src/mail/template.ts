@@ -5,6 +5,8 @@ export interface MailIdentity {
   fromAddress: string;
   agendaText: string;
   signature: string;
+  /** Mention d'opposition, en pied (vide = aucun pied). */
+  optOutText?: string;
 }
 
 const CLOSING = /^(cordialement|bien à vous|à bientôt|à très vite)/i;
@@ -31,14 +33,29 @@ export function renderEmail(input: { subject: string; body: string }, id: MailId
     type: "signature" as const,
     lines: id.signature.split("\n").map((l) => l.trim()),
   };
+  const footer = id.optOutText?.trim()
+    ? [
+        {
+          type: "footer" as const,
+          lines: id.optOutText
+            .trim()
+            .split("\n")
+            .map((l) => l.trim()),
+        },
+      ]
+    : [];
   const closing = blocks.findIndex((b) => CLOSING.test(b.lines[0] ?? ""));
   const paragraphs =
     closing === -1
-      ? [...blocks, agenda, signature]
-      : [...blocks.slice(0, closing), agenda, ...blocks.slice(closing), signature];
+      ? [...blocks, agenda, signature, ...footer]
+      : [...blocks.slice(0, closing), agenda, ...blocks.slice(closing), signature, ...footer];
 
   const html = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${paragraphs
-    .map((p) => `<p>${p.lines.map(escapeHtml).join("<br>")}</p>`)
+    .map((p) =>
+      p.type === "footer"
+        ? `<p style="color:#666;font-size:12px">${p.lines.map(escapeHtml).join("<br>")}</p>`
+        : `<p>${p.lines.map(escapeHtml).join("<br>")}</p>`,
+    )
     .join("")}</div>`;
   const text = paragraphs.map((p) => p.lines.join("\n")).join("\n\n");
 

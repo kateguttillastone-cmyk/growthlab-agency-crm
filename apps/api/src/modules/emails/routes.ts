@@ -20,6 +20,7 @@ import { companies, contacts, emailMessages, leadEvents, leads, suppressions } f
 import { authOf } from "../../lib/assert";
 import { audit } from "../../lib/audit";
 import { AppError, conflict, notFound } from "../../lib/errors";
+import { mailIdentity } from "../../mail/identity";
 import { renderEmail } from "../../mail/template";
 import { leadFilters } from "../leads/queries";
 import { leadReader } from "../leads/read";
@@ -33,12 +34,7 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
   const r = app.withTypeProvider<ZodTypeProvider>();
   const manager = app.requireRole("MANAGER");
   const { detail } = leadReader(db);
-  const identity = {
-    fromName: config.MAIL_FROM_NAME,
-    fromAddress: config.MAIL_FROM_ADDRESS,
-    agendaText: config.MAIL_AGENDA_TEXT,
-    signature: config.MAIL_SIGNATURE,
-  };
+  const identity = mailIdentity(config);
 
   /** Aperçu fidèle : le même gabarit que l'envoi, appliqué au texte en cours d'édition. */
   r.post(

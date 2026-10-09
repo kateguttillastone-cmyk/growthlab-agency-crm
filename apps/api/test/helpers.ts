@@ -8,9 +8,10 @@ import { users } from "../src/db/schema";
 import { one } from "../src/lib/assert";
 import { hashPassword } from "../src/lib/password";
 import type { DnsResolver } from "../src/mail/address-check";
+import type { MailSender } from "../src/mail/brevo";
 
 export const DEFAULT_PASSWORD = "Un-mot-de-passe-solide-1";
-const APP_ORIGIN = "http://localhost:5173";
+let APP_ORIGIN = "http://localhost:5173";
 
 export function testEnv(overrides: Record<string, string> = {}): NodeJS.ProcessEnv {
   return {
@@ -36,10 +37,17 @@ export interface TestApp {
 export async function createTestApp(
   overrides: Record<string, string> = {},
   dnsResolver?: DnsResolver,
+  mailSender?: MailSender | null,
 ): Promise<TestApp> {
   const config = loadConfig(testEnv(overrides));
+  APP_ORIGIN = config.APP_ORIGIN; // les en-têtes Origin des tests suivent la configuration
   const { db, pool } = createDb(config.DATABASE_URL);
-  const app = await buildApp({ config, db, dnsResolver });
+  const app = await buildApp({
+    config,
+    db,
+    dnsResolver,
+    mailSender: mailSender === undefined ? null : mailSender,
+  });
   await app.ready();
   return {
     app,
@@ -55,7 +63,7 @@ export async function createTestApp(
 /** Vide toutes les tables (la base de test est jetable). */
 export async function resetDb(t: TestApp): Promise<void> {
   await t.db.execute(
-    sql`truncate table lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
+    sql`truncate table settings, lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
   );
 }
 
