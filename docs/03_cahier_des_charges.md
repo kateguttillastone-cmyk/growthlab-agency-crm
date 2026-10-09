@@ -2,9 +2,11 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 — cahier des charges rétro-documenté (état du commit `7817213`) |
+| **Version** | 1.1 — cahier des charges rétro-documenté (commit `7817213` + workflow n8n `Lead Pilot`, noté **WF**) |
 | **Documents liés** | [Conception produit](01_conception_produit.md) · [PRD](02_product_requirements_document.md) · [Architecture](04_architecture_technique_et_systeme.md) |
 | **Légende** | ✅ implémenté · 🟡 partiel · 📄 documenté sans code · 💡 recommandation · ❓ à confirmer |
+
+> **Mise à jour 1.1 :** le workflow n8n a été analysé. Impacts : périmètre étendu à l'automatisation (lot E), écarts E10–E14, risques R11–R14, exigences SEC-10..12, recette d'intégration précisée. Le workflow de pont `crm-bridge-*` reste non fourni.
 
 > Ce cahier des charges couvre (a) la **maintenance et la consolidation** du produit existant et (b) les **évolutions** listées dans le PRD. **Aucun budget, aucun calendrier ni aucun effort chiffré n'est inventé** : ils sont à fournir par le commanditaire (voir §11).
 
@@ -13,6 +15,8 @@
 ## 1. Contexte
 
 GrowthLab Agency exploite une automatisation de prospection (« Lead Pilot », n8n) qui alimente une base Airtable. GAC Pilot est l'interface web de pilotage commercial de cette base : tri et validation des emails, suivi d'appels, pipeline, indicateurs (voir [01 §2](01_conception_produit.md)).
+
+Le workflow `Lead Pilot` (actif, 38 nœuds) assure : sourcing Apify, enrichissement BuiltWith/Semrush, scoring et rédaction d'email par Claude, écriture Airtable, envoi planifié via Brevo (lundi 14 h, mardi–jeudi 9 h, Paris) et synchronisation de la liste Brevo n° 3 ([01 §2.3](01_conception_produit.md)).
 
 Historique constaté dans le dépôt : l'application a d'abord été écrite comme **artifact Claude** (`source-artifact.html`, base de données fournie par la plateforme), puis **hébergée** sur Netlify avec un pont serveur vers n8n/Airtable (`build_site.py` ajoute la connexion et remplace la couche de données). Production : `https://crm.growthlab-agencycom.com` (README).
 
@@ -25,6 +29,7 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 | OBJ-3 | Éviter les pertes de saisies (colonnes absentes, erreurs réseau) | CA-07, CA-11 passés | EXG-F-052, 071..073 |
 | OBJ-4 | Réduire la dette de maintenance (source unique, tests, CI) | Build reproductible + tests minimaux en CI | EXG-NF-011, 012 |
 | OBJ-5 | Préparer l'extension (utilisateurs, contacts entrants, suivi de sourcing) | Décisions D1–D4 de [01 §10](01_conception_produit.md) prises | EXG-F-060, 081, 082, 091 |
+| OBJ-6 | Sécuriser et fiabiliser l'automatisation n8n (clés, mode d'envoi, double envoi, coûts) | Lot E terminé, CA-12 à CA-16 passés | EXG-A-020..044 |
 
 ## 3. Périmètre
 
@@ -32,10 +37,11 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 1. **Socle existant** (voir [02 §2](02_product_requirements_document.md)) : accès, dashboard, leads, sourcing & validation, pipeline, fiche d'évaluation, paramètres.
 2. **Correctifs de cohérence** recensés en §9 (colonnes attendues, échappement, textes obsolètes).
 3. **Documentation et exploitation** : procédures de build/déploiement, variables d'environnement, tests.
-4. **Évolutions priorisées** par le commanditaire parmi EXG-F-060, 081, 082, 090..093 (à arbitrer, §11).
+4. **Sécurisation et fiabilisation du workflow `Lead Pilot`** (lot E).
+5. **Évolutions priorisées** par le commanditaire parmi EXG-F-060, 081, 082, 090..093 (à arbitrer, §11).
 
 ### 3.2 Exclu
-- Les workflows n8n, le schéma Airtable, la configuration Brevo et les outils de sourcing/scoring (hors dépôt) — sauf **documentation de leur contrat** avec l'application (§5.2).
+- La refonte fonctionnelle du workflow `Lead Pilot` (hors correctifs de sécurité et fiabilité du lot E), le schéma Airtable, la configuration Brevo et les workflows non fournis (`crm-bridge-*`, Google Maps, retour de statuts) — sauf **documentation de leur contrat** avec l'application (§5.2).
 - La création/refonte de sites ou toute prestation commerciale de l'agence.
 - Une application mobile native, une refonte graphique complète, un changement de fournisseur de base de données (sauf décision D1).
 
@@ -45,6 +51,7 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 |---|---|
 | Application | Page unique HTML/CSS/JS sans framework ni dépendance npm, ≈ 2 200 lignes (`source-artifact.html`) |
 | Build | Script Python à substitutions textuelles sur la source (`build_site.py`), échoue si une ancre n'est pas trouvée exactement une fois |
+| Automatisation | Workflow n8n `Lead Pilot` (WF) : 3 chaînes (sourcing/scoring, envoi, synchro Brevo), services Apify, API Anthropic, Brevo, Airtable ([04 §5bis](04_architecture_technique_et_systeme.md)) |
 | Backend | Une fonction Netlify (`bridge.js`, Node, bundler esbuild) : contrôle du mot de passe + relais vers 5 webhooks n8n |
 | Données | Airtable « Lead Pilot » via n8n ; aucune base propre |
 | Tests / CI / observabilité | Aucun / aucune / aucune |
@@ -61,7 +68,7 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 | A4 | Rendre `build_site.py` indépendant du chemin `~/gac-pilot` (chemins relatifs au dépôt) | EXG-NF-011 | P1 |
 | A5 | Supprimer ou mettre à jour les textes obsolètes de la source (« tâche planifiée… session Claude Code ») | Cohérence | P2 |
 | A6 | Renseigner `lang="fr"` sur `<html>` et corriger les points bloquants d'accessibilité les plus visibles | EXG-NF-009 | P1 |
-| A7 | Protéger le webhook `search-leads` : l'appel de sourcing n'envoie **pas** l'en-tête `x-bridge-secret` contrairement aux autres appels (`bridge.js`) → confirmer avec n8n l'authentification de ce webhook | EXG-NF-001 | P0 ❓ |
+| A7 | Protéger le webhook `search-leads` : WF **ne comporte aucune authentification** sur ce webhook et le pont n'envoie pas `x-bridge-secret` pour cet appel ; ajouter l'en-tête côté `bridge.js` et la vérification côté n8n (EXG-A-041) | EXG-NF-001 | P0 ✅ constat confirmé |
 
 ### 5.2 Lot B — Documentation du contrat avec les systèmes externes
 | Réf. | Livrable |
@@ -69,7 +76,7 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 | B1 | Schéma Airtable de référence : noms exacts, types (texte, liste, multi-sélection, nombre, date, booléen), valeurs de listes, colonnes obligatoires |
 | B2 | Contrat des 5 webhooks n8n : entrée, sortie, codes d'erreur, authentification (`x-bridge-secret`) |
 | B3 | Règle d'envoi Brevo (délai ~10 min, liste « Leads validés - GAC Pilot », conditions) |
-| B4 | Export versionné des workflows n8n concernés (si l'agence l'accepte) |
+| B4 | Export versionné **expurgé de tout secret** des workflows n8n concernés (WF est fourni mais ne peut être versionné en l'état) ; fournir aussi les workflows non vus : `crm-bridge-*`, Google Maps, retour de statuts email |
 
 ### 5.3 Lot C — Qualité et exploitation
 | Réf. | Prestation | Prio |
@@ -79,6 +86,18 @@ Historique constaté dans le dépôt : l'application a d'abord été écrite com
 | C3 | Déploiement automatisé, environnement de prévisualisation | P2 |
 | C4 | Journalisation et alerte d'erreurs du pont | P2 |
 | C5 | Procédure de rotation de `BRIDGE_SECRET` et `APP_PASSWORD` | P1 |
+
+### 5.3bis Lot E — Sécurisation et fiabilisation de l'automatisation (WF)
+| Réf. | Prestation | Réponse à | Prio |
+|---|---|---|---|
+| E1 | **Révoquer et renouveler** le jeton Apify et la clé Anthropic exposés, puis les stocker comme identifiants n8n ; vérifier qu'aucune copie du workflow n'a été partagée | EXG-A-042, SEC-10 | **P0** |
+| E2 | Lever l'ambiguïté « mode test » : décider du destinataire réel, renommer le nœud d'envoi, supprimer la note obsolète, réactiver ou supprimer le nœud Gmail de test | EXG-A-023 | **P0** |
+| E3 | Authentifier `search-leads` (en-tête secret) et limiter les appels | EXG-A-041 | P0 |
+| E4 | Garde anti double envoi (ne pas envoyer si `Email envoyé le` ou `Statut email` renseigné) | EXG-A-043 | P0 |
+| E5 | Restreindre la synchronisation Brevo aux leads non encore synchronisés (case ou date de synchro) | EXG-NF-018 | P1 |
+| E6 | Remplacer les attentes fixes (3 min, 30 s) par un suivi d'état des exécutions Apify ; alerter les erreurs au lieu de les absorber | EXG-NF-017, EXG-A-044 | P1 |
+| E7 | Écrire `Pack` et segment calculés, aligner packs et qualifications avec le CRM (RG-17, RG-22) | EXG-A-010 | P1 |
+| E8 | Associer les données d'un lead par identifiant (domaine) et non par position (`$itemIndex`) dans `Edit Fields` | EXG-NF-017 | P1 |
 
 ### 5.4 Lot D — Évolutions (sous réserve d'arbitrage, §11)
 EXG-F-060 (demandes de contact), EXG-F-081/082 (utilisateurs/rôles), EXG-F-090 (historique), EXG-F-091 (suivi de sourcing), EXG-F-092/093 (création manuelle, export CSV).
@@ -109,6 +128,9 @@ EXG-F-060 (demandes de contact), EXG-F-081/082 (utilisateurs/rôles), EXG-F-090 
 | SEC-7 | Échappement systématique des données affichées | 🟡 (A2) |
 | SEC-8 | Moindre privilège sur le jeton Airtable côté n8n | ❓ hors dépôt |
 | SEC-9 | Journal d'audit des modifications | 💡 |
+| SEC-10 | Aucun secret dans les paramètres de nœuds n8n ni dans les exports ; rotation après exposition | ❌ (E10) |
+| SEC-11 | Webhooks n8n publics authentifiés | ❌ `search-leads` (E12) |
+| SEC-12 | Envoi d'emails : désinscription fonctionnelle, adresse expéditeur dédiée, plafond d'envoi | 🟡 expéditeur dédié ✅ ; désinscription gérée par Brevo (statut `Désinscrit`) ❓ ; pas de plafond |
 
 ### 7.2 Performance
 | Réf. | Exigence | État |
@@ -143,6 +165,7 @@ Code monolithique (un fichier de ≈ 2 200 lignes), fonctions nommées en franç
 | L4 | Pipeline CI et procédure de déploiement | C | Config + doc |
 | L5 | Guide d'exploitation (variables, rotation de secrets, retour arrière, incidents) | C | Markdown |
 | L6 | Évolutions retenues avec critères d'acceptation (CA-xx) | D | Dépôt Git |
+| L8 | Workflow `Lead Pilot` expurgé de secrets, versionné, avec garde anti double envoi et rapport de rotation des clés | E | Dépôt Git + JSON |
 | L7 | Mise à jour des documents 01–04 | Tous | Markdown |
 
 ## 9. Écarts constatés à traiter (preuves)
@@ -157,13 +180,19 @@ Code monolithique (un fichier de ≈ 2 200 lignes), fonctions nommées en franç
 | E6 | Textes de synchro obsolètes dans la source | `source-artifact.html:1294, 1898, 2061` (remplacés au build) | A5 |
 | E7 | Mot de passe en clair en `localStorage` | `build_site.py` (`tryPassword`) | SEC-3 |
 | E8 | `limit(1000)` sans effet côté pont | `build_site.py` (`limit: function(){return this}`) | PERF-2 |
+| E10 | **Secrets en clair dans le workflow** : jeton Apify (6 nœuds) et clé Anthropic (`Claude Scoring`) | WF | E1 |
+| E11 | **Mode test/production ambigu** : nœud « TEST MODE » avec destinataire = email du lead, note disant l'inverse, nœud Gmail de test désactivé | WF `Send Prospecting Email (TEST MODE)`, `Sticky Note1` | E2 |
+| E12 | Webhook `search-leads` sans authentification (`allowedOrigins` ciblant un ancien sous-domaine Netlify) | WF `Webhook` | E3 |
+| E13 | Synchro Brevo : tous les leads validés ré-envoyés toutes les 10 min ; pas de garde anti double envoi sur le déclencheur | WF `Sync Brevo`, `Airtable Trigger` | E4, E5 |
+| E14 | Packs du scoring ≠ packs du CRM ; `pack_cible` calculé mais non écrit ; qualifications `À qualifier - Sans site web` / `ERREUR_PARSING` inconnues du CRM | WF vs `source-artifact.html:574-576` | E7 |
 | E9 | `N8N_BASE` par défaut sur `n8n.growthlab-agency.fr`, domaine différent du site (`growthlab-agencycom.com`) | `bridge.js` | ❓ à confirmer |
 
 ## 10. Conditions de validation (recette)
 
 1. **Recette fonctionnelle** : exécution des critères CA-01 à CA-11 ([02 §5](02_product_requirements_document.md)) sur un jeu de données de test (au moins 60 leads pour couvrir la pagination, des cas limites : sans date, sans site, Taille non numérique, colonnes absentes).
 2. **Recette de sécurité** : appels `/api/*` sans/avec mauvais mot de passe (401), absence de secret dans le dépôt et dans le bundle livré, vérification des en-têtes HTTP, test d'injection HTML dans les champs de lead.
-3. **Recette d'intégration** : appels réels (en environnement de test) des 5 webhooks ; scénario complet sourcing → validation → présence dans Brevo.
+3. **Recette d'automatisation** : CA-12 à CA-16 ([02 §5](02_product_requirements_document.md)), avec adresse de réception de test, horloge simulée pour les créneaux, et vérification qu'aucun secret ne subsiste dans l'export.
+3bis. **Recette d'intégration** : appels réels (en environnement de test) des 5 webhooks ; scénario complet sourcing → validation → présence dans Brevo.
 4. **Recette d'exploitation** : déploiement et retour arrière réalisés par une personne autre que l'auteur à partir du guide L5.
 5. **Critères de réception** : tous les CA « P0 » passés, aucune anomalie bloquante ouverte, documents 01–04 à jour. Le commanditaire prononce la réception ❓ (interlocuteur à nommer).
 
@@ -181,6 +210,10 @@ Code monolithique (un fichier de ≈ 2 200 lignes), fonctions nommées en franç
 | R7 | Volume en croissance : rechargement complet toutes les 25 s | Moyen | Croissante | PERF-2, pagination côté serveur |
 | R8 | Segmentation par mots-clés libres → leads mal classés | Moyen | Moyenne | Champ de segment explicite (Q2 du PRD) |
 | R9 | Aperçu d'email dupliqué du gabarit n8n : dérive entre aperçu et email réellement envoyé | Moyen | Moyenne | Source unique du gabarit |
+| R11 | Fuite de clés (Apify, Anthropic) si le JSON du workflow a été partagé ou versionné | Élevé | Moyenne | E1 |
+| R12 | Envoi réel à des prospects alors que le workflow se croit en test (ou l'inverse) | Élevé | ❓ | E2 |
+| R13 | Double envoi d'un même email (re-déclenchement Airtable) | Élevé | ❓ | E4 |
+| R14 | Coûts de services tiers non plafonnés (webhook ouvert, synchro ré-envoyant tous les leads) | Moyen | Moyenne | E3, E5 |
 | R10 | Dépendance à une personne (« Kate », « Ifaliana ») | Moyen | ❓ | Gestion des utilisateurs, documentation |
 
 ### 11.2 Points à arbitrer
@@ -205,7 +238,9 @@ Code monolithique (un fichier de ≈ 2 200 lignes), fonctions nommées en franç
 **Questions ouvertes**
 - Q1 : volume actuel et cible de leads ? nombre d'utilisateurs simultanés ?
 - Q2 : qui administre Netlify, n8n, Airtable, Brevo ? Existe-t-il des sauvegardes ?
-- Q3 : le webhook `search-leads` est-il protégé (E4) ?
+- Q3 : confirmer que `search-leads` n'est protégé par rien d'autre (reverse proxy, pare-feu) — WF n'en contient pas (E12).
+- Q7 : l'envoi réel est-il actif (E11) ? Quel plafond quotidien d'envois ?
+- Q8 : les clés exposées (E10) ont-elles déjà été utilisées hors du périmètre prévu ?
 - Q4 : la différence de domaine n8n/site (E9) est-elle voulue ?
 - Q5 : disponibilités et limites réelles du plan Netlify utilisé ?
 - Q6 : doit-on conserver la compatibilité artifact Claude (ARB-4) ?

@@ -2,10 +2,12 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 — PRD rétro-documenté (état du commit `7817213`) |
+| **Version** | 1.1 — PRD rétro-documenté (commit `7817213` + workflow n8n `Lead Pilot`, noté **WF**) |
 | **Documents liés** | [Conception produit](01_conception_produit.md) · [Cahier des charges](03_cahier_des_charges.md) · [Architecture](04_architecture_technique_et_systeme.md) |
 | **Légende de statut** | ✅ implémenté · 🟡 partiel/fragile · 📄 documenté sans code · 💡 recommandation · ❓ à confirmer (voir [01 §1](01_conception_produit.md)) |
 | **Priorités** | **P0** indispensable / **P1** important / **P2** souhaitable (MoSCoW simplifié). Les priorités des exigences existantes sont celles que je propose ; elles sont à valider. |
+
+**Mise à jour 1.1 :** ajout du module AUT (§2.9, automatisation n8n), des règles RG-14 à RG-22, des critères CA-12 à CA-16, et révision de EXG-F-041, EXG-F-047, RG-13 et des dépendances. WF ne contient pas les webhooks `crm-bridge-*` (❓).
 
 Les références de code sans préfixe désignent `source-artifact.html` (« SA »), `site/netlify/functions/bridge.js` (« BR ») ou `build_site.py` (« BS »).
 
@@ -76,14 +78,14 @@ Format : **ID** · énoncé · priorité · statut · preuve. Les critères d'ac
 
 | ID | Exigence | Prio | Statut | Preuve |
 |---|---|---|---|---|
-| EXG-F-040 | Formulaire ICP : secteur (5 valeurs), poste (texte, défaut « CEO, Founder »), localisation (france/paris/ile-de-france), statut email (validated/all), nom de fichier (défaut `sourcing-<horodatage>`) | P1 | ✅ | SA:478-487, 2066 |
-| EXG-F-041 | Le lancement transmet l'ICP au webhook n8n `search-leads` et affiche une confirmation | P1 | 🟡 : confirmation = requête acceptée, pas fin du sourcing | BR `sourcing` |
+| EXG-F-040 | Formulaire ICP : secteur (5 valeurs), poste (texte, défaut « CEO, Founder »), localisation (france/paris/ile-de-france), statut email (validated/all), nom de fichier (défaut `sourcing-<horodatage>`). Les paramètres `size` (défaut `1-10`,`11-20`) et `fetch_count` (défaut 20) acceptés par WF **ne sont pas exposés** dans le formulaire ; le champ « poste » est transmis comme **un seul titre** (« CEO, Founder » n'est pas scindé en deux) | P1 | ✅ (🟡 pour les paramètres non exposés) | SA:478-487, 2066 |
+| EXG-F-041 | Le lancement transmet l'ICP au webhook n8n `search-leads` et affiche une confirmation | P1 | 🟡 : confirmation = requête acceptée ; le traitement complet (≥ 3 min d'attente fixe + enrichissement par lots) n'a aucun retour d'état | BR `sourcing`, WF |
 | EXG-F-042 | Liste « Résultats & validation » : par défaut leads « Pas Validé » ou vides, triés Chaud > Tiède > Froid > autres ; filtre de statut (À traiter / Tous / Pas Validé / Validé / Rejeté) | P0 | ✅ | SA:1499-1545 |
 | EXG-F-043 | Quand la colonne « Validation mail » est filtrée explicitement, ce filtre prévaut sur « À traiter » | P2 | ✅ | SA:1503-1510 |
 | EXG-F-044 | Modale d'édition d'email : objet, corps, validation ; onglet Aperçu « tel que le prospect le recevra » (paragraphes, agenda inséré avant la formule de politesse, signature) | P0 | ✅ | SA:1953-2080 |
 | EXG-F-045 | Enregistrer l'email envoie `Email objet`, `Email corps` et `Validation mail` (liste à un élément) dans une même mise à jour | P0 | ✅ | SA:2056 |
 | EXG-F-046 | Réécriture de l'email par IA à partir d'une consigne libre | P2 | 📄 disponible uniquement dans la version Claude ; **désactivée** en hébergé | BS, SA:2025 |
-| EXG-F-047 | Un lead passé à « Validé » rejoint la liste Brevo « Leads validés - GAC Pilot » dans les ~10 minutes | P0 | 📄 traitement côté n8n/Brevo, non vérifiable dans le dépôt | BS (texte Paramètres) |
+| EXG-F-047 | Un lead passé à « Validé » est ajouté à la liste Brevo n° 3 (immédiatement par le déclencheur, au plus tard 10 min par la synchronisation planifiée) puis son email est envoyé au prochain créneau autorisé (voir EXG-A-020..024) | P0 | ✅ WF (nom de liste « Leads validés - GAC Pilot » : texte du CRM, l'identifiant côté n8n est `3`) | BS, WF |
 
 ### 2.5 Module Pipeline (PIP)
 
@@ -123,6 +125,34 @@ Format : **ID** · énoncé · priorité · statut · preuve. Les critères d'ac
 | EXG-F-092 | Création manuelle d'un lead depuis l'interface | P2 | 💡 ❓ |
 | EXG-F-093 | Export CSV natif des leads filtrés (en complément de « Copier pour Sheets ») | P2 | 💡 |
 
+### 2.9 Module Automatisation « Lead Pilot » (AUT) — hors application, documenté par WF
+
+Exigences **constatées** dans le workflow actif. Elles conditionnent le CRM mais ne sont pas modifiables depuis lui.
+
+| ID | Exigence | Prio | Statut | Nœud(s) WF |
+|---|---|---|---|---|
+| EXG-A-001 | Recevoir une demande de sourcing par `POST /webhook/search-leads` (corps = ICP) | P0 | ✅ (sans authentification : voir EXG-A-041) | `Webhook` |
+| EXG-A-002 | Lancer l'acteur Apify `leads-finder` avec secteur, poste, localisation (également utilisée comme localisation d'entreprise), statut email (défaut `validated`), nom de fichier, tailles (défaut `1-10`,`11-20`), quantité (défaut 20) | P0 | ✅ | `Apify Launch` |
+| EXG-A-003 | Attendre 3 minutes (délai fixe) puis récupérer les résultats | P0 | 🟡 pas de vérification de fin d'exécution | `Wait`, `Apify Results` |
+| EXG-A-004 | Ne conserver que les contacts dont le téléphone d'entreprise commence par `+33` ou `0033` ; `Pays` est fixé à « Fra » | P0 | ✅ | `Filter`, `Edit Fields` |
+| EXG-A-005 | Orienter selon la présence d'un domaine : avec domaine → analyse complète ; sans domaine → fiche directe « Création de site » | P0 | ✅ | `If`, `Edit Fields1` |
+| EXG-A-006 | Pour chaque lead avec domaine (lots de 20) : récupérer la page (timeout 5 s), extraire Facebook/Instagram/LinkedIn, technologies (BuiltWith : CMS, e-commerce, GTM, GA, pixel Meta, Google Ads, plugin SEO, SSL) et métriques SEO (Semrush base `fr` : trafic, autorité, mots-clés, backlinks) | P0 | ✅ | `Scrape site web`, `Extraire Réseaux Sociaux`, `BuiltWith*`, `Semrush*`, `Code *` |
+| EXG-A-007 | Faire scorer le lead par Claude (`claude-haiku-4-5`, 1 500 tokens max) : segment, qualification, service, pack cible, services secondaires, raison, objet et corps d'email | P0 | ✅ | `Build Prompt`, `Claude Scoring`, `Parse Claude` |
+| EXG-A-008 | En cas de réponse IA illisible, enregistrer `Qualification = ERREUR_PARSING` et la raison `PARSE FAIL: …` plutôt que d'échouer | P1 | ✅ (mais valeur absente de la liste du CRM) | `Parse Claude` |
+| EXG-A-009 | Écrire le lead dans Airtable par upsert : clé `Site web` (avec site) ou `Email` (sans site) ; consigner `Source = LinkedIn Lead Finder`, `Persona` = poste demandé, `Date détection`, `Version_prompt_email` | P0 | ✅ | `Create or update a record`, `Créer prospect (sans site)` |
+| EXG-A-010 | N'écrire ni `Pack`, ni segment, ni services secondaires calculés par l'IA | — | 🟡 constat : données calculées puis perdues | `Edit Fields` |
+| EXG-A-020 | Détecter les leads dont `Validation mail = Validé` (interrogation toutes les minutes, champ `Derniere validation`) et ignorer ceux sans email | P0 | ✅ | `Airtable Trigger`, `Filter1` |
+| EXG-A-021 | Calculer le prochain créneau d'envoi : lundi 14 h, mardi/mercredi/jeudi 9 h (Europe/Paris) ; aucun envoi vendredi–dimanche ; si le créneau du jour est passé, prendre le suivant | P0 | ✅ | `Compute Send Time (9h Paris)`, `Wait Until 9h Paris` |
+| EXG-A-022 | Générer l'email HTML sobre (paragraphes, agenda en texte brut inséré avant la formule de clôture, signature) à partir de `Email objet` et `Email corps` ; **aucun lien cliquable ni style marketing** (choix délibéré pour la délivrabilité en boîte principale) | P0 | ✅ | `Format Email HTML` |
+| EXG-A-023 | Envoyer via Brevo depuis « Kate de Growthlab Agencycom <kate@growthlab-agencycom.com> » | P0 | 🟡 destinataire = email du lead dans le nœud, mais nom et note décrivent un « mode test » (❓) | `Send Prospecting Email (TEST MODE)` |
+| EXG-A-024 | Après envoi : `Étape pipeline = Contacté`, `Statut email = Envoyé`, `Email envoyé le = maintenant` | P0 | ✅ | `Marquer Contacté (immédiat)` |
+| EXG-A-030 | Maintenir la liste Brevo n° 3 : upsert du contact (attributs PRENOM, NOM, ENTREPRISE, JOB_TITLE, PERSONA = secteur, SIGNAL_DETECTE = service recommandé, SIGNAL_DETAIL = raison, QUALIFICATION, EMAIL_OBJET, EMAIL_CORPS) à chaque validation et toutes les 10 min pour **tous** les leads validés ; lots de 4 par 1,1 s, nouvelle tentative activée | P1 | ✅ | `Upsert contact Brevo (liste)`, `Sync Brevo (10 min)`, `Chercher leads validés`, `Normaliser` |
+| EXG-A-040 | Les nœuds d'appel externes poursuivent le flux en cas d'erreur (`continueRegularOutput`) | — | 🟡 constat : une erreur d'enrichissement donne un lead scoré sur données vides ; une erreur ne bloque ni n'alerte | plusieurs |
+| EXG-A-041 | Le webhook `search-leads` doit être authentifié (secret partagé) | P0 | 💡 absent ; `allowedOrigins` ne protège pas un appel serveur | `Webhook` |
+| EXG-A-042 | Les clés et jetons doivent être des identifiants n8n, jamais dans les paramètres de nœuds | P0 | 💡 jeton Apify et clé Anthropic en clair | `Apify *`, `BuiltWith*`, `Semrush*`, `Claude Scoring` |
+| EXG-A-043 | Empêcher un double envoi (garde sur `Email envoyé le` / `Statut email`) | P0 | 💡 absente | `Airtable Trigger` |
+| EXG-A-044 | Notifier les échecs (workflow en erreur, Brevo, Apify, Claude) | P1 | 💡 absent | — |
+
 ---
 
 ## 3. Règles métier
@@ -141,7 +171,16 @@ Format : **ID** · énoncé · priorité · statut · preuve. Les critères d'ac
 | RG-10 | Le lien « Google Ads Transparency » est construit sur le domaine du site (sans protocole ni `www.`) ; le lien Meta utilise le nom d'entreprise ou à défaut le domaine | ✅ | SA:787-801 |
 | RG-11 | Le sourcing exige uniquement les 5 champs ICP ; aucune validation de format (le champ « poste » est libre) | 🟡 | SA:2066 |
 | RG-12 | L'email affiché en aperçu reproduit le gabarit n8n : l'agenda (Calendly) est inséré avant la formule de clôture (cordialement, bien à vous, à bientôt, à très vite) ou, à défaut, à la fin ; signature « Kate Guttilla STONE — Traffic Manager » | ✅ (copie à maintenir synchronisée avec n8n) | SA:1953-1977 |
-| RG-13 | Un lead validé est envoyé à Brevo par l'automatisation, pas par l'application | 📄 | BS |
+| RG-13 | Un lead validé est envoyé à Brevo et son email expédié par l'automatisation n8n, jamais par l'application | ✅ | WF |
+| RG-14 | Qualification IA : *Chaud* = 5–50 employés **et** besoin clair ; *Tiède* = 1–5, ou 50–200 avec bon besoin ; *Froid* = ≥ 200 (surtout 1 000+) ou site déjà optimisé | ✅ prompt WF | WF `Build Prompt` |
+| RG-15 | Service d'entrée unique, par ordre de priorité : (a) Création/refonte de site si site inaccessible, sans SSL, non mobile ou sans CMS (ou e-commerce sans boutique) ; (b) sinon Google Ads. SEO complet et Meta Ads ne sont jamais recommandés | ✅ | WF |
+| RG-16 | Segment IA : *E-commerçant* si e-commerce ou CMS Shopify/WooCommerce/PrestaShop/Magento, sinon *PME/TPE* ; campagne Shopping/Performance Max seulement pour e-commerçants, Search uniquement pour PME/TPE | ✅ | WF |
+| RG-17 | Packs et tarifs du prompt : e-commerce Launch (1 200 €/mois) / Accelerate (2 000 €/mois) / Dominate (devis) ; PME Starter (800 €/mois) / Growth (1 500 €/mois) / Scale (devis) ; à la carte : site dès 800 €, Google Ads dès 500 € + 15 %, emailing dès 300 €/mois, audit CRO/UX dès 500 €, automatisations CRM dès 400 € | ✅ (⚠ diffère de la liste `Pack` du CRM, voir [01 §9](01_conception_produit.md)) | WF |
+| RG-18 | Contenu de l'email : aucun chiffre de backlinks, mots-clés ou autorité ; trafic organique cité seulement s'il est > 0, avec un angle business ; objet de 5 à 9 mots ; salutation « Bonjour {prénom}, » sinon « Bonjour l'équipe {entreprise}, » | ✅ | WF |
+| RG-19 | Créneaux d'envoi : lundi 14 h, mardi–jeudi 9 h, heure de Paris ; jamais vendredi–dimanche | ✅ | WF |
+| RG-20 | Seuls les contacts français (téléphone `+33`/`0033`) sont retenus | ✅ | WF |
+| RG-21 | Un lead sans domaine est créé en « À qualifier - Sans site web », service « Création de site » ; dans le CRM il est classé *Création de site* (segment sans site) | ✅ | WF + SA:675 |
+| RG-22 | La qualification d'un lead sans site (« À qualifier - Sans site web ») et la valeur `ERREUR_PARSING` ne figurent pas dans la liste de qualifications du CRM ; elles s'affichent comme vides et ne comptent ni dans Chaud/Tiède/Froid | 🟡 constat | WF + SA:574 |
 
 ---
 
@@ -162,6 +201,9 @@ Chaque story renvoie à ses exigences et à ses critères d'acceptation (CA, §5
 | US-09 | responsable | suivre la performance des emails | ajuster les messages | EXG-F-015, 016 | CA-10 |
 | US-10 | responsable | traiter des lots entiers (validation, qualification) | gagner du temps | EXG-F-026 | CA-05 |
 | US-11 | administrateur | être alerté si une colonne Airtable manque | ne pas perdre de saisies | EXG-F-071..073 | CA-11 |
+| US-14 | responsable | que les emails validés partent automatiquement à un créneau favorable | maximiser les réponses sans intervention | EXG-A-020..024 | CA-13 |
+| US-15 | responsable | que chaque lead sourcé arrive qualifié, avec un service recommandé et un email rédigé | gagner du temps de recherche | EXG-A-002..009 | CA-12 |
+| US-16 | administrateur | que l'automatisation soit sécurisée et supervisée | éviter fuites, coûts et doubles envois | EXG-A-041..044 | CA-15, CA-16 |
 | US-12 | responsable | gérer les demandes de contact du site | ne pas perdre d'entrants | EXG-F-060 | 💡 CA à écrire quand le flux existera |
 | US-13 | administrateur | créer des utilisateurs avec des rôles | tracer et limiter les droits | EXG-F-081, 082 | 💡 CA à écrire |
 
@@ -182,6 +224,11 @@ Chaque story renvoie à ses exigences et à ses critères d'acceptation (CA, §5
 | CA-09 | **Given** un lead avec site `https://www.exemple.fr/page` **When** j'ouvre la fiche **Then** le lien Google Ads Transparency contient `domain=exemple.fr` | Manuelle |
 | CA-10 | **Given** que n8n/Brevo répond **Then** 6 tuiles s'affichent ; **sinon** « Statistiques Brevo injoignables. » sans bloquer le reste du dashboard | Mock |
 | CA-11 | **Given** une colonne absente d'Airtable **When** je modifie ce champ **Then** aucune requête d'écriture n'est émise et le toast « Non enregistré : la colonne « X » n'existe pas encore dans Airtable. » s'affiche ; si la vérification de schéma est indisponible, l'écriture est tentée et la réponse 422 `colonne_absente` est affichée | Mock schéma |
+| CA-12 | **Given** un ICP valide envoyé à `search-leads` **When** l'exécution se termine **Then** les contacts sans téléphone français sont écartés ; chaque lead avec domaine possède `Qualification ∈ {Chaud, Tiède, Froid}` (ou `ERREUR_PARSING` documenté), `Service recommandé`, `Email objet`, `Email corps` et les champs d'enrichissement ; chaque lead sans domaine est créé « À qualifier - Sans site web » ; rejouer le même ICP **ne crée pas de doublon** (clés `Site web` / `Email`) | Exécution en environnement de test + comptage Airtable |
+| CA-13 | **Given** un lead passé à *Validé* un mardi à 10 h Paris **Then** l'envoi a lieu le mercredi à 9 h ; un vendredi → lundi 14 h ; un lundi à 13 h → le jour même 14 h ; après l'envoi, `Étape pipeline=Contacté`, `Statut email=Envoyé`, `Email envoyé le` renseigné ; **le destinataire est celui configuré pour l'environnement** (adresse de test en test, email du lead en production) | Tests du nœud de calcul (heures simulées) + boîte de test |
+| CA-14 | **Given** un lead *Validé* **Then** il figure dans la liste Brevo n° 3 avec les 10 attributs ; au passage suivant de la synchronisation il n'est pas dupliqué | Brevo |
+| CA-15 | **Given** un appel à `search-leads` sans secret **Then** réponse 401/403 et aucune exécution Apify ; avec le secret de pont → exécution | `curl` (cible EXG-A-041, aujourd'hui non conforme) |
+| CA-16 | **Given** une relecture du JSON exporté du workflow **Then** aucune chaîne ressemblant à un jeton (`apify_api_…`, `sk-ant-…`) n'y figure (cible EXG-A-042, aujourd'hui non conforme) | Revue automatique de l'export |
 
 ---
 
@@ -193,7 +240,7 @@ Chaque story renvoie à ses exigences et à ses critères d'acceptation (CA, §5
 | EXG-NF-002 | Sécurité | Authentification nominative, expirable, avec limitation des tentatives | P1 | 💡 | Mot de passe unique, comparaison simple, pas de limitation de débit, mot de passe stocké en clair dans `localStorage` (clé `gac_pwd`) |
 | EXG-NF-003 | Sécurité | En-têtes de sécurité HTTP | P1 | 🟡 | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` présents ; pas de `Content-Security-Policy` ni HSTS explicite (`netlify.toml`) |
 | EXG-NF-004 | Sécurité | Échappement des données affichées (anti-XSS) | P0 | ✅ globalement | `esc()` systématique dans les tableaux, la fiche et le Kanban ; **trous constatés** (données Airtable insérées en `innerHTML` sans `esc()`) : `renderTasks` (nom, entreprise, service — SA:1244), libellés de secteur de `funnelBar` (SA:1199-1215) et pastilles Qualification/Validation de `renderRecentLeads` (SA:1255) |
-| EXG-NF-005 | Sécurité | Aucun secret dans le dépôt | P0 | ✅ | README + revue : seules des URLs (`n8n.growthlab-agency.fr`) et l'identifiant de site Netlify |
+| EXG-NF-005 | Sécurité | Aucun secret dans le dépôt **ni dans les exports de workflow** | P0 | ✅ dépôt / ❌ workflow | Dépôt : seules des URLs et l'identifiant de site Netlify. Workflow : jeton Apify (6 nœuds) et clé Anthropic en clair (valeurs non reproduites ici) |
 | EXG-NF-006 | Performance | Chargement complet de la base à chaque rafraîchissement (toutes les 25 s) | P1 | 🟡 | `pull()` charge **tous** les leads ; pas de pagination serveur ; `limit(1000)` du code source est ignoré par le shim |
 | EXG-NF-007 | Performance | Actions groupées par lots de 4 requêtes parallèles pour rester sous la limite Airtable | P1 | ✅ | SA:1667 |
 | EXG-NF-008 | Disponibilité | Dégradation gracieuse si n8n/Brevo est indisponible | P1 | 🟡 | Brevo : message dédié ; leads : bandeau d'erreur ; pas de relance ni de cache |
@@ -204,6 +251,9 @@ Chaque story renvoie à ses exigences et à ses critères d'acceptation (CA, §5
 | EXG-NF-013 | Observabilité | Journalisation et alerte d'erreurs | P2 | 💡 | Aucune journalisation applicative ; seuls les journaux de fonction Netlify existent par défaut ❓ |
 | EXG-NF-014 | Confidentialité | Conformité RGPD des données prospects (information, droit d'opposition, conservation) | P0 | ❓ | Non traité dans le dépôt ; désinscription gérée côté Brevo (statut `Désinscrit`) |
 | EXG-NF-015 | Internationalisation | Interface en français (formats `fr-FR`, euro) | P2 | ✅ | `toLocaleString('fr-FR')` |
+| EXG-NF-017 | Fiabilité | Lancement du sourcing → résultat fiable | P1 | 🟡 | Attentes fixes (3 min, 30 s) au lieu d'un suivi d'état Apify ; erreurs absorbées (`continueRegularOutput`) ; association des données par position (`$itemIndex`) entre nœuds, risque d'attribution erronée si un élément est perdu |
+| EXG-NF-018 | Coût | Maîtrise du coût des services payants (Apify, BuiltWith, Semrush, Anthropic, Brevo) | P1 | ❓ | Aucun plafond ni suivi ; synchronisation Brevo ré-envoie **tous** les leads validés toutes les 10 min |
+| EXG-NF-019 | Délivrabilité | Email sobre, expéditeur dédié, créneaux limités | P1 | ✅ | `Format Email HTML` (commentaire de test du 13/09/2026), `Compute Send Time` |
 | EXG-NF-016 | Dépendances externes | Polices Google Fonts chargées à l'exécution | P2 | 🟡 | `@import` Google Fonts (SA:5) ; impact RGPD/performance ❓ |
 
 ---
@@ -213,10 +263,11 @@ Chaque story renvoie à ses exigences et à ses critères d'acceptation (CA, §5
 | Dépendance | Type | Rôle | Dans le dépôt ? |
 |---|---|---|---|
 | Netlify (hébergement + Functions) | Plateforme | Sert l'app et le pont `/api/*` | Config seulement (`netlify.toml`) |
-| n8n (`N8N_BASE`) — webhooks `crm-bridge-list`, `crm-bridge-schema`, `crm-bridge-update`, `crm-bridge-brevo`, `search-leads` | Service interne | Intermédiaire Airtable/Brevo, sourcing | ❌ workflows absents |
+| n8n (`N8N_BASE`) — webhook `search-leads` | Service interne | Sourcing, scoring, envoi, synchro Brevo | ✅ analysé via WF (hors dépôt, contient des secrets) |
+| n8n — webhooks `crm-bridge-list`, `-schema`, `-update`, `-brevo` | Service interne | Intermédiaire Airtable/Brevo pour le CRM | ❌ workflow **non fourni** |
 | Airtable — base « Lead Pilot » | Données | Source de vérité des leads | ❌ schéma absent |
-| Brevo | Emailing | Envoi, statistiques, liste « Leads validés - GAC Pilot » | ❌ |
-| Outils de sourcing/scoring IA | Amont | Alimentent les colonnes enrichies, `Raison (scoring IA)`, `Service recommandé`, `Persona` | ❌ ❓ non identifiés |
+| Brevo | Emailing | Envoi (expéditeur kate@growthlab-agencycom.com), liste n° 3, statistiques | ✅ envoi et liste (WF) ; statistiques et retour des statuts ❌ non vus |
+| Apify (`code_crafter~leads-finder`, `builtwith~builtwith-official-technology-scraper`, `pro100chok~semrush-scraper`), API Anthropic (`claude-haiku-4-5-20251001`), Gmail (nœud de test désactivé) | Services tiers payants | Sourcing, technos, SEO, scoring et rédaction des emails | ✅ WF |
 | Google Fonts, Google Ads Transparency, Meta Ads Library, Calendly | Externes | Polices, liens de vérification, agenda affiché dans l'aperçu | URL dans le code |
 | Python 3, `npx netlify-cli` | Outillage | Build et déploiement manuels | README |
 
@@ -233,6 +284,7 @@ Dépendances entre exigences : EXG-F-052 ← EXG-F-072 (garde de colonne) ; EXG-
 | UC-03 | EXG-F-040, 041, 091 | [03 §4](03_cahier_des_charges.md) |
 | UC-04, UC-05 | EXG-F-042..047, 026 | |
 | UC-06..UC-09 | EXG-F-020..035, 050..056 | |
+| UC-03 (amont), UC-04 (aval) | EXG-A-001..044, RG-14..RG-22 | [04 §5bis](04_architecture_technique_et_systeme.md) |
 | UC-11, UC-12 | EXG-F-060, 081, 082 | |
 
 ---
@@ -250,9 +302,14 @@ Dépendances entre exigences : EXG-F-052 ← EXG-F-072 (garde de colonne) ; EXG-
 - Q3 : la limite « Taille < 50 » pour Google Ads est-elle une règle commerciale permanente ?
 - Q4 : le filtre de période du dashboard doit-il aussi s'appliquer à Brevo (EXG-F-017) ?
 - Q5 : quelles colonnes Airtable existent réellement aujourd'hui (EXG-F-071) ?
+- Q7 : le workflow est-il en production réelle (envoi aux vrais prospects) ? Quel est le plafond quotidien d'envois ?
+- Q8 : faut-il limiter la synchronisation Brevo aux leads non encore synchronisés ?
+- Q9 : faut-il écrire `Pack`, segment et services secondaires calculés par l'IA dans Airtable (EXG-A-010) ?
+- Q10 : doit-on ajouter `À qualifier - Sans site web` aux qualifications du CRM (RG-22) ?
 - Q6 : les leads provenant de sources externes (scraping, enrichissement) peuvent contenir du HTML : faut-il corriger les trous d'échappement de EXG-NF-004 en priorité ?
 
 **Décisions à valider**
 - D1 : prioriser EXG-F-081/082 (utilisateurs, rôles) vs EXG-F-060 (contacts) vs EXG-F-091 (suivi sourcing).
 - D2 : valider les niveaux de priorité de ce PRD.
+- D4 : sécuriser l'automatisation (EXG-A-041..044) avant toute montée en charge.
 - D3 : trancher RGPD (EXG-NF-014) avant toute extension du volume de prospection.

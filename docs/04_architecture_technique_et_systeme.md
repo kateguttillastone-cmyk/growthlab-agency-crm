@@ -2,9 +2,11 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 — architecture constatée au commit `7817213` |
+| **Version** | 1.1 — architecture constatée au commit `7817213` + workflow n8n `Lead Pilot` (noté **WF**) |
 | **Documents liés** | [Conception produit](01_conception_produit.md) · [PRD](02_product_requirements_document.md) · [Cahier des charges](03_cahier_des_charges.md) |
 | **Légende** | ✅ présent dans le dépôt · 🟡 partiel · 📄 décrit mais hors dépôt · ❌ absent · 💡 recommandation |
+
+> **Mise à jour 1.1 :** ajout du §5bis (architecture du workflow n8n), mise à jour des diagrammes, des constats de sécurité (§6) et de nouvelles recommandations AR-21 à AR-28. WF **ne contient pas** les webhooks `crm-bridge-*` du pont (❓).
 
 Abréviations : **SA** = `source-artifact.html`, **IDX** = `site/public/index.html`, **BR** = `site/netlify/functions/bridge.js`, **BS** = `build_site.py`, **NT** = `site/netlify.toml`.
 
@@ -21,7 +23,8 @@ GAC Pilot est une **application monopage statique** (HTML + CSS + JavaScript san
 | Présentation | HTML/CSS/JS vanilla en IIFE `"use strict"`, polices Google Fonts (Plus Jakarta Sans, JetBrains Mono) | SA, IDX |
 | Accès aux données (client) | Objet `API` (fetch POST JSON) + `makeDb()` imitant l'API Firestore-like de l'artifact (`collection/doc/onSnapshot/update/add`) | BS (bloc `SHIM`) |
 | Backend | Netlify Function Node, bundler esbuild | BR, NT |
-| Intégration | n8n (webhooks HTTP) — **hors dépôt** | 📄 |
+| Intégration | n8n : workflow `Lead Pilot` (webhook `search-leads`, déclencheur Airtable, planification) ✅ analysé via WF ; webhooks `crm-bridge-*` ❓ non fourni | WF |
+| Services tiers | Apify (3 acteurs), API Anthropic (`claude-haiku-4-5-20251001`), Brevo, Gmail (test, désactivé) | WF |
 | Données | Airtable, base « Lead Pilot » — **hors dépôt** | 📄 |
 | Emailing | Brevo — **hors dépôt** | 📄 |
 | Build / déploiement | Script Python + `netlify-cli` manuel | BS, README |
@@ -45,14 +48,15 @@ flowchart LR
         N8N[n8n<br/>webhooks crm-bridge-* et search-leads]
         AT[(Airtable<br/>base Lead Pilot)]
         BR[Brevo<br/>listes + statistiques]
-        SRC[Sourcing / enrichissement / scoring IA ❓]
+        SRC[Apify : leads-finder, BuiltWith, Semrush<br/>API Anthropic claude-haiku-4-5 ✅ WF]
     end
     UI -- "GET page" --> CDN
     UI -- "POST /api/{action}<br/>x-app-password" --> FN
     FN -- "POST + x-bridge-secret" --> N8N
     N8N <--> AT
     N8N <--> BR
-    SRC --> AT
+    N8N --> SRC
+    AT -. déclencheur chaque minute .-> N8N
     UI -. liens externes .-> EXT[Google Ads Transparency<br/>Meta Ads Library<br/>Google Fonts]
 ```
 
@@ -172,29 +176,75 @@ sequenceDiagram
     UI->>FN: POST /api/leads (rechargement complet)
 ```
 
-### 5.2 Flux « validation d'email → envoi » (partie amont 📄)
-```mermaid
-sequenceDiagram
-    actor U as Responsable
-    participant UI as SPA
-    participant A as Airtable
-    participant N as n8n (planifié 📄)
-    participant B as Brevo
-    U->>UI: édite l'email, Validation mail = Validé
-    UI->>A: écriture via bridge/n8n
-    Note over N,B: Délai annoncé ≈ 10 min (texte d'interface)
-    N->>A: détecte les leads Validé
-    N->>B: ajoute à la liste « Leads validés - GAC Pilot »
-    B-->>A: statut email (Envoyé/Délivré/Ouvert…) via n8n 📄
-    UI->>A: relecture (25 s) → pastille Statut email
-```
-Le mécanisme exact (déclencheur, fréquence, écriture retour des statuts, `Email envoyé le`) n'est **pas** dans le dépôt.
+### 5.2 Flux « validation d'email → envoi »
+Voir §5bis.B et §5bis.C (confirmés par WF). Le retour des statuts `Délivré / Ouvert / Bounce / Désinscrit` n'est écrit par aucun nœud de WF ❓.
 
 ### 5.3 Flux de sourcing
-Formulaire ICP → `POST /api/sourcing` → webhook `search-leads` → (📄) collecte, enrichissement, scoring IA → nouvelles lignes Airtable → apparaissent à la lecture suivante, avec toast « nouveaux leads » (`gacPilotSeenLeadIds`). Aucun retour d'état n'est prévu.
+Voir §5bis.A (détail confirmé par WF). Aucun retour d'état n'est prévu vers le CRM ; les nouveaux leads apparaissent à la lecture suivante (≤ 25 s) avec un toast « nouveaux leads » (`gacPilotSeenLeadIds`).
 
 ### 5.4 Aperçu d'email
-La fonction `construireApercuHtml` **recopie** le nœud n8n « Format Email HTML » (SA:1950-1977). L'agenda Calendly, l'expéditeur et la signature sont codés en dur (SA:1954, 1984). Risque de dérive documenté en [03 R9](03_cahier_des_charges.md).
+La fonction `construireApercuHtml` **recopie** le nœud n8n « Format Email HTML » (SA:1950-1977) ; comparaison avec WF : logique identique (découpe en paragraphes, agenda avant la formule de clôture, signature) ✅. L'agenda Calendly, l'expéditeur et la signature sont codés en dur (SA:1954, 1984). Risque de dérive documenté en [03 R9](03_cahier_des_charges.md).
+
+## 5bis. Architecture du workflow n8n « Lead Pilot » ✅ (WF)
+
+Workflow **actif**, 38 nœuds (dont 2 notes et 1 nœud Gmail désactivé), ordre d'exécution `v1`, aucun nœud épinglé. Trois chaînes indépendantes partagent la même table Airtable `BDD` (base « Lead Pilot »).
+
+### A. Sourcing, enrichissement, scoring
+```mermaid
+flowchart TD
+    W[Webhook POST search-leads] --> AL[Apify Launch<br/>acteur leads-finder]
+    AL --> WT[Wait 3 min fixe]
+    WT --> AR[Apify Results]
+    AR --> F{Filter<br/>téléphone +33 / 0033}
+    F --> I{company_domain<br/>renseigné ?}
+    I -- non --> EF1[Edit Fields1<br/>Qualification À qualifier - Sans site web<br/>Service Création de site]
+    EF1 --> CP[(Airtable upsert<br/>clé Email)]
+    I -- oui --> LOOP[Loop Over Items<br/>lots de 20]
+    LOOP --> SC[Scrape site web<br/>timeout 5 s] --> RS[Extraire réseaux sociaux]
+    RS --> BW[BuiltWith run] --> SS[SEO Signals] --> SM[Semrush run] --> W1[Wait 30 s]
+    W1 --> BWR[BuiltWith Results] --> CB[Code BuiltWith] --> SMR[Semrush Result] --> CS[Code Semrush]
+    CS --> BP[Build Prompt<br/>jointure par domaine] --> CL[Claude Scoring<br/>haiku-4-5, 1500 tokens]
+    CL --> PC[Parse Claude<br/>filet ERREUR_PARSING] --> EF[Edit Fields<br/>jointure par $itemIndex]
+    EF --> AU[(Airtable upsert<br/>clé Site web)] --> LOOP
+```
+Caractéristiques : attentes **fixes** (3 min, 30 s) ; lots Apify limités à 3 requêtes / 2,5 s ; pas de reprise ni d'alerte ; `onError = continueRegularOutput` sur 11 nœuds (erreurs absorbées) ; la jointure finale utilise la **position** (`$itemIndex`) alors que `Build Prompt` joint par domaine.
+
+### B. Envoi des emails validés
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AT as Airtable Trigger (1 min)
+    participant F as Filter1 (Email non vide)
+    participant C as Compute Send Time
+    participant W as Wait jusqu'au créneau
+    participant H as Format Email HTML
+    participant BR as Brevo (envoi)
+    participant M as Marquer Contacté
+    participant U as Upsert contact Brevo
+    AT->>F: lead Validé (champ Derniere validation)
+    par envoi
+        F->>C: calcul du créneau (lun 14h, mar-jeu 9h, Paris)
+        C->>W: sendAt (UTC)
+        W->>H: construit le HTML sobre
+        H->>BR: destinataire = Email du lead ❓ (nœud nommé « TEST MODE »)
+        BR->>M: Étape Contacté, Statut Envoyé, Email envoyé le
+    and liste
+        F->>U: upsert dans la liste Brevo n°3
+    end
+```
+Particularités : l'exécution **reste en attente** jusqu'au créneau (jusqu'à plusieurs jours selon le moment de la validation) ; aucune garde n'empêche un second envoi si le déclencheur se rejoue ; le nœud Gmail de test (destinataire fixe, objet préfixé `[TEST]`) est **désactivé**.
+
+### C. Synchronisation Brevo (toutes les 10 min)
+`Sync Brevo (10 min)` → `Chercher leads validés` (formule `AND({Validation mail}="Validé",{Email}!="")`, **sans filtre « déjà synchronisé »**) → `Normaliser` → `Upsert contact Brevo` (liste 3, lots de 4 toutes les 1,1 s, nouvelle tentative activée). Coût et durée croissent avec le nombre de leads validés.
+
+### Champs écrits dans Airtable par WF
+Prénom, Nom, Poste, Linkedin, Entreprise, Site web, Secteur, Taille, Linkedin Entreprise, Année de création, Téléphone (= téléphone d'**entreprise**), Adresse complète Entreprise, Etat, Ville, Pays (« Fra »), Description entreprise, Qualification, Date détection, Persona (= poste demandé), Source (« LinkedIn Lead Finder »), Service recommandé, Raison, Email objet, Email corps, Email, Trafic organique, Autorité domaine, Mots-clés organiques, Backlinks, CMS, E-commerce, Tracking GTM / GA4, Pixel Meta, Signal Google Ads, SSL, Version_prompt_email ; à l'envoi : Étape pipeline, Statut email, Email envoyé le. Le déclencheur lit `Validation mail` et `Derniere validation`.
+**Non écrits par WF** (donc produits ailleurs ou à la main ❓) : Note/Avis/Catégorie/GPS Google, statuts email ultérieurs, Pack, Valeur deal, STATUT/RELANCE, Responsable.
+
+### Credentials n8n et configuration
+Airtable (jeton), Brevo (API), Gmail (OAuth, nœud désactivé) via identifiants n8n ✅ ; Apify et Anthropic **en dur** ❌. Identifiants Airtable : base `Lead Pilot`, table `BDD`. Dépendances externes payantes : Apify (3 acteurs), Anthropic, Brevo.
+
+---
 
 ## 6. Authentification, autorisations, sécurité
 
@@ -203,7 +253,8 @@ La fonction `construireApercuHtml` **recopie** le nœud n8n « Format Email HTML
 | Authentification | Mot de passe unique `APP_PASSWORD` envoyé dans l'en-tête `x-app-password` à chaque requête ; comparaison `!==` ; pas de session, jeton, expiration ni limitation de débit |
 | Mémorisation | Mot de passe stocké en clair dans `localStorage.gac_pwd` (exposé à tout script de la page : lien direct avec les trous XSS) |
 | Autorisations | Aucune : tout utilisateur authentifié a tous les droits (voir [02 §1](02_product_requirements_document.md)) |
-| Secret serveur → n8n | `BRIDGE_SECRET` en variable d'environnement, jamais envoyé au navigateur ✅ ; **non envoyé** à `search-leads` |
+| Secret serveur → n8n | `BRIDGE_SECRET` en variable d'environnement, jamais envoyé au navigateur ✅ ; **non envoyé** à `search-leads`, dont le webhook **n'a aucune authentification** dans WF (seul `allowedOrigins` vers un ancien sous-domaine Netlify, inopérant face à un appel serveur) |
+| Secrets du workflow | ❌ Jeton Apify (6 nœuds) et clé Anthropic (`Claude Scoring`) en clair dans les paramètres de nœuds ; Airtable, Brevo et Gmail utilisent correctement des identifiants n8n |
 | Transport | HTTPS fourni par Netlify ; pas de HSTS explicite dans `NT` |
 | En-têtes | `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` ; pas de CSP |
 | XSS | `esc()` majoritaire ; trois rendus non échappés (voir [03 E2](03_cahier_des_charges.md)) |
@@ -238,6 +289,7 @@ La fonction `construireApercuHtml` **recopie** le nœud n8n « Format Email HTML
 
 | Sujet | État |
 |---|---|
+| Workflow n8n | Historique d'exécutions n8n ❓ ; aucun nœud d'alerte d'erreur dans WF ; erreurs absorbées sur 11 nœuds |
 | Journalisation applicative | ❌ aucune (`console.*` absent de `BR`) ; journaux de fonctions Netlify par défaut ❓ |
 | Métriques / alertes / suivi d'erreurs navigateur | ❌ |
 | Santé | Action `ping` (contrôle du mot de passe seulement ; ne teste pas n8n) |
@@ -294,6 +346,14 @@ Ces propositions **ne sont pas décidées** ; elles découlent des écarts du §
 | AR-18 | Accessibilité : `lang`, rôles et labels ARIA, navigation clavier du Kanban (alternative au glisser-déposer), focus visibles, audit de contrastes | RGAA/WCAG | P1 | Moyen | NF-009 |
 | AR-19 | Historique des activités (table Airtable « Activités » alimentée par n8n) | EXG-F-090, KPI de délais | P2 | Moyen | PRD |
 | AR-20 | Découpage progressif du monolithe en modules (données, rendu, grille, pipeline, email) avec bundler léger | Maintenabilité | P2 | Élevé | §2 |
+| AR-21 | **Révoquer et renouveler** jeton Apify + clé Anthropic ; les passer en identifiants n8n ; ne plus exporter/partager le JSON sans expurgation | Clés en clair dans WF | **P0** | Faible | E1, EXG-A-042 |
+| AR-22 | Lever l'ambiguïté test/production du nœud d'envoi : variable d'environnement n8n `SEND_MODE`, destinataire et préfixe d'objet conditionnés par elle, nœud renommé | Le nom, la note et la configuration se contredisent | **P0** | Faible | E2 |
+| AR-23 | Authentifier `search-leads` (en-tête secret vérifié dans n8n, envoyé par `bridge.js`) ; supprimer `allowedOrigins` obsolète | Webhook ouvert déclenchant des runs payants | **P0** | Faible | E3, AR-02 |
+| AR-24 | Garde anti double envoi : conditionner l'envoi à `Email envoyé le` vide, ou un statut « En file / Envoyé » posé avant l'attente | Re-déclenchement possible du trigger ; envoi différé de plusieurs jours | **P0** | Faible | E4 |
+| AR-25 | Synchro Brevo incrémentale (case « Synchro Brevo » ou date) au lieu de ré-envoyer tous les leads validés | Coût/temps croissants | P1 | Faible | E5 |
+| AR-26 | Remplacer les attentes fixes par un suivi d'état Apify (appel d'état + boucle bornée), alerte d'échec (nœud Error Trigger → notification) et désactiver `continueRegularOutput` là où l'erreur doit stopper | Données vides scorées silencieusement | P1 | Moyen | E6 |
+| AR-27 | Joindre par identifiant (domaine) dans `Edit Fields` plutôt que par `$itemIndex` | Risque d'attribuer les données d'un lead à un autre | P1 | Moyen | E8 |
+| AR-28 | Aligner catalogue (packs, qualifications, étapes) entre WF, Airtable et CRM via une source unique ; écrire `Pack` calculé ; exposer `size` et `fetch_count` dans le formulaire ICP | Vocabulaire divergent, données IA perdues | P1 | Faible–moyen | E7 |
 
 \* *Effort relatif* : indication qualitative de l'auteur pour hiérarchiser ; **aucune estimation en jours ou en coût** n'est fournie.
 
@@ -311,8 +371,8 @@ flowchart LR
 Cette cible conserve Airtable comme source de vérité (hypothèse H2 de [01](01_conception_produit.md)) ; une base applicative n'est justifiée que si la décision ARB-2 le demande.
 
 ## 13. Ordre de mise en œuvre suggéré
-1. **Sécurité immédiate** : AR-01, AR-02, AR-06 (faible effort, fort gain).
-2. **Fiabilité** : AR-13, AR-08, AR-09, AR-10, AR-15.
+1. **Sécurité immédiate** : AR-21 (rotation des clés), AR-22 (mode d'envoi), AR-23/AR-02 (webhook), AR-24 (double envoi), AR-01, AR-06 (faible effort, fort gain).
+2. **Fiabilité** : AR-25, AR-26, AR-27, AR-28, AR-13, AR-08, AR-09, AR-10, AR-15.
 3. **Accès** : AR-03/04, puis AR-05 si l'équipe grandit.
 4. **Passage à l'échelle et confort** : AR-11, AR-12, AR-14, AR-18.
 5. **Évolutions** : AR-16, AR-17, AR-19, AR-20 selon arbitrages ([03 §11.2](03_cahier_des_charges.md)).
@@ -322,6 +382,7 @@ Cette cible conserve Airtable comme source de vérité (hypothèse H2 de [01](01
 ## 14. Hypothèses, questions ouvertes et décisions à valider
 
 **Hypothèses**
+- H5 : WF est la version en production. Les formules Airtable et le comportement du déclencheur sont déduits de la configuration, non testés.
 - H1 : les webhooks n8n renvoient les formes de données attendues par `bridge.js` (tableau d'objets `{id, fields}`, objet `{colonnes}`, objet de stats) — déduites du code du pont.
 - H2 : le délai « ~10 minutes » entre validation et envoi Brevo est une tâche planifiée n8n (texte d'interface seulement).
 - H3 : Netlify fournit HTTPS et l'historique de déploiements (non vérifié).
@@ -329,7 +390,9 @@ Cette cible conserve Airtable comme source de vérité (hypothèse H2 de [01](01
 
 **Questions ouvertes**
 - Q1 : n8n et Airtable sont-ils sauvegardés / versionnés ? Qui y a accès ?
-- Q2 : `search-leads` est-il protégé côté n8n ? Quelles autres entrées publiques existent ?
+- Q2 : `search-leads` est protégé par quoi que ce soit en amont de n8n ? Quelles autres entrées publiques existent (webhooks `crm-bridge-*`) ?
+- Q7 : où sont les workflows `crm-bridge-*`, Google Maps et retour de statuts Brevo ?
+- Q8 : quelle est la valeur du champ Airtable `Derniere validation` (date de dernière modification de `Validation mail` ?) et se redéclenche-t-il sur une réécriture identique ?
 - Q3 : types exacts des colonnes Airtable (listes simples/multiples, booléens, dates) ?
 - Q4 : volume actuel de leads et limites de l'offre Airtable/Netlify utilisées ?
 - Q5 : où atterrissent les journaux de la fonction et combien de temps sont-ils conservés ?
