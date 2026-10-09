@@ -21,6 +21,8 @@ export const LEAD_SORT_KEYS = [
   "employees",
   "rating",
   "traffic",
+  "city",
+  "calls",
 ] as const;
 
 /** Valeur de filtre « aucune valeur » (ex. qualification vide). */
@@ -47,6 +49,9 @@ export const leadListQuerySchema = z.object({
   callStatus: withNone(CALL_STATUSES).optional(),
   sector: z.string().trim().max(100).optional(),
   promptVersion: z.string().trim().max(100).optional(),
+  /** Début du nom de la ville (sans tenir compte de la casse). */
+  city: z.string().trim().max(100).optional(),
+  hasPhone: bool.optional(),
   hasEmail: bool.optional(),
 });
 export type LeadListQuery = z.infer<typeof leadListQuerySchema>;

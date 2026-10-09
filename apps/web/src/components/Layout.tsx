@@ -30,6 +30,11 @@ export function Layout() {
           <NavLink to="/leads" className={linkClass}>
             Leads
           </NavLink>
+          {can("AGENT") && (
+            <NavLink to="/calls" className={linkClass}>
+              Appels
+            </NavLink>
+          )}
           {can("MANAGER") && (
             <NavLink to="/emails" className={linkClass}>
               E-mails

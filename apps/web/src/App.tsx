@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { AuditPage } from "./pages/AuditPage";
+import { CallsPage } from "./pages/CallsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EmailsPage } from "./pages/EmailsPage";
 import { ImportPage } from "./pages/ImportPage";
@@ -39,6 +40,14 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route
+          path="calls"
+          element={
+            <RequireRole minimum="AGENT">
+              <CallsPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="emails"
           element={

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loginSchema } from "./auth";
+import { planCall } from "./calls";
 import { CALL_STATUS_TO_STAGE, CALL_STATUSES, nextStageForCallStatus } from "./catalog";
 import { hasRole } from "./roles";
 import { createUserSchema } from "./users";
@@ -53,5 +54,40 @@ describe("nextStageForCallStatus", () => {
     expect(nextStageForCallStatus("Perdu", "RDV fixé")).toBe("Perdu");
     expect(nextStageForCallStatus("Contacté", "PB NUMERO")).toBe("Contacté");
     expect(nextStageForCallStatus("Répondu", null)).toBe("Répondu");
+  });
+});
+
+describe("planCall", () => {
+  const fresh = { stage: null, callStatus: null, followup1: null, followup2: null } as const;
+
+  it("range les essais successifs dans l'appel puis les relances, et devient injoignable au 3e sans réponse", () => {
+    const first = planCall(fresh, "NRP");
+    expect(first).toMatchObject({
+      slot: "callStatus",
+      callState: "À appeler",
+      stage: "Contacté",
+      attempts: 1,
+    });
+    const second = planCall({ ...fresh, callStatus: "NRP", stage: "Contacté" }, "REPONDEUR");
+    expect(second).toMatchObject({ slot: "followup1", callState: "À appeler", attempts: 2 });
+    const third = planCall({ ...fresh, callStatus: "NRP", followup1: "REPONDEUR", stage: "Contacté" }, "NRP");
+    expect(third).toMatchObject({ slot: "followup2", callState: "Injoignable", attempts: 3 });
+  });
+
+  it("les issues définitives sortent de la file", () => {
+    expect(planCall(fresh, "RDV fixé")).toMatchObject({ callState: "RDV fixé", stage: "RDV programmé" });
+    expect(planCall(fresh, "PI")).toMatchObject({ callState: "Pas intéressé", stage: "Perdu" });
+    expect(planCall(fresh, "PB NUMERO").callState).toBe("Injoignable");
+    expect(planCall(fresh, "A RAP").callState).toBe("Répondu");
+  });
+
+  it("ne fait jamais reculer l'étape du pipeline", () => {
+    expect(planCall({ ...fresh, stage: "RDV programmé" }, "NRP").stage).toBe("RDV programmé");
+    expect(planCall({ ...fresh, stage: "Gagné" }, "PI").stage).toBe("Gagné");
+  });
+
+  it("réécrit la dernière relance quand toutes les cases sont pleines", () => {
+    const full = { stage: "Contacté", callStatus: "NRP", followup1: "NRP", followup2: "NRP" } as const;
+    expect(planCall(full, "RDV fixé")).toMatchObject({ slot: "followup2", callState: "RDV fixé" });
   });
 });
