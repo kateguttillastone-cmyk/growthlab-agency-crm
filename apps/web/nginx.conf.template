@@ -16,6 +16,24 @@ server {
   # Aucun script ni style en ligne, aucune ressource tierce : une CSP stricte suffit.
   add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
+  # Import de fichiers : jusqu'à 12 Mo (l'API refuse au-delà de IMPORT_MAX_MB) et traitement plus long (quelques secondes
+  # à quelques dizaines de secondes). Ce bloc ne s'applique qu'à ce chemin ; le reste de l'API reste limité à 2 Mo / 60 s.
+  location /api/imports/ {
+    proxy_pass ${API_UPSTREAM}/imports/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_set_header X-Request-Id $request_id;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Content-Security-Policy;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Referrer-Policy;
+    proxy_read_timeout 300s;
+    proxy_request_buffering off;
+    client_max_body_size 12m;
+  }
+
   location /api/ {
     proxy_pass ${API_UPSTREAM}/;
     # l'API (Helmet) envoie déjà ces en-têtes avec d'autres valeurs : on garde ceux de nginx, une seule fois

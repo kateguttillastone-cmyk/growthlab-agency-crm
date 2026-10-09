@@ -16,8 +16,8 @@ déploiement automatique `dev` / `main`, sauvegarde, restauration, retour arriè
 ## Phase 2 — Leads ✅ (livrée)
 
 Livré : modèle `companies` / `contacts` / `leads` / `email_messages` / `suppressions` / `lead_events`
-([06](06-modele-donnees.md)) ; **import rejouable de l'export CSV d'Airtable** (simulation, rapport sans donnée personnelle,
-doublons fusionnés, 57 adresses exclues) ; API `GET /leads` (pagination, tri, 11 filtres, recherche texte), `GET /leads/facets`,
+([06](06-modele-donnees.md)) ; **import rejouable de l'export CSV d'Airtable**, en ligne de commande **et par l'interface** (menu Import : simulation,
+rapport sans donnée personnelle, confirmation, empreinte du fichier, journal d'audit ; doublons fusionnés, 57 adresses exclues) ; API `GET /leads` (pagination, tri, 11 filtres, recherche texte), `GET /leads/facets`,
 `GET /leads/:id`, `PATCH /leads/:id` (droits **par champ et par rôle**, historique, règle « le statut d'appel ne fait jamais
 reculer le pipeline ») ; écran **Leads** (vues rapides, filtres dans l'adresse, tri accessible, fiche latérale, historique).
 

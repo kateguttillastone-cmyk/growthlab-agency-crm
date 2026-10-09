@@ -35,6 +35,9 @@ export function Layout() {
               <NavLink to="/users" className={linkClass}>
                 Utilisateurs
               </NavLink>
+              <NavLink to="/import" className={linkClass}>
+                Import
+              </NavLink>
               <NavLink to="/audit" className={linkClass}>
                 Journal d'audit
               </NavLink>

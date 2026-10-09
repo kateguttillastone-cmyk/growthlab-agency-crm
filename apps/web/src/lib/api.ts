@@ -23,15 +23,16 @@ export function onUnauthorized(fn: Listener): () => void {
 
 export async function api<T = void>(
   path: string,
-  options: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+  options: { method?: string; body?: unknown; form?: FormData; signal?: AbortSignal } = {},
 ): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
       method: options.method ?? "GET",
       credentials: "same-origin",
+      // un FormData fixe lui-même son content-type (avec la frontière du multipart) : ne pas le forcer
       headers: options.body !== undefined ? { "content-type": "application/json" } : undefined,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
       signal: options.signal,
     });
   } catch {

@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { AuditPage } from "./pages/AuditPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ImportPage } from "./pages/ImportPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -42,6 +43,14 @@ export function App() {
           element={
             <RequireRole minimum="ADMIN">
               <UsersPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="import"
+          element={
+            <RequireRole minimum="ADMIN">
+              <ImportPage />
             </RequireRole>
           }
         />

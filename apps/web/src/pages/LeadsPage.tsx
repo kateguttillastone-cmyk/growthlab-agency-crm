@@ -2,11 +2,12 @@ import type { LeadFacets, LeadSummary, Page } from "@gac/shared";
 import { NONE } from "@gac/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { LeadDrawer } from "../components/LeadDrawer";
 import { Pager } from "../components/Pager";
 import { Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import {
   activePreset,
   contactName,
@@ -38,6 +39,7 @@ const COLUMNS: Array<{ key: SortKey | null; label: string }> = [
 ];
 
 export function LeadsPage() {
+  const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const filters = filtersFromParams(params);
   const page = Math.max(1, Number(params.get("page")) || 1);
@@ -105,6 +107,22 @@ export function LeadsPage() {
         {f ? `${f.total.toLocaleString("fr-FR")} prospects au total` : "Chargement…"}
         {list.data ? ` — ${list.data.total.toLocaleString("fr-FR")} correspondent aux filtres` : ""}
       </p>
+
+      {f?.total === 0 && (
+        <p className="mb-4 rounded-lg bg-white p-4 text-sm" role="note">
+          Aucun prospect pour l'instant.{" "}
+          {can("ADMIN") ? (
+            <>
+              <Link to="/import" className="font-semibold underline">
+                Importez l'export de l'ancienne base
+              </Link>{" "}
+              pour commencer.
+            </>
+          ) : (
+            "Demandez à un administrateur d'importer l'ancienne base."
+          )}
+        </p>
+      )}
 
       <nav aria-label="Vues rapides" className="mb-4 flex flex-wrap gap-2">
         {PRESETS.map((p) => (

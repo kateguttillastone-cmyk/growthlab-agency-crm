@@ -115,8 +115,13 @@ mesures valident le volume actuel ; elles ne disent rien d'un volume 100 fois su
 
 Le fichier reste **sur votre machine**, hors du dépôt (dossier `data/`, ignoré par Git).
 
+**Par l'interface** (administrateur) : menu **Import** → choisir le CSV → relire le rapport de simulation → **Importer** →
+confirmer. Maximum 10 Mo et 20 000 lignes (réglable : `IMPORT_MAX_MB`). Le fichier envoyé pour l'import réel doit avoir la même
+empreinte SHA-256 que celui simulé.
+
+**En ligne de commande** (aucune limite de taille) :
+
 ```bash
-# Docker seul (recommandé) : monter le dossier en lecture seule dans le conteneur de l'API
 docker compose up -d postgres
 docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/export.csv --dry-run   # simulation
 docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/export.csv             # import réel

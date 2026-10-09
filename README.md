@@ -78,7 +78,13 @@ DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 
 ## Importer l'ancienne base (une fois)
 
-Le CSV d'Airtable contient des données de prospects : il reste **sur votre machine**, hors du dépôt (`data/` est ignoré par Git).
+Le CSV d'Airtable contient des données de prospects : il ne va **jamais dans le dépôt** (`data/` et `*.csv` sont ignorés par Git).
+
+**Par l'interface** (administrateur) : menu **Import** → choisir le fichier → relire le rapport de simulation (rien n'est écrit) →
+**Importer** → confirmer. Le fichier n'est pas conservé ; l'opération est tracée dans le journal d'audit ; maximum 10 Mo et
+20 000 lignes. L'import réel exige l'empreinte du fichier simulé : c'est forcément celui que vous avez relu.
+
+**En ligne de commande** (gros fichiers, automatisation) :
 
 ```bash
 docker compose up -d postgres
@@ -86,7 +92,8 @@ docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/
 docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/export.csv             # import réel
 ```
 
-Rejouable sans doublon, sans écraser vos modifications. Analyse de l'export réel : [docs/11-analyse-export-airtable.md](docs/11-analyse-export-airtable.md).
+Dans les deux cas : rejouable sans doublon, sans écraser vos modifications. Analyse de l'export réel :
+[docs/11-analyse-export-airtable.md](docs/11-analyse-export-airtable.md).
 
 ## Règles de sécurité implémentées
 
@@ -99,6 +106,8 @@ Rejouable sans doublon, sans écraser vos modifications. Analyse de l'export ré
 - Contrôle de l'origine des requêtes qui modifient des données (en plus de `SameSite`).
 - Les autorisations sont appliquées **côté serveur** ; l'interface ne fait que masquer.
 - Journal d'audit des connexions, comptes et mots de passe (jamais de secret dans le journal).
+- Import de fichier : administrateurs seulement, taille et nombre de lignes bornés, encodage et format vérifiés, empreinte exigée entre la
+  simulation et l'import, un seul import à la fois, rapport sans donnée de prospect, aucun fichier conservé.
 - Leads : droits **par champ et par rôle** vérifiés côté serveur (un commercial ne peut pas changer la qualification, la valeur ni
   le responsable), historique de chaque modification, liens issus des données limités à http(s) (jamais `javascript:`).
 
