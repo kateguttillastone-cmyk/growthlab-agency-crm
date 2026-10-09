@@ -1,0 +1,85 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+# Une exécution à la fois par branche et par type d'événement. Seules les exécutions de pull request sont
+# annulées par une nouvelle poussée : celle d'un push sur main ou dev déclenche le déploiement et ne doit
+# jamais être annulée.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: gac, POSTGRES_PASSWORD: gac, POSTGRES_DB: gac_test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U gac" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://gac:gac@localhost:5432/gac_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Aucun secret dans les fichiers suivis
+        run: ./scripts/check-no-secrets.sh
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: Tests (API sur une vraie base PostgreSQL)
+        run: pnpm test
+      - run: pnpm build
+      - name: Migrations à jour (le schéma TypeScript ne diffère pas du SQL versionné)
+        working-directory: apps/api
+        run: |
+          pnpm db:generate --name ci_check || true
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "Le schéma (src/db/schema.ts) diffère des migrations versionnées : lancez « pnpm db:generate » et commitez le résultat."
+            git status --porcelain drizzle
+            exit 1
+          fi
+
+  docker:
+    name: Images Docker et configuration de production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configuration Compose de production valide
+        env:
+          POSTGRES_PASSWORD: x
+          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
+          DOMAIN: example.com
+        run: docker compose -f docker-compose.prod.yml config --quiet
+      - name: Construire les images
+        run: docker compose -f docker-compose.prod.yml build
+        env:
+          POSTGRES_PASSWORD: x
+          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
+          DOMAIN: example.com
+      - name: L'API démarre dans l'image et répond sur /health (via le conteneur web)
+        env:
+          POSTGRES_PASSWORD: x
+          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
+          DOMAIN: example.com
+          WEB_PORT: "3020"
+        run: |
+          docker compose -p smoke -f docker-compose.prod.yml up -d --wait --wait-timeout 120
+          curl -fsS http://127.0.0.1:3020/api/health
+          curl -fsS -o /dev/null http://127.0.0.1:3020/
+          docker compose -p smoke -f docker-compose.prod.yml down -v
