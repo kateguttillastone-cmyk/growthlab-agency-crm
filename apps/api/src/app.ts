@@ -12,6 +12,7 @@ import { type DnsResolver, systemResolver } from "./mail/address-check";
 import { auditRoutes } from "./modules/audit/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { callsRoutes } from "./modules/calls/routes";
+import { dashboardRoutes } from "./modules/dashboard/routes";
 import { emailsRoutes } from "./modules/emails/routes";
 import { healthRoutes } from "./modules/health/routes";
 import { importsRoutes } from "./modules/imports/routes";
@@ -93,6 +94,7 @@ export async function buildApp({ config, db, dnsResolver }: AppDeps): Promise<Fa
   await app.register(leadsRoutes);
   await app.register(emailsRoutes);
   await app.register(callsRoutes);
+  await app.register(dashboardRoutes);
   await app.register(importsRoutes);
 
   return app;
