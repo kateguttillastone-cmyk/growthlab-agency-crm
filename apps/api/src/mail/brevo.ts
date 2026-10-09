@@ -43,8 +43,9 @@ export function brevoSender(apiKey: string, timeoutMs = 15_000, fetchImpl: typeo
             subject: mail.subject,
             htmlContent: mail.html,
             textContent: mail.text,
-            headers: mail.headers,
-            tags: mail.tags,
+            // Brevo refuse un champ vide (« headers is blank ») : on n'envoie ces champs que s'ils ont une valeur
+            ...(Object.keys(mail.headers).length ? { headers: mail.headers } : {}),
+            ...(mail.tags.length ? { tags: mail.tags } : {}),
           }),
           signal: AbortSignal.timeout(timeoutMs),
         });
