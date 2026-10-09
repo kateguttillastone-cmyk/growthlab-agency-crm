@@ -13,32 +13,48 @@ déploiement automatique `dev` / `main`, sauvegarde, restauration, retour arriè
 
 À faire **une fois, côté serveur et GitHub** (pas dans le code) : [docs/08-deploiement.md](08-deploiement.md).
 
-## Phase 2 — Leads (EXG-F-020..035, EXG-F-090)
+## Phase 2 — Leads ✅ (livrée)
 
-- Modèle `companies` / `contacts` / `leads` / `enrichments` / `lead_events` ([06](06-modele-donnees.md)).
-- Import unique depuis Airtable (script reproductible et rejouable, rapport d'écarts) — [10](10-sortie-airtable-n8n.md).
-- Liste des leads **paginée, triée et filtrée côté serveur** ; recherche plein texte ; segments par service ; fiche lead.
-- Édition en place avec liste blanche de champs par rôle ; historique de chaque modification.
-- Interface : grille accessible (virtualisée), vues enregistrées par utilisateur.
+Livré : modèle `companies` / `contacts` / `leads` / `email_messages` / `suppressions` / `lead_events`
+([06](06-modele-donnees.md)) ; **import rejouable de l'export CSV d'Airtable**, en ligne de commande **et par l'interface** (menu Import : simulation,
+rapport sans donnée personnelle, confirmation, empreinte du fichier, journal d'audit ; doublons fusionnés, 57 adresses exclues) ; API `GET /leads` (pagination, tri, 11 filtres, recherche texte), `GET /leads/facets`,
+`GET /leads/:id`, `PATCH /leads/:id` (droits **par champ et par rôle**, historique, règle « le statut d'appel ne fait jamais
+reculer le pipeline ») ; écran **Leads** (vues rapides, filtres dans l'adresse, tri accessible, fiche latérale, historique).
 
-**Acceptation** : 50 000 leads synthétiques, p95 de la liste (page de 50, deux filtres) sous le seuil convenu (à fixer avec
-les utilisateurs) mesuré par k6 sur le VPS de test ; aucun champ « lecture seule » modifiable par l'API ; l'import rejoué
-deux fois ne crée aucun doublon.
+Mesuré sur les 1 971 leads réels (environnement de test, hors VPS) : liste, filtres et recherche en 4 à 12 ms.
+Détails et chiffres : [11](11-analyse-export-airtable.md).
 
-## Phase 3 — Pipeline et dashboard (EXG-F-010..014, EXG-F-050..056)
+**Reste de la phase 2** (non livré) : actions groupées sur les lignes filtrées, vues enregistrées par utilisateur,
+grille éditable en place, export CSV, choix du responsable (liste des utilisateurs pour les responsables).
 
-- Kanban accessible (glisser-déposer **et** clavier), règle statut d'appel → étape **sans recul** d'une étape plus avancée
-  (décision à valider, [02 EXG-F-054]), valeur des deals, packs issus de la table `packs`.
+> **Priorités revues d'après les données réelles ([11](11-analyse-export-airtable.md)).** Le Kanban et la valeur des deals
+> n'ont aucun usage à ce jour (0 ligne renseignée) ; l'équipe a besoin de **(1) la file d'appel de 783 prospects**, **(2) la
+> relecture de 363 e-mails**, **(3) la fiabilisation des adresses** (7,1 % de rebonds, 10 désinscrits). Ordre conseillé :
+> phase 4 (e-mails) avant le Kanban, et dans la phase 3 la file d'appel avant le tableau de bord.
+
+## Phase 3 — File d'appel, pipeline et dashboard (EXG-F-010..014, EXG-F-050..056)
+
+- **File d'appel** : prochain prospect à appeler (« À appeler », trié par zone et qualification), enregistrement de l'issue en
+  deux clics, relances 1 et 2 ; l'étape du pipeline suit **sans jamais reculer** (déjà implémenté côté API).
+- Kanban accessible (glisser-déposer **et** clavier), valeur des deals, packs issus de la table `packs` — à n'entreprendre
+  que si l'équipe s'en sert (aucun usage à ce jour).
 - KPI et entonnoirs calculés en SQL sur la période choisie.
 
-**Acceptation** : critères CA-02, CA-06, CA-07 du PRD passent en test automatisé.
+**Acceptation** : CA-02, CA-06, CA-07 du PRD passent en test automatisé ; un commercial traite 20 prospects de la file sans quitter l'écran.
 
-## Phase 4 — Emails (EXG-F-042..047, EXG-A-020..024, EXG-A-043)
+## Phase 4 — E-mails (EXG-F-042..047, EXG-A-020..024, EXG-A-043) — **prioritaire**
+
+*Pourquoi d'abord : 665 e-mails sont déjà partis à de vrais prospects, 7,1 % ont rebondi, 10 personnes se sont désinscrites, et
+520 nouveaux e-mails attendent d'être relus. Chaque envoi supplémentaire sans contrôle aggrave le risque pour la réputation de
+l'expéditeur.*
 
 - Validation unitaire et en masse (une requête SQL, transactionnelle) ; aperçu **rendu par l'API** (un seul gabarit).
 - File d'envoi pg-boss : créneaux (lundi 14 h, mardi–jeudi 9 h, Paris), anti-doublon par contrainte, `SEND_MODE=test|prod`.
 - Brevo : envoi, webhooks de statuts (délivré, ouvert, rebond, désinscription, plainte), table `suppressions`.
 - Mention d'opposition dans chaque email, adresse d'expéditeur dédiée, plafond quotidien configurable.
+- **Vérification des adresses avant envoi** (fournisseur de vérification, ou à défaut contrôle MX) : 47 des 665 adresses ont rebondi.
+- **Contrôle systématique de `suppressions`** (déjà alimentée par l'import avec 57 adresses) avant tout envoi.
+- Statuts de retour de Brevo (délivré, ouvert, rebond, désinscription, plainte) écrits en base par webhook.
 
 **Acceptation** : CA-13 (créneaux), un test qui lance **10 workers concurrents** sur le même message et vérifie un seul envoi,
 un test de désinscription qui bloque tout envoi ultérieur, et un envoi réel de bout en bout vers une boîte de test.

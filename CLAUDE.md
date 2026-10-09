@@ -25,4 +25,7 @@ référence fonctionnelle uniquement, ne pas la modifier. Vue d'ensemble : `READ
 - Toute logique métier nouvelle a un test d'intégration sur la vraie base ; pas de simulation de la base.
 - Interface : composants accessibles (labels, `role="alert"`, tableaux avec `caption` et `scope`), pas de style en ligne
   ni de ressource tierce (la CSP de nginx les bloque).
+- **Données réelles de prospects** : jamais dans le dépôt, les tests, les journaux ni les réponses (`data/` et `*.csv` sont ignorés).
+  Les tests utilisent des données fictives (`apps/api/test/fixtures/airtable-csv.ts`). Les analyses n'affichent que des agrégats.
+- Les liens issus des données (site web, LinkedIn…) passent par `safeUrl()` (http/https uniquement).
 - Branches : `feature/*` → PR vers `dev` → PR `dev` → `main`. Pas de push direct sur `dev` ni `main`.

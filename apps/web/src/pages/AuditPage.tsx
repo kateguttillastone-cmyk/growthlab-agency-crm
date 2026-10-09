@@ -1,9 +1,9 @@
 import type { Page } from "@gac/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Pager } from "../components/Pager";
 import { Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
-import { Pager } from "./UsersPage";
 
 interface AuditEvent {
   id: number;

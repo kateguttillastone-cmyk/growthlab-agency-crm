@@ -27,10 +27,16 @@ export function Layout() {
           <NavLink to="/" end className={linkClass}>
             Tableau de bord
           </NavLink>
+          <NavLink to="/leads" className={linkClass}>
+            Leads
+          </NavLink>
           {can("ADMIN") && (
             <>
               <NavLink to="/users" className={linkClass}>
                 Utilisateurs
+              </NavLink>
+              <NavLink to="/import" className={linkClass}>
+                Import
               </NavLink>
               <NavLink to="/audit" className={linkClass}>
                 Journal d'audit

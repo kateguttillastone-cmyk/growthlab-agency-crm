@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loginSchema } from "./auth";
-import { CALL_STATUS_TO_STAGE, CALL_STATUSES } from "./catalog";
+import { CALL_STATUS_TO_STAGE, CALL_STATUSES, nextStageForCallStatus } from "./catalog";
 import { hasRole } from "./roles";
 import { createUserSchema } from "./users";
 
@@ -34,5 +34,24 @@ describe("schémas", () => {
   it("refuse un mot de passe trop court à la création", () => {
     const r = createUserSchema.safeParse({ email: "a@b.fr", name: "A", role: "AGENT", password: "court" });
     expect(r.success).toBe(false);
+  });
+});
+
+describe("nextStageForCallStatus", () => {
+  it("fait avancer un lead sans étape", () => {
+    expect(nextStageForCallStatus(null, "NRP")).toBe("Contacté");
+    expect(nextStageForCallStatus(null, "RDV fixé")).toBe("RDV programmé");
+    expect(nextStageForCallStatus(null, "PI")).toBe("Perdu");
+  });
+  it("ne fait jamais reculer un lead plus avancé", () => {
+    expect(nextStageForCallStatus("Négociation", "NRP")).toBe("Négociation");
+    expect(nextStageForCallStatus("RDV effectué", "REPONDEUR")).toBe("RDV effectué");
+    expect(nextStageForCallStatus("Contacté", "RDV fixé")).toBe("RDV programmé");
+  });
+  it("ne touche jamais aux états finaux ni aux statuts sans correspondance", () => {
+    expect(nextStageForCallStatus("Gagné", "PI")).toBe("Gagné");
+    expect(nextStageForCallStatus("Perdu", "RDV fixé")).toBe("Perdu");
+    expect(nextStageForCallStatus("Contacté", "PB NUMERO")).toBe("Contacté");
+    expect(nextStageForCallStatus("Répondu", null)).toBe("Répondu");
   });
 });

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { ComponentProps, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { useId } from "react";
 
 const buttonBase =
@@ -8,7 +8,7 @@ export function Button({
   variant = "primary",
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" }) {
+}: ComponentProps<"button"> & { variant?: "primary" | "ghost" | "danger" }) {
   const styles = {
     primary: "bg-brand-600 text-white hover:bg-brand-700",
     ghost: "border border-brand-100 bg-white text-ink hover:bg-brand-50",

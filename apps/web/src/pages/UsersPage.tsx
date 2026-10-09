@@ -1,6 +1,7 @@
 import { PASSWORD_MIN_LENGTH, type Page, ROLE_LABELS, ROLES, type Role, type User } from "@gac/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
+import { Pager } from "../components/Pager";
 import { Button, Card, ErrorAlert, Field, SelectField, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -240,43 +241,5 @@ function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => voi
         </div>
       </form>
     </div>
-  );
-}
-
-export function Pager({
-  total,
-  offset,
-  pageSize,
-  onChange,
-}: {
-  total: number;
-  offset: number;
-  pageSize: number;
-  onChange: (offset: number) => void;
-}) {
-  const page = Math.floor(offset / pageSize) + 1;
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  return (
-    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm">
-      <span aria-live="polite">
-        {total} résultat(s) — page {page} / {pages}
-      </span>
-      <span className="space-x-2">
-        <Button
-          variant="ghost"
-          disabled={offset === 0}
-          onClick={() => onChange(Math.max(0, offset - pageSize))}
-        >
-          Précédent
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={offset + pageSize >= total}
-          onClick={() => onChange(offset + pageSize)}
-        >
-          Suivant
-        </Button>
-      </span>
-    </nav>
   );
 }

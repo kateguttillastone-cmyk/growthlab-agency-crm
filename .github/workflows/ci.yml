@@ -94,6 +94,15 @@ jobs:
           curl -fsS -c /tmp/cj -H "Origin: https://example.com" -H 'content-type: application/json' \
             -d '{"email":"admin@example.com","password":"xxxxxxxxxxxx"}' http://127.0.0.1:3020/api/auth/login
           curl -fsS -b /tmp/cj http://127.0.0.1:3020/api/auth/me
+          # import de fichier à travers nginx : un petit fichier passe ; un fichier de plus de 2 Mo n'est PAS refusé par nginx
+          # (limite relevée sur ce chemin) mais par l'API, qui répond 422 « trop de lignes »
+          printf 'Entreprise,Email\nSociete Test,\n' > /tmp/petit.csv
+          curl -fsS -b /tmp/cj -H "Origin: https://example.com" -F mode=preview -F file=@/tmp/petit.csv \
+            http://127.0.0.1:3020/api/imports/airtable
+          { echo Entreprise; for i in $(seq 1 300000); do echo "Societe $i"; done; } > /tmp/gros.csv
+          code="$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/cj -H "Origin: https://example.com" \
+            -F mode=preview -F file=@/tmp/gros.csv http://127.0.0.1:3020/api/imports/airtable)"
+          [ "$code" = 422 ] || { echo "import d'un gros fichier : attendu 422 (trop de lignes), reçu $code"; exit 1; }
       - name: La commande de développement « docker compose up --build » démarre aussi (docker-compose.yml)
         run: |
           docker compose -p devsmoke up -d --build --wait --wait-timeout 240

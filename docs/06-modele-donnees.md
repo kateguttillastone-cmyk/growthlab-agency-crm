@@ -2,179 +2,176 @@
 
 | | |
 |---|---|
-| **Statut** | Socle (phase 1) **implémenté** : `users`, `sessions`, `audit_events` (`apps/api/src/db/schema.ts`). Le reste est la **cible** des phases 2 à 5, à affiner à chaque phase. |
-| **Liens** | [Feuille de route](07-feuille-de-route.md) · [Sortie d'Airtable](10-sortie-airtable-n8n.md) · exigences : [02 — PRD](02_product_requirements_document.md) |
+| **Statut** | **Implémenté** : `users`, `sessions`, `audit_events` (phase 1) ; `companies`, `contacts`, `leads`, `email_messages`, `suppressions`, `lead_events` (phase 2). **Prévu** : `sourcing_runs`, `packs`, séquences d'e-mails (phases 4 et 5). Source de vérité du schéma : `apps/api/src/db/schema.ts`. |
+| **Liens** | [Feuille de route](07-feuille-de-route.md) · [Analyse de l'export réel](11-analyse-export-airtable.md) · [Sortie d'Airtable](10-sortie-airtable-n8n.md) |
 
 ## 1. Principes
 
-1. **PostgreSQL est la source de vérité.** Plus d'Airtable ; les services externes (Brevo, Apify) sont des sous-traitants.
-2. **Entreprise ≠ contact ≠ lead.** L'ancienne table à 55 colonnes mélangeait tout. Une entreprise a plusieurs contacts ;
-   un lead est le suivi commercial d'un contact.
-3. **Tout changement important laisse une trace** (`lead_events`), ce qui permet les KPI de délais et de conversion.
-4. **Les données enrichies gardent leur provenance** (`enrichments.source`, `fetched_at`) pour savoir quand les rafraîchir.
-5. **L'anti-doublon d'envoi est une contrainte de base de données**, pas une convention de code.
-6. **Les valeurs de listes sont des types** (énumérations PostgreSQL alimentées par `packages/shared/src/catalog.ts`).
+1. **PostgreSQL est la source de vérité.** Airtable n'est plus qu'une source d'import.
+2. **Entreprise ≠ contact ≠ lead.** L'ancienne table à 57 colonnes mélangeait tout. Sur l'export réel : 6 sites web portent
+   plusieurs contacts, et 783 prospects Google Maps n'ont **aucune personne** (seulement un standard). Une entreprise a 0 à n
+   contacts ; un lead est le suivi commercial d'un contact **ou** de l'entreprise seule.
+3. **Les listes de valeurs sont des types** (énumérations PostgreSQL) construits à partir du catalogue partagé
+   `packages/shared/src/catalog.ts` : une définition pour la base, l'API et l'interface.
+4. **Inconnu ≠ non.** Les indicateurs techniques d'un site (HTTPS, GA4…) valent `NULL` tant que le site n'a pas été mesuré.
+5. **Tout changement laisse une trace** (`lead_events`), écrite dans la même transaction que la modification.
+6. **L'anti-doublon est une contrainte de base de données**, pas une convention de code.
+7. **Les données importées ne sont jamais écrasées** : après l'import, l'application fait foi.
 
-## 2. Schéma cible
+## 2. Schéma
 
 ```mermaid
 erDiagram
     users ||--o{ sessions : possede
     users ||--o{ audit_events : "est l'auteur de"
     users ||--o{ leads : "est responsable de"
+    users ||--o{ lead_events : "est l'auteur de"
     companies ||--o{ contacts : emploie
-    companies ||--o{ enrichments : "est décrite par"
+    companies ||--o{ leads : "fait l'objet de"
     contacts ||--o| leads : "fait l'objet de"
     leads ||--o{ lead_events : historise
     leads ||--o{ email_messages : recoit
-    users ||--o{ sourcing_runs : lance
-    sourcing_runs ||--o{ leads : produit
-    packs ||--o{ leads : "est visé par"
-    email_messages }o--|| suppressions : "est bloqué par"
 
     companies {
         uuid id PK
         text name
-        text domain "normalisé, unique si non vide"
+        text name_key "nom normalisé"
+        text domain "unique si renseigné"
         text website
         text sector
-        int employees_min
-        int employees_max
+        int employees "effectif exact"
         int founded_year
         text address
         text city
+        text postal_code
         text region
-        text country
-        text phone
+        text country "FR"
+        text phone "format +33"
         text linkedin_url
         text description
-        text source
+        text google_category
+        numeric google_rating
+        int google_reviews
+        text google_maps_url
+        text gps
+        int organic_traffic
+        int domain_authority
+        int backlinks
+        text cms
+        bool is_ecommerce "null = non mesuré"
+        bool has_gtm
+        bool has_ga4
+        bool has_meta_pixel
+        bool has_google_ads
+        bool has_ssl
     }
     contacts {
         uuid id PK
         uuid company_id FK
         text first_name
         text last_name
+        text name_key
         text job_title
-        text email "unique sur lower(email)"
-        text phone
+        text email "minuscules, unique"
         text linkedin_url
     }
     leads {
         uuid id PK
-        uuid contact_id FK "unique"
         uuid company_id FK
+        uuid contact_id FK "unique, nul = lead d'entreprise"
         uuid owner_id FK
-        uuid sourcing_run_id FK
-        qualification qualification "Chaud/Tiède/Froid/À qualifier"
+        text source
+        timestamptz detected_at
+        qualification qualification "nul = à qualifier"
         text qualification_reason
-        segment segment "PME/TPE ou E-commerçant"
-        text recommended_service
-        uuid pack_id FK
+        lead_service service
+        text service_detail
         pipeline_stage stage
         numeric deal_value
+        text pack
         call_status call_status
         call_status followup_1
         call_status followup_2
+        call_state call_state
         text comment
         text next_action
-        timestamptz detected_at
+        text import_key "unique"
     }
-    enrichments {
+    email_messages {
         uuid id PK
-        uuid company_id FK
-        text kind "web_tech, seo, maps"
-        jsonb data
-        text source
-        timestamptz fetched_at
+        uuid lead_id FK
+        int sequence_no "unique avec lead_id"
+        text subject
+        text body
+        validation_status validation
+        timestamptz validated_at
+        email_status status "nul = pas envoyé"
+        date sent_on
+        text prompt_version
+    }
+    suppressions {
+        text email PK
+        suppression_reason reason "unsubscribe, bounce, complaint, manual"
+        text note
+        timestamptz at
     }
     lead_events {
         bigint id PK
         uuid lead_id FK
         uuid actor_id FK
-        text type "stage_changed, validated, call_logged…"
-        text from_value
-        text to_value
+        text type
         jsonb data
         timestamptz at
-    }
-    email_messages {
-        uuid id PK
-        uuid lead_id FK
-        int sequence_no "1 = premier email"
-        text subject
-        text body
-        validation_status validation
-        uuid validated_by FK
-        timestamptz validated_at
-        email_status status "draft, queued, sending, sent, delivered, opened, bounced, unsubscribed, failed"
-        timestamptz scheduled_for
-        timestamptz sent_at
-        text provider_message_id
-        text prompt_version
-    }
-    suppressions {
-        text email PK "minuscules"
-        text reason "unsubscribe, bounce, complaint, manual"
-        timestamptz at
-    }
-    sourcing_runs {
-        uuid id PK
-        uuid requested_by FK
-        jsonb icp
-        text status "pending, running, done, failed"
-        text apify_run_id
-        int found
-        int created
-        numeric cost_estimate
-        text error
-        timestamptz started_at
-        timestamptz finished_at
-    }
-    packs {
-        uuid id PK
-        text name
-        text segment
-        numeric monthly_price "null = sur devis"
-        bool active
     }
     users {
         uuid id PK
         text email
         text name
         user_role role
-        text password_hash
     }
     sessions {
         uuid id PK
         uuid user_id FK
-        text token_hash
     }
     audit_events {
         bigint id PK
         uuid actor_id FK
         text action
-        text entity_type
     }
 ```
 
-## 3. Contraintes importantes
+## 3. Choix qui découlent des données réelles
+
+| Choix | Pourquoi (voir [11](11-analyse-export-airtable.md)) |
+|---|---|
+| `employees` est un **entier** | `Taille` contient des effectifs exacts (1 à 355 000), pas des tranches |
+| Colonnes **typées** sur `companies` (pas de JSON « enrichissement ») | Elles sont filtrées et triées par l'interface ; un schéma explicite protège des données incohérentes |
+| `call_status` **et** `call_state` | Deux usages distincts coexistaient : résultat d'appel (NRP, PI…) et file d'appel (« À appeler ») |
+| `service` = 3 valeurs + `service_detail` | 25 formulations libres de 3 services ; la précision (Search, Shopping, suivi des conversions) est gardée à part |
+| `qualification` **nul** = à qualifier | « À qualifier - Sans site web » (783) n'est pas une qualification |
+| `email_messages.sent_on` est une **date** | L'ancienne base ne conserve pas l'heure d'envoi ; la phase 4 ajoutera l'horodatage |
+| Pas de colonne « mots-clés organiques » | Toujours égale à 0 : source défaillante |
+| `suppressions` alimentée dès l'import | 47 rebonds et 10 désinscrits ne doivent plus jamais recevoir d'e-mail |
+
+## 4. Contraintes importantes
 
 | Besoin | Mécanisme |
 |---|---|
-| Pas de doublon de contact | `UNIQUE (lower(email))` sur `contacts` ; `UNIQUE (domain)` partiel sur `companies` (domaine non vide) |
-| **Jamais deux envois du même email** | `UNIQUE (lead_id, sequence_no)` sur `email_messages` ; l'envoi « réclame » le message par `UPDATE … SET status='sending' WHERE id=$1 AND status='queued' RETURNING …` (une seule ligne retournée = un seul worker envoie) |
-| Pas d'envoi à une personne désinscrite | Contrôle dans la transaction d'envoi contre `suppressions` ; ajout automatique sur désinscription, plainte ou rebond définitif (webhooks Brevo) |
-| Valeur du deal cohérente | `CHECK (deal_value IS NULL OR deal_value >= 0)` ; `numeric(12,2)` (jamais de flottant pour l'argent) |
-| Étape du pipeline valide | Énumération PostgreSQL (`pipeline_stage`) alimentée par le catalogue partagé ; un test vérifie que les deux restent synchronisés |
-| Historique fiable | Les `lead_events` sont insérés **dans la même transaction** que la modification du lead |
-| Recherche rapide | Index sur `leads (stage)`, `(qualification)`, `(owner_id)`, `(detected_at DESC)` ; index trigramme (`pg_trgm`) sur les colonnes recherchées en texte libre |
-| Conservation RGPD | Colonnes `created_at`; tâche planifiée de purge/anonymisation selon la durée de conservation à décider ([01 §10](01_conception_produit.md)) |
+| Une entreprise n'existe qu'une fois | `UNIQUE (domain)` si renseigné ; sinon `UNIQUE (name_key, coalesce(phone, ''))`. **Le téléphone seul ne suffit pas** : 9 cas sur 17 numéros en double concernaient des entreprises différentes (standards, franchises) |
+| Un contact n'existe qu'une fois | `UNIQUE (email)` si renseigné ; sinon `UNIQUE (company_id, name_key)` |
+| Un seul lead par contact (ou par entreprise sans contact) | Index uniques partiels `leads_contact_uq` et `leads_company_only_uq` |
+| Import rejouable | `UNIQUE (import_key)` ; l'import ne modifie jamais une ligne existante |
+| **Jamais deux e-mails identiques à un lead** | `UNIQUE (lead_id, sequence_no)` ; en phase 4, l'envoi « réclame » le message par `UPDATE … WHERE status IS NULL AND validation = 'Validé' RETURNING …` (une seule ligne retournée = un seul envoi) |
+| Pas d'envoi à une personne exclue | Contrôle de `suppressions` dans la transaction d'envoi (phase 4) |
+| Valeur du deal cohérente | `CHECK (deal_value IS NULL OR deal_value >= 0)`, `numeric(12,2)` (jamais de flottant pour l'argent) |
+| Étape et qualification valides | Énumérations PostgreSQL alimentées par le catalogue partagé |
+| Historique fiable | `lead_events` écrit dans la même transaction que la modification |
+| Recherche rapide | Index sur `detected_at`, `stage`, `qualification`, `service`, `owner_id`, `sector` ; mesuré : 4 à 12 ms sur 1 971 leads. Un index trigramme (`pg_trgm`) sera à envisager avec la montée en volume |
 
-## 4. Règles de migration
+## 5. Règles de migration
 
-- Une migration par changement, générée par `pnpm db:generate`, relue, commitée avec le code.
-- **Expand / contract** : ajouter d'abord (colonne nullable, nouvelle table), faire basculer le code, supprimer dans un
-  déploiement ultérieur. La version N-1 du code doit fonctionner avec le schéma N : c'est ce qui rend le retour arrière sûr.
+- Une migration par changement, générée par `pnpm db:generate`, relue, commitée avec le code (la CI échoue sinon).
+- **Expand / contract** : ajouter d'abord, supprimer dans un déploiement ultérieur. La version N-1 du code doit fonctionner
+  avec le schéma N : c'est ce qui rend le retour arrière sûr.
 - Jamais de modification d'une migration déjà fusionnée dans `dev` ou `main`.
 - Les migrations tournent au démarrage de l'API, protégées par un verrou consultatif PostgreSQL.
