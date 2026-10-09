@@ -1,5 +1,8 @@
 # 03 — Cahier des charges : GAC Pilot
 
+> ℹ️ **Contexte (octobre 2026).** Les écarts E1 à E14 décrivent l'application héritée (`legacy/`). Les correctifs urgents du workflow n8n sont détaillés dans [10 §2](10-sortie-airtable-n8n.md) ; le reste est traité par la reconstruction ([07](07-feuille-de-route.md)).
+
+
 | | |
 |---|---|
 | **Version** | 1.1 — cahier des charges rétro-documenté (commit `7817213` + workflow n8n `Lead Pilot`, noté **WF**) |

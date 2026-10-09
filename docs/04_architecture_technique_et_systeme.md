@@ -1,5 +1,8 @@
 # 04 — Architecture technique & architecture système : GAC Pilot
 
+> ℹ️ **Contexte (octobre 2026).** La partie A décrit l'architecture **héritée** (`legacy/`). L'architecture retenue pour la suite est celle du [README](../README.md), du [modèle de données](06-modele-donnees.md) et du [déploiement](08-deploiement.md).
+
+
 | | |
 |---|---|
 | **Version** | 1.1 — architecture constatée au commit `7817213` + workflow n8n `Lead Pilot` (noté **WF**) |

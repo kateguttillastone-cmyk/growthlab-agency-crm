@@ -1,5 +1,8 @@
 # 01 — Conception produit : GAC Pilot (CRM GrowthLab Agency)
 
+> ℹ️ **Contexte (octobre 2026).** Ce document décrit l'application **héritée** (dossier `legacy/`). Le dépôt contient désormais un nouveau socle (API + PostgreSQL + React) : voir le [README](../README.md) et la [feuille de route](07-feuille-de-route.md). Les exigences et règles métier restent la référence fonctionnelle.
+
+
 | | |
 |---|---|
 | **Version** | 1.1 — mise à jour après analyse du workflow n8n `Lead Pilot` (v1.0 : dépôt seul) |

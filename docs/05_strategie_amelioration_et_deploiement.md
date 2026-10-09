@@ -1,5 +1,8 @@
 # 05 — Stratégie d'amélioration et de déploiement à grande échelle : GAC Pilot
 
+> ℹ️ **Contexte (octobre 2026).** Cette stratégie a été retenue ; la décision « sortie d'Airtable » est appliquée de façon directe (voir [10](10-sortie-airtable-n8n.md)) et le socle est livré (phase 1 de la [feuille de route](07-feuille-de-route.md)). Le déploiement suit le modèle `deploy.sh` des projets Lingora et Inventory plutôt qu'une promotion d'images GHCR : c'est plus simple à exploiter ; la promotion d'image reste une amélioration possible.
+
+
 | | |
 |---|---|
 | **Version** | 1.0 |

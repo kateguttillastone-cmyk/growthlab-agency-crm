@@ -1,5 +1,8 @@
 # 02 — Product Requirements Document (PRD) : GAC Pilot
 
+> ℹ️ **Contexte (octobre 2026).** Ce PRD reste la référence fonctionnelle ; les exigences se réalisent dans le nouveau socle selon la [feuille de route](07-feuille-de-route.md). Les références `SA:`/`BR`/`BS` désignent des fichiers de `legacy/`.
+
+
 | | |
 |---|---|
 | **Version** | 1.1 — PRD rétro-documenté (commit `7817213` + workflow n8n `Lead Pilot`, noté **WF**) |
