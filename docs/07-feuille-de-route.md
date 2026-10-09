@@ -34,13 +34,19 @@ grille éditable en place, export CSV, choix du responsable (liste des utilisate
 
 ## Phase 3 — File d'appel, pipeline et dashboard (EXG-F-010..014, EXG-F-050..056)
 
-- **File d'appel** : prochain prospect à appeler (« À appeler », trié par zone et qualification), enregistrement de l'issue en
+- **File d'appel (réalisée : page « Appels »)** : prochain prospect à appeler (« À appeler », trié par zone et qualification), enregistrement de l'issue en
   deux clics, relances 1 et 2 ; l'étape du pipeline suit **sans jamais reculer** (déjà implémenté côté API).
 - Kanban accessible (glisser-déposer **et** clavier), valeur des deals, packs issus de la table `packs` — à n'entreprendre
   que si l'équipe s'en sert (aucun usage à ce jour).
 - KPI et entonnoirs calculés en SQL sur la période choisie.
 
-**Acceptation** : CA-02, CA-06, CA-07 du PRD passent en test automatisé ; un commercial traite 20 prospects de la file sans quitter l'écran.
+**Acceptation** : CA-02, CA-06, CA-07 du PRD passent en test automatisé ; un commercial traite 20 prospects de la file sans quitter l'écran
+(vérifié dans Chromium sur des données fictives pour la file d'appel).
+
+*Règles de la file d'appel* : le résultat de l'appel va dans la première case libre (appel, relance 1, relance 2) ; rendez-vous,
+refus, mauvais numéro et « à rappeler » sortent de « À appeler » ; absence de réponse, répondeur et barrage y restent jusqu'à
+3 essais, puis « Injoignable » ; l'étape du pipeline ne recule jamais ; la note s'ajoute au commentaire sans l'effacer. Tout est décidé
+sur l'état verrouillé du lead (`POST /leads/:id/call`) : deux appels simultanés ne s'écrasent pas.
 
 ## Phase 4 — E-mails (EXG-F-042..047, EXG-A-020..024, EXG-A-043) — **prioritaire**
 

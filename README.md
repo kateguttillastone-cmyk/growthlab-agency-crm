@@ -76,6 +76,12 @@ docker compose exec postgres createdb -U gac gac_test
 DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 ```
 
+## File d'appel
+
+Menu **Appels** (agents et plus) : un prospect à la fois, les jamais-appelés d'abord et regroupés par ville, numéro cliquable,
+notes précédentes, puis l'issue de l'appel en un clic (le suivant s'affiche aussitôt). Onglet « À rappeler » pour les rappels
+promis ; filtres par ville et qualification ; « Passer » pour laisser un prospect de côté. Règles : `docs/07-feuille-de-route.md` (phase 3).
+
 ## Relire et valider les e-mails
 
 Menu **E-mails** (responsables et administrateurs) : file des e-mails à relire (les plus chauds d'abord), aperçu exact de l'e-mail

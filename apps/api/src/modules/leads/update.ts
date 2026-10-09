@@ -25,6 +25,8 @@ export async function updateLead(
   leadId: string,
   input: UpdateLeadInput,
   actor: { id: string; role: Role },
+  /** Complète la modification à partir de l'état verrouillé du lead (ex. choix de la case d'un appel). */
+  derive?: (current: typeof leads.$inferSelect) => { input: UpdateLeadInput; autoStageReason?: string },
 ): Promise<void> {
   for (const field of Object.keys(input) as Array<keyof UpdateLeadInput>) {
     if (!hasRole(actor.role, LEAD_FIELD_MIN_ROLE[field])) {
@@ -45,8 +47,14 @@ export async function updateLead(
       if (!owner) throw conflict("Ce responsable n'existe pas ou son compte est désactivé");
     }
 
-    const next: UpdateLeadInput = { ...input };
-    let autoStage = false;
+    const derived = derive?.(current);
+    const next: UpdateLeadInput = { ...input, ...derived?.input };
+    for (const field of Object.keys(next) as Array<keyof UpdateLeadInput>) {
+      if (!hasRole(actor.role, LEAD_FIELD_MIN_ROLE[field])) {
+        throw forbidden(`Votre rôle ne permet pas de modifier « ${field} »`);
+      }
+    }
+    let autoStage = derived?.autoStageReason !== undefined;
     // Règle métier : un statut d'appel fait avancer l'étape du pipeline, jamais reculer (sauf choix explicite).
     if (input.callStatus !== undefined && input.stage === undefined) {
       const stage = nextStageForCallStatus(current.stage, input.callStatus);
@@ -69,7 +77,7 @@ export async function updateLead(
           from: brief(from),
           to: brief(to),
           ...(field === "stage" && autoStage
-            ? { auto: true, reason: `statut d'appel « ${input.callStatus} »` }
+            ? { auto: true, reason: derived?.autoStageReason ?? `statut d'appel « ${input.callStatus} »` }
             : {}),
         },
       });
