@@ -1,4 +1,4 @@
-import type { LeadDetail, LeadEvent, LeadSummary } from "@gac/shared";
+import type { LeadDetail, LeadEvent, LeadSummary, SuppressionReason } from "@gac/shared";
 import type { companies, contacts, emailMessages, leads } from "../../db/schema";
 
 type Lead = typeof leads.$inferSelect;
@@ -11,9 +11,12 @@ export interface JoinedRow {
   company: Company;
   contact: Contact | null;
   message: Message | null;
+  /** Motif d'exclusion de l'adresse du contact (liste de suppression), le cas échéant. */
+  blockedReason: SuppressionReason | null;
+  validatorName: string | null;
 }
 
-export function toSummary({ lead, company, contact, message }: JoinedRow): LeadSummary {
+export function toSummary({ lead, company, contact, message, blockedReason }: JoinedRow): LeadSummary {
   return {
     id: lead.id,
     company: {
@@ -44,7 +47,15 @@ export function toSummary({ lead, company, contact, message }: JoinedRow): LeadS
     callStatus: lead.callStatus,
     callState: lead.callState,
     detectedAt: lead.detectedAt.toISOString(),
-    email: message && { validation: message.validation, status: message.status, sentOn: message.sentOn },
+    email: message && {
+      validation: message.validation,
+      status: message.status,
+      sentOn: message.sentOn,
+      subject:
+        message.subject && message.subject.length > 120 ? message.subject.slice(0, 120) : message.subject,
+      promptVersion: message.promptVersion,
+      blockedReason,
+    },
   };
 }
 
@@ -90,7 +101,9 @@ export function toDetail(
       subject: message.subject,
       body: message.body,
       validatedAt: message.validatedAt?.toISOString() ?? null,
+      validatedBy: row.validatorName,
       promptVersion: message.promptVersion,
+      updatedAt: message.updatedAt.toISOString(),
     },
     events,
   };

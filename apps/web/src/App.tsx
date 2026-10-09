@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { AuditPage } from "./pages/AuditPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { EmailsPage } from "./pages/EmailsPage";
 import { ImportPage } from "./pages/ImportPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -38,6 +39,14 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route
+          path="emails"
+          element={
+            <RequireRole minimum="MANAGER">
+              <EmailsPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="users"
           element={

@@ -1,20 +1,19 @@
 import {
-  type LeadEvent,
   leadDetailSchema,
   leadFacetsSchema,
   leadListQuerySchema,
   leadSummarySchema,
   updateLeadSchema,
 } from "@gac/shared";
-import { count, desc, eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { companies, contacts, emailMessages, leadEvents, leads, users } from "../../db/schema";
+import { companies, contacts, emailMessages, leads } from "../../db/schema";
 import { authOf } from "../../lib/assert";
-import { notFound } from "../../lib/errors";
-import { type JoinedRow, toDetail, toSummary } from "./dto";
+import { toSummary } from "./dto";
 import { leadFilters, leadOrder } from "./queries";
+import { leadReader } from "./read";
 import { updateLead } from "./update";
 
 const idParams = z.object({ id: z.uuid() });
@@ -31,17 +30,7 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
   const viewer = app.requireRole("VIEWER");
   const agent = app.requireRole("AGENT");
 
-  /** Lead, entreprise, contact et premier e-mail : la forme de base de toutes les lectures. */
-  const joined = () =>
-    db
-      .select({ lead: leads, company: companies, contact: contacts, message: emailMessages })
-      .from(leads)
-      .innerJoin(companies, eq(companies.id, leads.companyId))
-      .leftJoin(contacts, eq(contacts.id, leads.contactId))
-      .leftJoin(
-        emailMessages,
-        sql`${emailMessages.leadId} = ${leads.id} and ${emailMessages.sequenceNo} = 1`,
-      );
+  const { joined, detail } = leadReader(db);
 
   r.get(
     "/leads",
@@ -109,33 +98,6 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
       };
     },
   );
-
-  async function detail(id: string) {
-    const [row] = await joined().where(eq(leads.id, id)).limit(1);
-    if (!row) throw notFound("Lead introuvable");
-    const [owner] = row.lead.ownerId
-      ? await db
-          .select({ id: users.id, name: users.name })
-          .from(users)
-          .where(eq(users.id, row.lead.ownerId))
-          .limit(1)
-      : [];
-    const events = await db
-      .select({
-        id: leadEvents.id,
-        at: leadEvents.at,
-        type: leadEvents.type,
-        data: leadEvents.data,
-        actorName: users.name,
-      })
-      .from(leadEvents)
-      .leftJoin(users, eq(users.id, leadEvents.actorId))
-      .where(eq(leadEvents.leadId, id))
-      .orderBy(desc(leadEvents.at), desc(leadEvents.id))
-      .limit(50);
-    const history: LeadEvent[] = events.map((e) => ({ ...e, at: e.at.toISOString() }));
-    return toDetail(row satisfies JoinedRow, owner ?? null, history);
-  }
 
   r.get(
     "/leads/:id",

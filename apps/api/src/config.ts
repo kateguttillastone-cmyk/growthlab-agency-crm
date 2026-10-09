@@ -2,6 +2,13 @@ import { z } from "zod";
 
 const bool = z.enum(["true", "false", "1", "0"]).transform((v) => v === "true" || v === "1");
 
+/** Texte facultatif : variable absente ou vide → valeur par défaut. `\n` littéral accepté pour les sauts de ligne. */
+const optionalText = (fallback: string) =>
+  z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.replace(/\\n/g, "\n") : fallback));
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().default(3001),
@@ -36,6 +43,12 @@ const schema = z.object({
   IMPORT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(10),
   /** Taille maximale d'un fichier importé par l'interface (Mo). */
   IMPORT_MAX_MB: z.coerce.number().positive().max(100).default(10),
+
+  /** Expéditeur, agenda et signature des e-mails (valeurs de l'ancienne chaîne n8n par défaut ; chaîne vide = défaut). */
+  MAIL_FROM_NAME: optionalText("Kate de Growthlab Agencycom"),
+  MAIL_FROM_ADDRESS: optionalText("kate@growthlab-agencycom.com"),
+  MAIL_AGENDA_TEXT: optionalText("calendly.com/kateguttilla-growthlab-agencycom/30min"),
+  MAIL_SIGNATURE: optionalText("Kate Guttilla STONE\nTraffic Manager"),
 
   SWAGGER: bool.default(false),
 

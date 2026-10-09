@@ -5,6 +5,7 @@ import {
   PIPELINE_STAGES,
   QUALIFICATIONS,
   SERVICES,
+  SUPPRESSION_REASONS,
   VALIDATION_STATUSES,
 } from "@gac/shared";
 import { sql } from "drizzle-orm";
@@ -97,12 +98,7 @@ export const callState = pgEnum("call_state", CALL_STATES);
 export const leadService = pgEnum("lead_service", SERVICES);
 export const validationStatus = pgEnum("validation_status", VALIDATION_STATUSES);
 export const emailStatus = pgEnum("email_status", EMAIL_STATUSES);
-export const suppressionReason = pgEnum("suppression_reason", [
-  "unsubscribe",
-  "bounce",
-  "complaint",
-  "manual",
-]);
+export const suppressionReason = pgEnum("suppression_reason", SUPPRESSION_REASONS);
 
 /**
  * Entreprise. Clé naturelle : le domaine du site ; à défaut (prospects sans site, issus de Google Maps), le nom
@@ -245,6 +241,8 @@ export const emailMessages = pgTable(
     /** « Pas Validé » = en attente de relecture. */
     validation: validationStatus("validation").notNull().default("Pas Validé"),
     validatedAt: timestamp("validated_at", { withTimezone: true }),
+    /** Qui a validé : la personne qui relit répond du texte qui partira. */
+    validatedBy: uuid("validated_by").references(() => users.id, { onDelete: "set null" }),
     status: emailStatus("status"),
     /** Jour d'envoi (l'ancienne base ne conserve pas l'heure). */
     sentOn: date("sent_on", { mode: "string" }),
