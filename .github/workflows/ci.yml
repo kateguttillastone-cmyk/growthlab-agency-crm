@@ -60,7 +60,7 @@ jobs:
       - name: Configuration Compose de production valide
         env:
           POSTGRES_PASSWORD: x
-          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
           DOMAIN: example.com
         run: docker compose -f docker-compose.prod.yml config --quiet
@@ -68,13 +68,13 @@ jobs:
         run: docker compose -f docker-compose.prod.yml build
         env:
           POSTGRES_PASSWORD: x
-          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
           DOMAIN: example.com
       - name: L'API démarre dans l'image et répond sur /health (via le conteneur web)
         env:
           POSTGRES_PASSWORD: x
-          SEED_ADMIN_EMAIL: a@b.c
+          SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
           DOMAIN: example.com
           WEB_PORT: "3020"
@@ -82,4 +82,19 @@ jobs:
           docker compose -p smoke -f docker-compose.prod.yml up -d --wait --wait-timeout 120
           curl -fsS http://127.0.0.1:3020/api/health
           curl -fsS -o /dev/null http://127.0.0.1:3020/
-          docker compose -p smoke -f docker-compose.prod.yml down -v
+      - name: Journaux des conteneurs (en cas d'échec)
+        if: failure()
+        env:
+          POSTGRES_PASSWORD: x
+          SEED_ADMIN_EMAIL: admin@example.com
+          SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
+          DOMAIN: example.com
+        run: docker compose -p smoke -f docker-compose.prod.yml logs --no-color --tail 80
+      - name: Nettoyage
+        if: always()
+        env:
+          POSTGRES_PASSWORD: x
+          SEED_ADMIN_EMAIL: admin@example.com
+          SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
+          DOMAIN: example.com
+        run: docker compose -p smoke -f docker-compose.prod.yml down -v
