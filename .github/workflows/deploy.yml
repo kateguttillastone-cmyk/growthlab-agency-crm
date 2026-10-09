@@ -25,6 +25,15 @@ jobs:
       group: deploy-${{ github.event.workflow_run.head_branch }}
       cancel-in-progress: false
     steps:
+      - name: Vérifier que le déploiement est configuré
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$SSH_KEY" ]; then
+            echo "::error::Secrets DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS absents : le serveur n'est pas encore configuré (voir docs/08-deploiement.md, étape 7)."
+            exit 1
+          fi
       - name: Déployer sur le serveur
         env:
           BRANCH: ${{ github.event.workflow_run.head_branch }}

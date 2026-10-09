@@ -82,6 +82,18 @@ jobs:
           docker compose -p smoke -f docker-compose.prod.yml up -d --wait --wait-timeout 120
           curl -fsS http://127.0.0.1:3020/api/health
           curl -fsS -o /dev/null http://127.0.0.1:3020/
+          # en-têtes de sécurité : présents, une seule fois, sur la page et sur l'API
+          for url in / /api/health; do
+            h="$(curl -sI "http://127.0.0.1:3020$url")"
+            for name in x-frame-options x-content-type-options content-security-policy; do
+              n="$(printf '%s\n' "$h" | grep -ci "^$name:")"
+              [ "$n" = 1 ] || { echo "$url : en-tête $name présent $n fois (attendu : 1)"; printf '%s\n' "$h"; exit 1; }
+            done
+          done
+          # connexion de bout en bout par la chaîne web -> API -> base, avec l'administrateur créé au démarrage
+          curl -fsS -c /tmp/cj -H "Origin: https://example.com" -H 'content-type: application/json' \
+            -d '{"email":"admin@example.com","password":"xxxxxxxxxxxx"}' http://127.0.0.1:3020/api/auth/login
+          curl -fsS -b /tmp/cj http://127.0.0.1:3020/api/auth/me
       - name: Journaux des conteneurs (en cas d'échec)
         if: failure()
         env:
