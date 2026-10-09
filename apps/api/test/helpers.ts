@@ -49,7 +49,9 @@ export async function createTestApp(overrides: Record<string, string> = {}): Pro
 
 /** Vide toutes les tables (la base de test est jetable). */
 export async function resetDb(t: TestApp): Promise<void> {
-  await t.db.execute(sql`truncate table audit_events, sessions, users restart identity cascade`);
+  await t.db.execute(
+    sql`truncate table lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
+  );
 }
 
 let counter = 0;
