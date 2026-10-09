@@ -1,0 +1,2200 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>GAC Pilot</title>
+<meta name="description" content="CRM commercial de GrowthLab Agency : dashboard, pipeline et fiches prospects branchés sur Airtable en direct.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F7F5FF;
+    --surface:#ffffff;
+    --surface-2:#F4F1FF;
+    --ink:#210B2C;
+    --muted:#6B6280;
+    --line:#EAE5F8;
+    --accent:#5B3FE0;
+    --accent-ink:#ffffff;
+    --accent-soft:#BC96E6;
+    --sun:#FFD166;
+    --good:#1E9E5A;
+    --good-bg:#E7F7EE;
+    --critical:#D6455A;
+    --critical-bg:#FBEAEC;
+    --warning:#966A0B;
+    --warning-bg:#FFF3D9;
+    --info:#0E7C86;
+    --info-bg:#DFF7F5;
+    --violet2:#7C3AED;
+    --violet2-bg:#F1E9FE;
+    --slate:#475569;
+    --slate-bg:#E7E9EE;
+    --pink:#BE185D;
+    --pink-bg:#FCE7F3;
+    --chart-1:#5B3FE0;
+    --chart-2:#1E9E7A;
+    --chart-3:#C97A16;
+    --chart-4:#4D8FE0;
+    --shadow-sm:0 1px 3px rgba(33,11,44,.06),0 8px 24px -16px rgba(44,31,115,.24);
+    --shadow:0 18px 40px -20px rgba(44,31,115,.28);
+    --radius:16px;
+    --sidebar-bg:#2A1B66;
+    --sidebar-bg-2:#221656;
+    --sidebar-ink:#EFEBFF;
+    --sidebar-muted:#B3A4EE;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#170F24; --surface:#20172F; --surface-2:#261C3A; --ink:#F1EDFB; --muted:#B2A6D6; --line:#392A54;
+      --accent:#9C8CFF; --accent-ink:#170F24; --accent-soft:#BC96E6; --good:#3FCB86; --good-bg:#123423;
+      --critical:#F0748A; --critical-bg:#3A1620; --warning:#F0C15C; --warning-bg:#3A2E10;
+      --info:#4DD9D1; --info-bg:#0E3A3A; --violet2:#B794F6; --violet2-bg:#2E1F4A; --slate:#A3AEBF; --slate-bg:#2A3140; --pink:#F472B6; --pink-bg:#3A1530;
+      --chart-1:#9C8CFF; --chart-2:#3FCB86; --chart-3:#E0982E; --chart-4:#79A9F5;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.5); --shadow:0 18px 40px -20px rgba(0,0,0,.55);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#170F24; --surface:#20172F; --surface-2:#261C3A; --ink:#F1EDFB; --muted:#B2A6D6; --line:#392A54;
+    --accent:#9C8CFF; --accent-ink:#170F24; --accent-soft:#BC96E6; --good:#3FCB86; --good-bg:#123423;
+    --critical:#F0748A; --critical-bg:#3A1620; --warning:#F0C15C; --warning-bg:#3A2E10;
+    --info:#4DD9D1; --info-bg:#0E3A3A; --violet2:#B794F6; --violet2-bg:#2E1F4A; --slate:#A3AEBF; --slate-bg:#2A3140; --pink:#F472B6; --pink-bg:#3A1530;
+    --chart-1:#9C8CFF; --chart-2:#3FCB86; --chart-3:#E0982E; --chart-4:#79A9F5;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.5); --shadow:0 18px 40px -20px rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .num{font-family:"JetBrains Mono","Segoe UI",monospace;font-variant-numeric:tabular-nums}
+  h1,h2,h3{text-wrap:balance;margin:0}
+  a{color:inherit}
+  button{font-family:inherit}
+  ::selection{background:var(--accent-soft);color:var(--ink)}
+  .app{display:flex;min-height:100vh}
+
+  .status-banner{position:fixed;top:0;left:0;right:0;z-index:50;background:var(--ink);color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.02em;padding:7px 16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+  .status-banner .dot{width:7px;height:7px;border-radius:50%;background:var(--good);flex:none}
+  .status-banner.warn .dot{background:var(--warning)}
+  .status-banner b{color:var(--sun)}
+
+  .sidebar{width:224px;flex:0 0 224px;background:linear-gradient(185deg,var(--sidebar-bg),var(--sidebar-bg-2));color:var(--sidebar-ink);display:flex;flex-direction:column;padding:20px 14px;gap:22px;position:sticky;top:0;height:100vh;margin-top:34px}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+  .brand-mark{width:34px;height:34px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,var(--accent),var(--accent-soft));font-weight:800;color:#fff;font-size:14px}
+  .brand-name{font-weight:800;font-size:15px;letter-spacing:-.01em}
+  .brand-sub{font-size:11px;color:var(--sidebar-muted)}
+
+  nav{display:flex;flex-direction:column;gap:2px}
+  .nav-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--sidebar-muted);padding:14px 10px 4px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;color:var(--sidebar-muted);font-weight:600;font-size:13.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%}
+  .nav-item svg{flex:none;opacity:.85}
+  .nav-item:hover{background:rgba(255,255,255,.06);color:var(--sidebar-ink)}
+  .nav-item.active{background:rgba(255,255,255,.14);color:#fff}
+  .nav-item .count{margin-left:auto;font-size:11px;background:rgba(255,255,255,.14);padding:1px 7px;border-radius:99px;font-family:"JetBrains Mono",monospace}
+  .nav-subitem{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 30px;border-radius:9px;color:var(--sidebar-muted);font-weight:500;font-size:12.5px;cursor:pointer;border:none;background:none;text-align:left;width:100%;opacity:.88}
+  .nav-subitem:hover{background:rgba(255,255,255,.06);color:var(--sidebar-ink)}
+  .nav-subitem.active{background:rgba(255,255,255,.12);color:#fff;opacity:1}
+  .nav-subitem .count{margin-left:auto;font-size:10.5px;background:rgba(255,255,255,.12);padding:1px 6px;border-radius:99px;font-family:"JetBrains Mono",monospace}
+
+  .sidebar-foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.06)}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--sun),#F2A65A);flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#3a2500;font-size:13px}
+  .sidebar-foot .who{font-size:12.5px;font-weight:700;color:#fff;line-height:1.2}
+  .sidebar-foot .role{font-size:11px;color:var(--sidebar-muted)}
+
+  .main{flex:1;min-width:0;padding:34px 32px 48px}
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .topbar h1{font-size:23px;font-weight:800;letter-spacing:-.01em}
+  .topbar p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .topbar-actions{display:flex;gap:8px;align-items:center}
+  .topbar-actions select, .topbar-actions input[type="date"]{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-size:12.5px;color:var(--ink);font-family:inherit}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:11px;padding:10px 16px;font-weight:700;font-size:13.5px;cursor:pointer}
+  .btn-primary{background:linear-gradient(135deg,#6D4AE6,var(--accent));color:#fff;box-shadow:var(--shadow-sm)}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+  [hidden]{display:none!important}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:6px}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .val{font-size:24px;font-weight:800;font-family:"JetBrains Mono",monospace;letter-spacing:-.02em}
+  .kpi .delta{font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px}
+  .delta.up{color:var(--good)} .delta.down{color:var(--critical)} .delta.flat{color:var(--muted)}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:20px}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+  .panel-head h3{font-size:15px;font-weight:800}
+  .panel-head .sub{font-size:12px;color:var(--muted)}
+
+  .row-2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px}
+  .row-2b{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+
+  .funnel{display:flex;flex-direction:column;gap:9px}
+  .funnel-row{display:grid;grid-template-columns:150px 1fr 90px;align-items:center;gap:10px}
+  .funnel-row .stage{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .funnel-track{background:var(--surface-2);border-radius:8px;height:26px;position:relative;overflow:hidden}
+  .funnel-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-soft));display:flex;align-items:center;padding-left:10px;color:#fff;font-size:11.5px;font-weight:700;font-family:"JetBrains Mono",monospace;white-space:nowrap}
+  .funnel-row .val{font-size:12px;color:var(--muted);text-align:right;font-family:"JetBrains Mono",monospace}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:0 10px 10px;border-bottom:1px solid var(--line)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--surface-2)}
+  .who-cell{display:flex;align-items:center;gap:11px;min-width:0}
+  .who-cell > div:last-child{min-width:0;flex:1}
+  .who-cell .ini{width:34px;height:34px;font-size:13px}
+  .who-cell .name{font-size:15.5px;font-weight:800;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who-cell .co{font-size:13px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .who-cell .ini{border-radius:50%;background:var(--surface-2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .pill-chaud{background:var(--good-bg);color:var(--good)}
+  .pill-tiede{background:var(--warning-bg);color:var(--warning)}
+  .pill-froid{background:var(--surface-2);color:var(--muted)}
+  .pill-validated{background:var(--good-bg);color:var(--good)}
+  .pill-pending{background:var(--surface-2);color:var(--accent)}
+  .pill-rejected{background:var(--critical-bg);color:var(--critical)}
+  .pill-empty{background:var(--surface-2);color:var(--muted)}
+  .pill-nrp{background:var(--violet2-bg);color:var(--violet2)}
+  .pill-pbnum{background:var(--slate-bg);color:var(--slate)}
+  .pill-repondeur{background:var(--info-bg);color:var(--info)}
+  .pill-barrage{background:var(--pink-bg);color:var(--pink)}
+
+  .task-list{display:flex;flex-direction:column;gap:2px}
+  .task{display:flex;align-items:flex-start;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line)}
+  .task:last-child{border-bottom:none}
+  .task .t-main{font-weight:700;font-size:13px}
+  .task .t-sub{font-size:12px;color:var(--muted);margin-top:1px}
+  .task .tag{margin-left:auto;flex:none}
+  .empty-state{padding:26px 10px;text-align:center;color:var(--muted);font-size:13px}
+
+  .pipeline-wrap{overflow-x:auto;padding-bottom:6px}
+  .board{display:flex;gap:14px;min-width:1200px}
+  .col{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px}
+  .col-head{display:flex;align-items:center;gap:8px;padding:0 2px}
+  .col-head .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .col-head .name{font-size:12.5px;font-weight:800}
+  .col-head .n{margin-left:auto;font-size:11px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .col-body{background:var(--surface-2);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:8px;min-height:120px;flex:1}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;box-shadow:var(--shadow-sm);cursor:grab;display:flex;flex-direction:column;gap:6px}
+  .card:active{cursor:grabbing}
+  .card.dragging{opacity:.4}
+  .card .co{font-weight:800;font-size:13px}
+  .card .ct{font-size:11.5px;color:var(--muted)}
+  .card .foot{display:flex;align-items:center;justify-content:space-between;margin-top:2px}
+  .card .val{font-size:11.5px;font-weight:700;font-family:"JetBrains Mono",monospace;color:var(--accent)}
+  .card .pack{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--surface-2);color:var(--muted)}
+  .col-body.over{outline:2px dashed var(--accent);outline-offset:-4px}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .filters select, .filters input[type="text"]{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;font-size:12.5px;color:var(--ink);font-family:inherit}
+  .stage-select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 7px;font-size:11.5px;color:var(--ink);font-family:inherit}
+
+  /* ---------- editable grid ---------- */
+  .grid-wrap{overflow-x:auto;padding-bottom:6px;position:relative}
+  #leads-table, #sourcing-table{table-layout:fixed;width:auto;border-collapse:separate;border-spacing:0}
+  #leads-table th, #sourcing-table th{white-space:nowrap;position:relative;padding:0 12px 10px 10px;background:var(--surface)}
+  .th-label{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .th-label.th-sort{cursor:pointer;user-select:none;border-radius:5px;padding:2px 4px;margin:-2px -4px}
+  .th-label.th-sort:hover{background:var(--surface-2);color:var(--ink)}
+  .sort-ind{color:var(--accent);font-size:10px;margin-left:3px;font-weight:700}
+  #leads-table, #sourcing-table{font-size:14.5px}
+  #leads-table td, #sourcing-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;padding:13px 10px}
+  #leads-table th, #sourcing-table th{font-size:12px}
+  /* Identité : une seule ligne, colonne assez large pour l'afficher en entier */
+  #leads-table td.id-cell .editable-cell, #sourcing-table td.id-cell .editable-cell{
+    font-size:15px;font-weight:600;white-space:nowrap;max-width:100%
+  }
+  /* le crayon d'édition ne vole plus de place au texte */
+  .linkish-link{flex:1;min-width:0}
+  .linkish-edit{opacity:0;transition:opacity .12s}
+  tr:hover .linkish-edit, .linkish-edit:focus{opacity:1}
+  #leads-table.wrap-on td, #sourcing-table.wrap-on td{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;vertical-align:top}
+  .col-resizer{position:absolute;top:0;right:0;bottom:0;width:10px;cursor:col-resize;touch-action:none;z-index:6}
+  .col-resizer::after{content:"";position:absolute;top:2px;bottom:2px;left:4px;width:2px;border-radius:1px;background:var(--line)}
+  .col-resizer:hover::after, .col-resizer.resizing::after{background:var(--accent);width:3px;left:3.5px}
+  .wrap-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+  .wrap-toggle input{accent-color:var(--accent)}
+  .col-filter-icon{border:none;background:none;color:var(--muted);cursor:pointer;padding:2px;margin-left:3px;border-radius:5px;display:inline-flex;vertical-align:middle}
+  .col-filter-icon:hover{background:var(--surface-2);color:var(--ink)}
+  .col-filter-icon.active{color:var(--accent)}
+  .col-filter-popover{position:fixed;z-index:100;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:10px;width:300px;display:none}
+  .col-filter-popover.open{display:block}
+  .col-filter-popover .cfp-search{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);border-radius:7px;padding:6px 8px;font-size:12px;color:var(--ink);font-family:inherit;margin-bottom:6px}
+  .col-filter-popover .cfp-actions{display:flex;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+  .col-filter-popover .cfp-actions button{background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;padding:0}
+  .col-filter-popover .cfp-list{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 4px;margin-bottom:8px}
+  .col-filter-popover .cfp-item{display:flex;align-items:flex-start;gap:7px;font-size:12.5px;line-height:1.35;color:var(--ink);cursor:pointer;white-space:normal;overflow:visible;text-overflow:unset;word-break:break-word}
+  .col-filter-popover .cfp-item input{accent-color:var(--accent);flex:none;margin-top:2px}
+  .col-filter-popover .cfp-footer{display:flex;justify-content:flex-end}
+  .col-filter-popover .cfp-footer .btn{padding:5px 12px;font-size:12px}
+  .pager{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+  .pager-sizes{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .pager-sizes select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:4px 7px;font-size:12.5px;color:var(--ink);font-family:inherit}
+  .pager-pages{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+  .pager-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .pager-btn:hover{background:var(--surface-2)}
+  .pager-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .pager-btn:disabled{opacity:.4;cursor:default}
+  .pager-num{min-width:34px;text-align:center}
+  /* frozen columns 1-3, Sheets-style */
+  #leads-table th:nth-child(-n+3), #leads-table td:nth-child(-n+3),
+  #sourcing-table th:nth-child(-n+3), #sourcing-table td:nth-child(-n+3){
+    position:sticky; left:0; z-index:2; background:var(--surface);
+  }
+  #leads-table th:nth-child(-n+3), #sourcing-table th:nth-child(-n+3){ z-index:7; }
+  tr:hover td:nth-child(-n+3){ background:var(--surface-2); }
+  #leads-table td:nth-child(3), #sourcing-table td:nth-child(3),
+  #leads-table th:nth-child(3), #sourcing-table th:nth-child(3){
+    box-shadow: 4px 0 6px -4px rgba(33,11,44,.3);
+  }
+  .editable-cell{cursor:text;border-radius:6px;padding:3px 6px;margin:-3px -6px;display:inline-block;min-width:24px;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+  .editable-cell:hover{background:var(--surface-2)}
+  .editable-cell:focus{outline:2px solid var(--accent-soft);background:var(--surface);white-space:normal;overflow:visible;position:relative;z-index:2}
+  .cell-select, .cell-number{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 7px;font-size:11.5px;color:var(--ink);font-family:inherit;width:100%;min-width:70px}
+  .cell-select.pill-validated{background:var(--good-bg);color:var(--good)}
+  .cell-select.pill-pending{background:var(--surface-2);color:var(--accent)}
+  .cell-select.pill-rejected{background:var(--critical-bg);color:var(--critical)}
+  .cell-select.pill-tiede{background:var(--warning-bg);color:var(--warning)}
+  .cell-select.pill-empty{background:var(--surface);color:var(--ink)}
+  .cell-select.pill-nrp{background:var(--violet2-bg);color:var(--violet2)}
+  .cell-select.pill-pbnum{background:var(--slate-bg);color:var(--slate)}
+  .cell-select.pill-repondeur{background:var(--info-bg);color:var(--info)}
+  .cell-select.pill-barrage{background:var(--pink-bg);color:var(--pink)}
+  .linkish-field{display:flex;align-items:center;gap:5px;max-width:100%}
+  .linkish-link{color:var(--accent);font-weight:700;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .linkish-link:hover{text-decoration:underline}
+  .linkish-empty{color:var(--muted)}
+  .linkish-edit{border:none;background:none;color:var(--muted);cursor:pointer;flex:none;padding:2px;border-radius:5px;font-size:11px}
+  .fiche-btn{border:none;background:none;color:var(--accent);cursor:pointer;flex:none;padding:3px 5px;border-radius:6px;
+    font-size:13px;opacity:0;transition:opacity .12s;margin-left:auto}
+  tr:hover .fiche-btn, .fiche-btn:focus{opacity:1}
+  .fiche-btn:hover{background:var(--surface-2)}
+  .fiche-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:16px}
+  .fiche-item{display:flex;flex-direction:column;gap:2px}
+  .fiche-item .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;font-weight:700}
+  .fiche-item .val{font-size:14px;font-weight:700}
+  .fiche-item .val.oui{color:var(--good)}
+  .fiche-item .val.non{color:var(--muted);font-weight:600}
+  .fiche-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .fiche-links a{flex:1;min-width:150px;text-align:center;display:inline-block;padding:10px 14px;border-radius:10px;
+    background:var(--surface-2);color:var(--accent);font-weight:700;font-size:12.5px;text-decoration:none}
+  .fiche-links a:hover{background:var(--accent-soft);color:#fff}
+  .linkish-edit:hover{background:var(--surface-2);color:var(--ink)}
+  .linkish-input{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:4px 6px;font-size:12px;color:var(--ink);font-family:inherit;width:100%;min-width:80px}
+
+  .mail-preview{background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:18px 20px;
+    max-height:360px;overflow-y:auto;color:#1a1a1a}
+  .mail-preview .mp-objet{font-size:12px;color:#6B7280;border-bottom:1px solid #E9D5FF;
+    padding-bottom:9px;margin-bottom:16px}
+  .mail-preview .mp-objet strong{color:#1a1a1a;font-size:13.5px}
+  .mail-tabs{display:flex;gap:6px;margin-bottom:8px}
+  .mail-tabs button{border:1px solid var(--line);background:var(--surface);color:var(--muted);
+    border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .mail-tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  .bulk-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:var(--surface-2);
+    border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+  .bulk-bar .bulk-lbl{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .bulk-bar select, .bulk-bar input[type="text"]{border:1px solid var(--line);background:var(--surface);
+    border-radius:9px;padding:7px 9px;font-size:13px;color:var(--ink);font-family:inherit;min-width:150px}
+  .bulk-bar .bulk-count{font-size:12.5px;color:var(--muted);margin-left:auto}
+  .bulk-bar .btn{padding:8px 14px;font-size:13px}
+
+  .fill-handle{position:fixed;width:11px;height:11px;background:var(--accent);border:2px solid var(--surface);
+    border-radius:2px;cursor:crosshair;z-index:40;display:none;box-shadow:0 0 0 1px var(--accent)}
+  .fill-source{outline:2px solid var(--accent);outline-offset:-2px}
+  #leads-table tr.fill-target td, #sourcing-table tr.fill-target td{background:var(--surface-2)}
+  #leads-table tr.fill-target td:first-child, #sourcing-table tr.fill-target td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(23,15,36,.42);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+  .modal{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:26px;width:420px;max-width:100%;max-height:88vh;overflow-y:auto}
+  .ai-rewrite{margin-top:6px;padding-top:14px;border-top:1px solid var(--line)}
+  .ai-rewrite textarea{width:100%}
+  .modal h3{font-size:17px;font-weight:800;margin-bottom:3px}
+  .modal .sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+  .field label{font-size:12px;font-weight:700;color:var(--ink)}
+  .field input, .field select, .field textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink)}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:700;box-shadow:var(--shadow);z-index:70}
+
+  @media (max-width: 1100px){ .kpi-grid{grid-template-columns:repeat(3,1fr)} .row-2,.row-2b{grid-template-columns:1fr} }
+  @media (max-width: 760px){
+    .app{flex-direction:column}
+    .sidebar{width:100%;flex:none;height:auto;position:relative;margin-top:34px;flex-direction:row;overflow-x:auto}
+    .sidebar-foot{display:none}
+    nav{flex-direction:row}
+    .nav-label{display:none}
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .main{padding:16px 12px 40px}
+    .topbar{gap:8px}
+    .topbar h1{font-size:19px}
+    .panel{padding:14px}
+    .funnel-row{grid-template-columns:96px 1fr 60px;gap:6px}
+    .funnel-row .stage{font-size:11px}
+    .modal{padding:18px}
+  }
+</style>
+
+<div class="status-banner" id="status-banner"><span class="dot"></span><span id="status-text">Connexion à la base…</span></div>
+
+<div class="modal-overlay" id="mail-modal" hidden>
+  <div class="modal" style="width:560px">
+    <h3 id="mail-modal-title">Éditer l'email</h3>
+    <div class="sub">Relu avant envoi via Brevo</div>
+    <div class="field"><label>Objet</label><input type="text" id="mail-objet"></div>
+    <div class="mail-tabs">
+      <button type="button" id="mail-tab-texte" class="active">✏️ Texte</button>
+      <button type="button" id="mail-tab-apercu">👁 Aperçu</button>
+    </div>
+    <div class="field" id="mail-champ-texte"><label>Corps de l'email</label><textarea id="mail-corps" rows="8" style="resize:vertical"></textarea></div>
+    <div class="field" id="mail-champ-apercu" hidden>
+      <label>Tel que le prospect le recevra</label>
+      <div class="mail-preview" id="mail-preview"></div>
+    </div>
+    <div class="field">
+      <label>Validation mail</label>
+      <select id="mail-validation"><option value="Pas Validé">Pas Validé</option><option value="Validé">Validé</option><option value="Rejeté">Rejeté</option></select>
+    </div>
+    <div class="ai-rewrite">
+      <div class="field">
+        <label>Réécrire avec l'IA</label>
+        <textarea id="mail-rewrite-prompt" rows="2" placeholder="Ex : rends-le plus direct, ajoute une urgence, traduis en anglais…"></textarea>
+      </div>
+      <button class="btn btn-ghost" id="mail-rewrite-btn">✨ Réécrire</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mail-cancel">Annuler</button>
+      <button class="btn btn-primary" id="mail-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sourcing-modal" hidden>
+  <div class="modal">
+    <h3>Sourcing envoyé</h3>
+    <div class="sub" id="sourcing-modal-sub">La demande a été enregistrée. Elle sera lancée par la synchro automatique.</div>
+    <div class="modal-actions"><button class="btn btn-primary" id="sourcing-modal-ok">OK</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fiche-modal" hidden>
+  <div class="modal" style="width:480px">
+    <h3 id="fiche-modal-title">Fiche client</h3>
+    <div class="sub" id="fiche-modal-sub">—</div>
+    <div class="fiche-grid" id="fiche-grid"></div>
+    <div class="fiche-links" id="fiche-links"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="fiche-close">Fermer</button></div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">GA</div>
+      <div><div class="brand-name">GAC Pilot</div><div class="brand-sub">GrowthLab Agency</div></div>
+    </div>
+    <nav>
+      <div class="nav-label">Vue d'ensemble</div>
+      <button class="nav-item active" data-view="dashboard"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Dashboard</button>
+      <button class="nav-item" data-view="pipeline"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h10M4 19h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Pipeline<span class="count" id="nav-count-pipeline">0</span></button>
+      <button class="nav-item" data-view="leads"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 8.5c1.7.2 3 1.6 3 3.3M17 14c2 .3 3.5 1.9 3.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Leads<span class="count" id="nav-count-leads">0</span></button>
+      <button class="nav-subitem" data-view="leads" data-scope="leads" data-bucket="google_ads">Google Ads<span class="count" id="nav-count-leads-google_ads">0</span></button>
+      <button class="nav-subitem" data-view="leads" data-scope="leads" data-bucket="creation_site">Création de site<span class="count" id="nav-count-leads-creation_site">0</span></button>
+      <button class="nav-subitem" data-view="leads" data-scope="leads" data-bucket="autres">Autres<span class="count" id="nav-count-leads-autres">0</span></button>
+      <div class="nav-label">Sourcing</div>
+      <button class="nav-item" data-view="sourcing"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Sourcing &amp; validation<span class="count" id="nav-count-sourcing">0</span></button>
+      <button class="nav-subitem" data-view="sourcing" data-scope="sourcing" data-bucket="google_ads">Google Ads<span class="count" id="nav-count-sourcing-google_ads">0</span></button>
+      <button class="nav-subitem" data-view="sourcing" data-scope="sourcing" data-bucket="seo">SEO<span class="count" id="nav-count-sourcing-seo">0</span></button>
+      <button class="nav-subitem" data-view="sourcing" data-scope="sourcing" data-bucket="creation_site">Création de site<span class="count" id="nav-count-sourcing-creation_site">0</span></button>
+      <button class="nav-subitem" data-view="sourcing" data-scope="sourcing" data-bucket="refonte_site">Refonte site web<span class="count" id="nav-count-sourcing-refonte_site">0</span></button>
+      <div class="nav-label">Entrants</div>
+      <button class="nav-item" data-view="contacts"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.8"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Demandes de contact</button>
+      <div class="nav-label">Compte</div>
+      <button class="nav-item" data-view="settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M12 3v2.5M12 18.5V21M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M3 12h2.5M18.5 12H21M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Paramètres</button>
+    </nav>
+    <div class="sidebar-foot"><div class="avatar">KG</div><div><div class="who">Kate Guttilla-Stone</div><div class="role">Admin</div></div></div>
+  </aside>
+
+  <main class="main">
+
+    <section id="view-dashboard" class="view" style="max-width:1360px">
+      <div class="topbar">
+        <div><h1>Dashboard</h1><p id="dash-sub">Chargement…</p></div>
+        <div class="topbar-actions">
+          <select id="dash-range-preset">
+            <option value="all">Toute la période</option>
+            <option value="7">7 derniers jours</option>
+            <option value="30">30 derniers jours</option>
+            <option value="90">90 derniers jours</option>
+            <option value="custom">Personnalisée…</option>
+          </select>
+          <input type="date" id="dash-date-from" hidden>
+          <span id="dash-range-sep" hidden style="color:var(--muted);font-size:12px">→</span>
+          <input type="date" id="dash-date-to" hidden>
+        </div>
+      </div>
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="row-2">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Funnel de sourcing</h3><div class="sub">Répartition des leads sourcés, en direct</div></div></div>
+          <div class="funnel" id="funnel-qual"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Répartition par secteur</h3><div class="sub">Top secteurs sourcés</div></div></div>
+          <div class="funnel" id="funnel-secteur"></div>
+        </div>
+      </div>
+      <div class="row-2b">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Pipeline actif</h3><div class="sub">Leads déjà engagés dans un suivi commercial</div></div></div>
+          <div class="funnel" id="funnel-pipeline"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>À traiter en priorité</h3><div class="sub">Leads chauds pas encore validés</div></div></div>
+          <div class="task-list" id="task-list"></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-head">
+          <div><h3>Performance emailing</h3><div class="sub" id="brevo-periode">Statistiques Brevo — 30 derniers jours</div></div>
+          <button type="button" class="btn btn-ghost" id="brevo-refresh" style="padding:6px 12px;font-size:12px">Actualiser</button>
+        </div>
+        <div id="brevo-stats"><div class="empty-state">Chargement des statistiques…</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><h3>Leads récents</h3><div class="sub">Derniers prospects sourcés</div></div><button class="btn btn-ghost" data-goto="leads">Voir tout</button></div>
+        <table><thead><tr><th>Prospect</th><th>Secteur</th><th>Qualification</th><th>Validation mail</th></tr></thead><tbody id="recent-leads-body"></tbody></table>
+      </div>
+    </section>
+
+    <section id="view-pipeline" class="view" hidden>
+      <div class="topbar"><div><h1>Pipeline</h1><p id="pipeline-sub">Glissez une carte pour changer son étape</p></div></div>
+      <div class="pipeline-wrap"><div class="board" id="board"></div></div>
+    </section>
+
+    <section id="view-sourcing" class="view" hidden>
+      <div class="topbar"><div><h1>Sourcing &amp; validation</h1><p>Lancer une recherche, puis valider ou réécrire les emails avant envoi</p></div></div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-head"><div><h3>Persona / ICP</h3><div class="sub">Valeurs au format attendu par l'automatisation Lead Pilot</div></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 20px">
+          <div class="field"><label>Secteur (company_industry)</label><select id="icp-industry"><option>retail</option><option>restauration</option><option>btp</option><option>beauté &amp; bien-être</option><option>services aux entreprises</option></select></div>
+          <div class="field"><label>Fonction / poste (contact_job_title)</label><input type="text" id="icp-title" value="CEO, Founder"></div>
+          <div class="field"><label>Localisation (contact_location)</label><select id="icp-location"><option>france</option><option>paris</option><option>ile-de-france</option></select></div>
+          <div class="field"><label>Statut email (email_status)</label><select id="icp-email-status"><option>validated</option><option>all</option></select></div>
+          <div class="field"><label>Nom du fichier (file_name)</label><input type="text" id="icp-file" placeholder="ex : leads-retail-sept"></div>
+        </div>
+        <button class="btn btn-primary" id="launch-sourcing" style="margin-top:4px">Lancer le sourcing</button>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Résultats &amp; validation</h3><div class="sub" id="sourcing-count-sub">—</div></div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <button type="button" class="btn btn-ghost" id="sourcing-reset-cols" style="padding:6px 12px;font-size:12px">Réinitialiser les colonnes</button>
+            <label class="wrap-toggle"><input type="checkbox" id="sourcing-wrap-toggle">↵ Retour à la ligne</label>
+          </div>
+        </div>
+        <div class="filters">
+          <input type="text" id="sourcing-search" placeholder="Rechercher dans toutes les colonnes…" style="min-width:260px">
+          <select id="sourcing-status-filter"><option value="">À traiter (par défaut)</option><option value="all">Tous les statuts</option><option value="Pas Validé">Pas Validé</option><option value="Validé">Validé</option><option value="Rejeté">Rejeté</option></select>
+        </div>
+        <div class="bulk-bar" data-table="sourcing">
+          <span class="bulk-lbl">Appliquer à toutes les lignes du filtre actuel :</span>
+          <select class="bulk-col"></select>
+          <span class="bulk-value-slot"></span>
+          <button type="button" class="btn btn-primary bulk-apply">Appliquer</button>
+          <span class="bulk-count"></span>
+        </div>
+        <div class="grid-wrap">
+          <table id="sourcing-table"><colgroup id="sourcing-colgroup"></colgroup><thead><tr id="sourcing-thead-row"></tr></thead><tbody id="sourcing-body"></tbody></table>
+        </div>
+        <div class="pager" id="sourcing-pager"></div>
+      </div>
+    </section>
+
+    <section id="view-leads" class="view" hidden>
+      <div class="topbar"><div><h1>Leads</h1><p id="leads-sub">—</p></div></div>
+      <div class="filters">
+        <input type="text" id="lead-search" placeholder="Rechercher dans toutes les colonnes…" style="min-width:220px">
+        <select id="filter-qual"><option value="">Toutes qualifications</option><option>Chaud</option><option>Tiède</option><option>Froid</option></select>
+        <select id="filter-secteur"><option value="">Tous secteurs</option></select>
+      </div>
+      <div class="bulk-bar" data-table="leads">
+        <span class="bulk-lbl">Appliquer à toutes les lignes du filtre actuel :</span>
+        <select class="bulk-col"></select>
+        <span class="bulk-value-slot"></span>
+        <button type="button" class="btn btn-primary bulk-apply">Appliquer</button>
+        <span class="bulk-count"></span>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="sub">Prénom, nom, poste, entreprise, téléphone et email tiennent chacun sur une ligne entière — fais défiler le tableau vers la droite pour le reste. Comme dans Google Sheets : clique le <strong>titre</strong> d'une colonne pour trier, l'icône <strong>entonnoir</strong> pour filtrer, glisse le bord d'un en-tête pour l'élargir, clique une cellule pour l'éditer, puis <strong>tire le petit carré violet</strong> en bas à droite pour recopier sa valeur sur les lignes du dessous</div>
+          <div style="display:flex;align-items:center;gap:14px">
+            <button type="button" class="btn btn-ghost" id="leads-copy-sheets" style="padding:6px 12px;font-size:12px">Copier pour Sheets</button>
+            <button type="button" class="btn btn-ghost" id="leads-reset-cols" style="padding:6px 12px;font-size:12px">Réinitialiser les colonnes</button>
+            <label class="wrap-toggle"><input type="checkbox" id="leads-wrap-toggle">↵ Retour à la ligne</label>
+          </div>
+        </div>
+        <div class="grid-wrap">
+          <table id="leads-table"><colgroup id="leads-colgroup"></colgroup><thead><tr id="leads-thead-row"></tr></thead><tbody id="leads-body"></tbody></table>
+        </div>
+        <div class="pager" id="leads-pager"></div>
+      </div>
+    </section>
+
+    <section id="view-contacts" class="view" hidden>
+      <div class="topbar"><div><h1>Demandes de contact</h1><p>Formulaire du site</p></div></div>
+      <div class="panel"><div class="empty-state">Aucune source connectée pour l'instant — ce flux (formulaire du site) n'est pas encore branché à un workflow n8n.</div></div>
+    </section>
+
+    <section id="view-settings" class="view" hidden>
+      <div class="topbar"><div><h1>Paramètres</h1><p>Compte, accès et connexion aux données</p></div></div>
+      <div class="panel" style="max-width:520px;margin-bottom:16px">
+        <div class="panel-head"><h3>Connexion aux données</h3></div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6" id="settings-connection">—</div>
+      </div>
+      <div class="panel" style="max-width:480px">
+        <div class="panel-head"><h3>Utilisateurs</h3></div>
+        <table><thead><tr><th>Nom</th><th>Rôle</th></tr></thead><tbody>
+          <tr><td>Kate Guttilla-Stone</td><td>Admin</td></tr>
+          <tr><td style="color:var(--muted)">— poste cold call/closing —</td><td style="color:var(--muted)">Commercial</td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var PIPELINE_STAGES = ["Nouveau","Contacté","Répondu","RDV programmé","RDV effectué","Proposition envoyée","Négociation","Gagné","Perdu"];
+  var PIPELINE_COLORS = {"Nouveau":"var(--chart-1)","Contacté":"var(--chart-4)","Répondu":"var(--warning)","RDV programmé":"#8A5A00","RDV effectué":"#8A5A00","Proposition envoyée":"var(--accent)","Négociation":"var(--critical)","Gagné":"var(--good)","Perdu":"var(--muted)"};
+
+  var QUAL_OPTIONS = ['','Chaud','Tiède','Froid'];
+  // Catalogue réel — https://growthlab-agencycom.com/packs/ (au 2026-09-12)
+  var PACK_OPTIONS = ['','Starter','Growth','Scale','E-commerce'];
+  var STATUT_APPEL_OPTIONS = ['','À appeler','Injoignable','RDV fixé','Répondu','Pas intéressé'];
+  var VALIDATION_OPTIONS = ['Pas Validé','Validé','Rejeté'];
+  var STATUT_EMAIL_OPTIONS = ['','Envoyé','Délivré','Ouvert','Désinscrit','Bounce'];
+  var STATUT_APPEL_IFALIANA_OPTIONS = ['','NRP','PI','PB NUMERO','REPONDEUR','A RAP','BARRAGE SECRETAIRE','RDV fixé'];
+  var LEAD_COLUMNS = [
+    {key:'Prénom', label:'Prénom', type:'text', w:150, big:true},
+    {key:'Nom', label:'Nom', type:'text', w:180, big:true},
+    {key:'Poste', label:'Poste', type:'text', w:230, big:true},
+    {key:'Entreprise', label:'Entreprise', type:'text', w:250, big:true},
+    {key:'Qualification', label:'Qualification', type:'select', options:QUAL_OPTIONS, w:130},
+    {key:'Téléphone', label:'Téléphone', type:'phone', w:185},
+    {key:'STATUT', label:'STATUT', type:'select', options:STATUT_APPEL_IFALIANA_OPTIONS, w:160},
+    {key:'RELANCE 1', label:'RELANCE 1', type:'select', options:STATUT_APPEL_IFALIANA_OPTIONS, w:160},
+    {key:'RELANCE 2', label:'RELANCE 2', type:'select', options:STATUT_APPEL_IFALIANA_OPTIONS, w:160},
+    {key:'COMMENTAIRE', label:'COMMENTAIRE', type:'text', w:260},
+    {key:'Secteur', label:'Secteur', type:'text', w:150},
+    {key:'Email objet', label:'Email objet', type:'text', w:230},
+    {key:'Email', label:'Email', type:'text', w:260, big:true},
+    {key:'Site web', label:'Site web', type:'url', w:190},
+    {key:'Linkedin', label:'Linkedin', type:'url', w:190},
+    {key:'Linkedin Entreprise', label:'Linkedin Entreprise', type:'url', w:190},
+    {key:'Taille', label:'Taille', type:'text', w:130},
+    {key:'Année de création', label:'Année de création', type:'text', w:130},
+    {key:'Ville', label:'Ville', type:'text', w:130},
+    {key:'Etat', label:'Etat / Région', type:'text', w:150},
+    {key:'Pays', label:'Pays', type:'text', w:130},
+    {key:'Adresse complète Entreprise', label:'Adresse complète', type:'text', w:230},
+    {key:'Trafic organique', label:'Trafic organique/mois', type:'readonly', display:'number', w:150},
+    {key:'Autorité domaine', label:'Autorité domaine', type:'readonly', display:'number', w:140},
+    {key:'Mots-clés organiques', label:'Mots-clés SEO', type:'readonly', display:'number', w:130},
+    {key:'Backlinks', label:'Backlinks', type:'readonly', display:'number', w:120},
+    {key:'CMS', label:'CMS', type:'readonly', w:130},
+    {key:'E-commerce', label:'E-commerce', type:'readonly', display:'bool', w:110},
+    {key:'Tracking GTM', label:'GTM', type:'readonly', display:'bool', w:90},
+    {key:'Tracking GA4', label:'GA4', type:'readonly', display:'bool', w:90},
+    {key:'Pixel Meta', label:'Signal Facebook Ads', type:'readonly', display:'bool', w:130},
+    {key:'Signal Google Ads', label:'Signal Google Ads', type:'readonly', display:'bool', w:130},
+    {key:'SSL', label:'SSL', type:'readonly', display:'bool', w:80},
+    {key:'Note Google', label:'Note Google', type:'readonly', display:'number', w:110},
+    {key:'Nombre avis Google', label:'Avis Google', type:'readonly', display:'number', w:110},
+    {key:'Categorie Google Maps', label:'Catégorie Maps', type:'readonly', w:160},
+    {key:'Fiche Google My Business', label:'Fiche Google My Business', type:'url', w:190},
+    {key:'Coordonnees GPS', label:'Coordonnées GPS', type:'readonly', w:150},
+    {key:'__ads_google__', label:'Google Ads Transparency', type:'computed-url', builder:'googleAds', w:180},
+    {key:'__ads_meta__', label:'Meta Ads Library', type:'computed-url', builder:'metaAds', w:160},
+    {key:'Persona', label:'Persona', type:'readonly', display:'persona', w:150},
+    {key:'Source', label:'Source', type:'readonly', w:150},
+    {key:'Description entreprise', label:'Description entreprise', type:'text', w:270},
+    {key:'Raison', label:'Raison (scoring IA)', type:'text', w:270},
+    {key:'Service recommandé', label:'Service recommandé', type:'text', w:220},
+    {key:'Email corps', label:'Email corps', type:'text', w:290},
+    {key:'Validation mail', label:'Validation mail', type:'select', options:VALIDATION_OPTIONS, multi:true, w:140},
+    {key:'Email envoyé le', label:'Email envoyé le', type:'readonly', display:'date', w:140},
+    {key:'Statut email', label:'Statut email', type:'select', options:STATUT_EMAIL_OPTIONS, multi:true, w:140},
+    {key:'Étape pipeline', label:'Étape pipeline', type:'select', options:[''].concat(PIPELINE_STAGES), w:160},
+    {key:'Valeur deal', label:'Valeur deal', type:'number', w:130},
+    {key:'Pack', label:'Pack', type:'select', options:PACK_OPTIONS, w:130},
+    {key:'Prochaine action Kate', label:'Prochaine action (Kate)', type:'text', w:220},
+    {key:'Responsable', label:'Responsable', type:'text', w:140},
+    {key:'Date détection', label:"Date d'ajout", type:'readonly', display:'date', w:130}
+  ];
+
+  var MIN_COL_W = 120;
+  var PROSPECT_KEY = '__prospect__';
+  var PROSPECT_DEFAULT_W = 240;
+  var COL_WIDTHS = {};
+  (function loadColWidths(){
+    var saved = {};
+    // v2 : les largeurs enregistrées avant l'élargissement sont ignorées une fois,
+    // sinon un ancien réglage trop étroit resterait collé dans le navigateur.
+    try {
+      if(localStorage.getItem('gacPilotColWidthsV') !== '3'){
+        localStorage.removeItem('gacPilotColWidths');
+        localStorage.setItem('gacPilotColWidthsV', '3');
+      }
+      saved = JSON.parse(localStorage.getItem('gacPilotColWidths') || '{}');
+    } catch(e){ saved = {}; }
+    LEAD_COLUMNS.forEach(function(c){
+      var def = c.w || 140;
+      var v = saved[c.key];
+      COL_WIDTHS[c.key] = (typeof v === 'number' && v >= MIN_COL_W) ? v : def;
+    });
+    var pv = saved[PROSPECT_KEY];
+    COL_WIDTHS[PROSPECT_KEY] = (typeof pv === 'number' && pv >= MIN_COL_W) ? pv : PROSPECT_DEFAULT_W;
+  })();
+  function saveColWidths(){ try { localStorage.setItem('gacPilotColWidths', JSON.stringify(COL_WIDTHS)); } catch(e){} }
+  function resetColWidths(){
+    LEAD_COLUMNS.forEach(function(c){ COL_WIDTHS[c.key] = c.w || 140; });
+    COL_WIDTHS[PROSPECT_KEY] = PROSPECT_DEFAULT_W;
+    try { localStorage.removeItem('gacPilotColWidths'); } catch(e){}
+    clearColFilters();
+    PAGE_STATE.leads.page = 1; PAGE_STATE.sourcing.page = 1;
+    renderLeadsTable(); renderSourcingTable();
+    showToast('Colonnes, filtres et pagination réinitialisés');
+  }
+
+  // ---------------- segmentation par service (sous-menu gauche) ----------------
+  var SERVICE_FILTER = { sourcing: null, leads: null }; // null = tout voir, sinon clé de bucket
+  function serviceBucket(f){
+    var svc = (scalar(f['Service recommandé'])||'').toLowerCase();
+    var hasSite = !!scalar(f['Site web']);
+    if(svc.indexOf('google ads') !== -1) return 'google_ads';
+    if(svc.indexOf('seo') !== -1 || svc.indexOf('référencement') !== -1) return 'seo';
+    if(svc.indexOf('création') !== -1 || svc.indexOf('creation') !== -1 || svc.indexOf('fonte') !== -1){
+      return hasSite ? 'refonte_site' : 'creation_site';
+    }
+    return 'autres';
+  }
+  // Règles spécifiques à l'onglet Leads : Google Ads = uniquement <50 salariés,
+  // Création de site = uniquement les prospects sans site web (déjà garanti par
+  // serviceBucket), tout le reste part dans "Autres" pour l'instant.
+  function leadsServiceBucket(f){
+    var base = serviceBucket(f);
+    if(base === 'google_ads'){
+      var taille = parseInt(scalar(f['Taille']), 10);
+      return (!isNaN(taille) && taille < 50) ? 'google_ads' : 'autres';
+    }
+    if(base === 'creation_site') return 'creation_site';
+    return 'autres';
+  }
+  // Sur le segment "Création de site" (sans site web), les facteurs d'évaluation
+  // SEO/Ads n'ont aucun sens (pas de site à mesurer) : on les masque et on met en
+  // avant les colonnes utiles pour un appel (catégorie, téléphone, avis Google).
+  var EVAL_COLUMNS_HIDDEN_FOR_CREATION_SITE = ['Trafic organique','Autorité domaine','Mots-clés organiques','Backlinks','CMS','E-commerce','Tracking GTM','Tracking GA4','Pixel Meta','Signal Google Ads','SSL','Coordonnees GPS','__ads_google__','Persona','Source','Description entreprise','Email','Email objet','Email corps','Validation mail','Email envoyé le','Statut email','Pack','Responsable','__ads_meta__','Poste','Site web','Linkedin','Linkedin Entreprise','Taille','Année de création','Ville','Etat','Pays'];
+  function activeColumns(tableKey){
+    if(SERVICE_FILTER[tableKey] === 'creation_site'){
+      return LEAD_COLUMNS.filter(function(c){ return EVAL_COLUMNS_HIDDEN_FOR_CREATION_SITE.indexOf(c.key) === -1; });
+    }
+    return LEAD_COLUMNS;
+  }
+
+  // ---------------- column filters (Google Sheets style: checklist per column) ----------------
+  // Volontairement PAS persisté dans localStorage : un filtre oublié d'une session
+  // precedente donnait des tableaux vides sans explication. Reste actif pendant la
+  // session en cours (comme demandé), mais repart propre à chaque rechargement de page.
+  var COL_FILTERS = { leads: {}, sourcing: {} }; // tableKey -> colKey -> Set of EXCLUDED display values
+  function clearColFilters(){
+    COL_FILTERS.leads = {}; COL_FILTERS.sourcing = {};
+  }
+  function clearColFiltersFor(tableKey){
+    COL_FILTERS[tableKey] = {};
+  }
+  // ---------------- pagination (façon Google : numéros de page + nombre par page) ----------------
+  var PAGE_SIZES = [10, 20, 50, 100];
+  var PAGE_STATE = { leads: { page: 1, pageSize: 20 }, sourcing: { page: 1, pageSize: 20 } };
+  (function loadPageSize(){
+    try {
+      var saved = JSON.parse(localStorage.getItem('gacPilotPageSize') || '{}');
+      if(PAGE_SIZES.indexOf(saved.leads) !== -1) PAGE_STATE.leads.pageSize = saved.leads;
+      if(PAGE_SIZES.indexOf(saved.sourcing) !== -1) PAGE_STATE.sourcing.pageSize = saved.sourcing;
+    } catch(e){}
+  })();
+  function savePageSize(){
+    try { localStorage.setItem('gacPilotPageSize', JSON.stringify({ leads: PAGE_STATE.leads.pageSize, sourcing: PAGE_STATE.sourcing.pageSize })); } catch(e){}
+  }
+  function renderPager(tableKey, totalItems){
+    var st = PAGE_STATE[tableKey];
+    var totalPages = Math.max(1, Math.ceil(totalItems / st.pageSize));
+    if(st.page > totalPages) st.page = totalPages;
+    if(st.page < 1) st.page = 1;
+    var el = document.getElementById(tableKey + '-pager');
+    if(!el) return;
+    var windowSize = 10;
+    var startPage = Math.max(1, Math.min(st.page - Math.floor((windowSize-1)/2), Math.max(1, totalPages - windowSize + 1)));
+    var endPage = Math.min(totalPages, startPage + windowSize - 1);
+    var pages = [];
+    for(var p = startPage; p <= endPage; p++) pages.push(p);
+    var renderFn = tableKey === 'leads' ? renderLeadsTable : renderSourcingTable;
+
+    el.innerHTML = '<div class="pager-sizes">Afficher <select class="pager-size">' +
+      PAGE_SIZES.map(function(n){ return '<option value="'+n+'"'+(st.pageSize===n?' selected':'')+'>'+n+'</option>'; }).join('') +
+      '</select> par page — ' + totalItems + ' résultat(s), page ' + st.page + ' / ' + totalPages + '</div>' +
+      '<div class="pager-pages">' +
+      '<button type="button" class="pager-btn pager-prev"'+(st.page<=1?' disabled':'')+'>‹ Précédent</button>' +
+      pages.map(function(p){ return '<button type="button" class="pager-btn pager-num'+(p===st.page?' active':'')+'" data-page="'+p+'">'+p+'</button>'; }).join('') +
+      '<button type="button" class="pager-btn pager-next"'+(st.page>=totalPages?' disabled':'')+'>Suivant ›</button>' +
+      '</div>';
+
+    el.querySelector('.pager-size').addEventListener('change', function(e){
+      st.pageSize = Number(e.target.value); st.page = 1; savePageSize(); renderFn();
+    });
+    el.querySelectorAll('.pager-num').forEach(function(b){
+      b.addEventListener('click', function(){ st.page = Number(b.getAttribute('data-page')); renderFn(); });
+    });
+    var prevBtn = el.querySelector('.pager-prev');
+    if(!prevBtn.disabled) prevBtn.addEventListener('click', function(){ st.page--; renderFn(); });
+    var nextBtn = el.querySelector('.pager-next');
+    if(!nextBtn.disabled) nextBtn.addEventListener('click', function(){ st.page++; renderFn(); });
+  }
+  // ---------------- tranches de taille d'entreprise (mêmes bornes que le formulaire Apify Leads Finder) ----------------
+  var SIZE_BUCKETS = ['1-10','11-20','21-50','51-100','101-200','201-500','501-1000','1001-2000','2001-5000','5001-10000','10001-20000','20001-50000','50000+'];
+  function sizeBucket(raw){
+    var n = Number(scalar(raw));
+    if(!raw || isNaN(n) || n <= 0) return '';
+    if(n <= 10) return '1-10';
+    if(n <= 20) return '11-20';
+    if(n <= 50) return '21-50';
+    if(n <= 100) return '51-100';
+    if(n <= 200) return '101-200';
+    if(n <= 500) return '201-500';
+    if(n <= 1000) return '501-1000';
+    if(n <= 2000) return '1001-2000';
+    if(n <= 5000) return '2001-5000';
+    if(n <= 10000) return '5001-10000';
+    if(n <= 20000) return '10001-20000';
+    if(n <= 50000) return '20001-50000';
+    return '50000+';
+  }
+  function fmtBool(v){ return v===true || v==='true' || v===1 ? 'Oui' : (v===false || v==='false' || v===0 ? '—' : '—'); }
+  function fmtNum(v){ v = Number(v); return isNaN(v) || v===0 ? '—' : v.toLocaleString('fr-FR'); }
+  function domainOf(l){
+    var s = String(l.fields['Site web'] || '').trim();
+    if(!s) return '';
+    return s.replace(/^https?:\/\//i,'').replace(/^www\./i,'').replace(/\/.*$/,'');
+  }
+  var COMPUTED_URL_BUILDERS = {
+    googleAds: function(l){
+      var d = domainOf(l);
+      return d ? 'https://adstransparency.google.com/?region=FR&domain=' + encodeURIComponent(d) : '';
+    },
+    metaAds: function(l){
+      var q = l.fields['Entreprise'] || domainOf(l);
+      return q ? 'https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=FR&q=' + encodeURIComponent(q) : '';
+    }
+  };
+  function colDisplayValue(l, col){
+    var raw = l.fields[col.key];
+    if(col.type === 'computed-url') return '';
+    if(col.type === 'readonly'){
+      if(col.display==='date') return fmtDate(raw);
+      if(col.display==='persona') return normPersona(raw);
+      if(col.display==='bool') return fmtBool(raw);
+      if(col.display==='number') return fmtNum(raw);
+      return scalar(raw)||'';
+    }
+    return scalar(raw) || '';
+  }
+  function prospectDisplayValue(l){ return (leadName(l.fields) + ' — ' + (l.fields['Entreprise']||'')).trim(); }
+  function filterColValue(l, key){
+    if(key === '__prospect__') return prospectDisplayValue(l);
+    if(key === 'Taille') return sizeBucket(l.fields['Taille']);
+    var col = LEAD_COLUMNS.find(function(c){ return c.key === key; });
+    return col ? colDisplayValue(l, col) : '';
+  }
+
+  // ---------------- tri colonnes (façon Google Sheets) ----------------
+  var SORT_STATE = { leads: {key:null, dir:1}, sourcing: {key:null, dir:1} };
+  var LAST_RENDERED = { leads: [], sourcing: [] };
+
+  function sortValue(l, key){
+    if(key === '__prospect__') return prospectDisplayValue(l);
+    var col = LEAD_COLUMNS.find(function(c){ return c.key === key; });
+    if(!col) return '';
+    if(col.display === 'date'){
+      var t = new Date(l.fields[col.key]).getTime();
+      return isNaN(t) ? '' : t;
+    }
+    return colDisplayValue(l, col);
+  }
+
+  function compareLeads(a, b, key){
+    var va = sortValue(a, key), vb = sortValue(b, key);
+    var ea = (va === '' || va === null || va === undefined);
+    var eb = (vb === '' || vb === null || vb === undefined);
+    if(ea && eb) return 0;
+    if(ea) return 1;
+    if(eb) return -1;
+    if(typeof va === 'number' && typeof vb === 'number') return va - vb;
+    var sa = String(va), sb = String(vb);
+    var numLike = /^[\s\d.,€%+-]+$/;
+    if(numLike.test(sa) && numLike.test(sb)){
+      var na = parseFloat(sa.replace(/[^\d.,-]/g,'').replace(/\s/g,'').replace(',','.'));
+      var nb = parseFloat(sb.replace(/[^\d.,-]/g,'').replace(/\s/g,'').replace(',','.'));
+      if(!isNaN(na) && !isNaN(nb)) return na - nb;
+    }
+    return sa.localeCompare(sb, 'fr', {numeric:true, sensitivity:'base'});
+  }
+
+  function applySort(arr, tableKey){
+    var st = SORT_STATE[tableKey];
+    if(!st.key) return arr;
+    return arr.slice().sort(function(a,b){ return compareLeads(a, b, st.key) * st.dir; });
+  }
+
+  function toggleSort(tableKey, key){
+    var st = SORT_STATE[tableKey];
+    if(st.key !== key){ st.key = key; st.dir = 1; }
+    else if(st.dir === 1){ st.dir = -1; }
+    else { st.key = null; st.dir = 1; }
+    PAGE_STATE[tableKey].page = 1;
+    if(tableKey === 'leads') renderLeadsTable(); else renderSourcingTable();
+  }
+
+  function rowSearchHaystack(l){
+    var parts = [prospectDisplayValue(l), l.fields['Email'] || ''];
+    LEAD_COLUMNS.forEach(function(c){ parts.push(colDisplayValue(l, c)); });
+    return parts.join(' ').toLowerCase();
+  }
+
+  function copyForSheets(tableKey){
+    var rows = LAST_RENDERED[tableKey] || [];
+    if(!rows.length){ showToast('Rien à copier'); return; }
+    function cell(v){ return String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' '); }
+    var lines = [['Prospect'].concat(LEAD_COLUMNS.map(function(c){ return c.label; })).join('\t')];
+    rows.forEach(function(l){
+      lines.push([cell(prospectDisplayValue(l))].concat(LEAD_COLUMNS.map(function(c){ return cell(colDisplayValue(l, c)); })).join('\t'));
+    });
+    var tsv = lines.join('\n');
+    function fallbackCopy(){
+      var ta = document.createElement('textarea');
+      ta.value = tsv; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch(e){ ok = false; }
+      document.body.removeChild(ta);
+      showToast(ok ? (rows.length + ' ligne(s) copiées — colle dans Google Sheets') : 'Copie bloquée par le navigateur');
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(tsv).then(function(){
+        showToast(rows.length + ' ligne(s) copiées — colle dans Google Sheets');
+      }).catch(fallbackCopy);
+    } else { fallbackCopy(); }
+  }
+  // Un tableau vide sans explication fait perdre un temps fou : ce message dit
+  // quel filtre est en cause, uniquement quand il n'y a effectivement aucun résultat.
+  function texteAucunResultat(tableKey){
+    var raisons = [];
+    var filters = COL_FILTERS[tableKey] || {};
+    var cols = Object.keys(filters).filter(function(k){ var s = filters[k]; return s && s.size; }).map(function(k){
+      var col = LEAD_COLUMNS.find(function(c){ return c.key === k; });
+      return col ? col.label : (k === '__prospect__' ? 'Prospect' : k);
+    });
+    if(cols.length) raisons.push('filtre(s) de colonne actif(s) sur : ' + cols.join(', '));
+    if(tableKey === 'sourcing'){
+      var sel = document.getElementById('sourcing-status-filter');
+      if(sel && sel.value === '') raisons.push('le menu de statut est sur « À traiter », qui masque les leads déjà validés');
+      var s2 = document.getElementById('sourcing-search');
+      if(s2 && s2.value) raisons.push('une recherche texte est active');
+    } else {
+      var s1 = document.getElementById('lead-search');
+      if(s1 && s1.value) raisons.push('une recherche texte est active');
+      var q = document.getElementById('filter-qual');
+      if(q && q.value) raisons.push('le filtre qualification est sur « ' + q.value + ' »');
+      var sec = document.getElementById('filter-secteur');
+      if(sec && sec.value) raisons.push('le filtre secteur est sur « ' + sec.value + ' »');
+    }
+    if(!raisons.length) return 'Aucun lead ne correspond aux filtres';
+    return 'Aucun résultat — ' + raisons.join(' ; ') + '.';
+  }
+  function matchesColumnFilters(l, tableKey){
+    var filters = COL_FILTERS[tableKey];
+    for(var key in filters){
+      var excluded = filters[key];
+      if(!excluded || !excluded.size) continue;
+      var val = filterColValue(l, key) || '(vide)';
+      if(excluded.has(val)) return false;
+    }
+    return true;
+  }
+  var FILTER_ICON_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 5h16l-6.5 7.2V19l-3 1.6v-8.4L4 5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+  var filterPopoverEl = null;
+  function ensureFilterPopover(){
+    if(filterPopoverEl) return filterPopoverEl;
+    var el = document.createElement('div');
+    el.className = 'col-filter-popover';
+    el.innerHTML = '<input type="text" class="cfp-search" placeholder="Rechercher…">' +
+      '<div class="cfp-actions"><button type="button" class="cfp-all">Tout sélectionner</button><button type="button" class="cfp-none">Tout effacer</button><button type="button" class="cfp-only">Ne garder que la recherche</button></div>' +
+      '<div class="cfp-list"></div>' +
+      '<div class="cfp-footer"><button type="button" class="btn btn-primary cfp-ok">OK</button></div>';
+    document.body.appendChild(el);
+    document.addEventListener('mousedown', function(e){
+      if(el.classList.contains('open') && !el.contains(e.target) && !e.target.closest('.col-filter-icon')) el.classList.remove('open');
+    });
+    filterPopoverEl = el;
+    return el;
+  }
+  function updateFilterIconState(tableKey, key){
+    var rowId = tableKey === 'leads' ? 'leads-thead-row' : 'sourcing-thead-row';
+    var row = document.getElementById(rowId);
+    if(!row) return;
+    var icon = row.querySelector('[data-filter-key="'+cssEscape(key)+'"]');
+    if(!icon) return;
+    var excluded = COL_FILTERS[tableKey][key];
+    icon.classList.toggle('active', !!(excluded && excluded.size));
+  }
+  function openColumnFilter(tableKey, key, anchorEl){
+    var pop = ensureFilterPopover();
+    pop.classList.add('open');
+    var rect = anchorEl.getBoundingClientRect();
+    pop.style.top = (rect.bottom + 4) + 'px';
+    pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 316)) + 'px';
+
+    if(!COL_FILTERS[tableKey][key]) COL_FILTERS[tableKey][key] = new Set();
+    var excluded = COL_FILTERS[tableKey][key];
+    var renderFn = tableKey === 'leads' ? renderLeadsTable : renderSourcingTable;
+
+    var uniq = {};
+    state.leads.forEach(function(l){ uniq[filterColValue(l, key) || '(vide)'] = true; });
+    var values = Object.keys(uniq).sort(function(a,b){ return a.localeCompare(b, 'fr'); });
+
+    var listEl = pop.querySelector('.cfp-list');
+    function renderList(filterText){
+      var ft = (filterText||'').toLowerCase();
+      var shown = values.filter(function(v){ return !ft || v.toLowerCase().indexOf(ft) !== -1; });
+      listEl.innerHTML = shown.map(function(v){
+        var checked = !excluded.has(v);
+        return '<label class="cfp-item"><input type="checkbox" data-val="'+esc(v)+'"'+(checked?' checked':'')+'>'+esc(v)+'</label>';
+      }).join('') || '<div style="font-size:12px;color:var(--muted);padding:4px 0">Aucun résultat</div>';
+      listEl.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+        cb.addEventListener('change', function(){
+          var v = cb.getAttribute('data-val');
+          if(cb.checked) excluded.delete(v); else excluded.add(v);
+          PAGE_STATE[tableKey].page = 1;
+          renderFn(); updateFilterIconState(tableKey, key);
+        });
+      });
+    }
+    renderList('');
+    var searchEl = pop.querySelector('.cfp-search');
+    searchEl.value = '';
+    searchEl.oninput = function(){ renderList(searchEl.value); };
+    pop.querySelector('.cfp-all').onclick = function(){ excluded.clear(); PAGE_STATE[tableKey].page = 1; renderList(searchEl.value); renderFn(); updateFilterIconState(tableKey, key); };
+    pop.querySelector('.cfp-none').onclick = function(){ values.forEach(function(v){ excluded.add(v); }); PAGE_STATE[tableKey].page = 1; renderList(searchEl.value); renderFn(); updateFilterIconState(tableKey, key); };
+    // « Google Ads » existe en une dizaine de variantes : cocher chacune à la main est
+    // pénible. Ce bouton ne garde que les valeurs qui contiennent le texte recherché.
+    pop.querySelector('.cfp-only').onclick = function(){
+      var ft = (searchEl.value||'').toLowerCase();
+      if(!ft){ showToast('Tape d\'abord un texte à garder, par exemple « google ads »'); return; }
+      excluded.clear();
+      values.forEach(function(v){ if(v.toLowerCase().indexOf(ft) === -1) excluded.add(v); });
+      PAGE_STATE[tableKey].page = 1;
+      renderList(searchEl.value); renderFn(); updateFilterIconState(tableKey, key);
+    };
+    pop.querySelector('.cfp-ok').onclick = function(){ pop.classList.remove('open'); };
+  }
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  var db = null;
+  var state = { leads: [], sourcingRequests: [], lastSync: null, ready:false };
+
+  function showToast(msg){
+    var t = document.createElement('div'); t.className='toast'; t.textContent = msg;
+    document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3600);
+  }
+  // Toast qui reste affiché et dont on met à jour le texte en direct (progression d'un lot).
+  function showProgressToast(msg){
+    var t = document.createElement('div'); t.className='toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    return {
+      update: function(m){ t.textContent = m; },
+      close: function(finalMsg, holdMs){
+        if(finalMsg != null) t.textContent = finalMsg;
+        setTimeout(function(){ t.remove(); }, holdMs || 3600);
+      }
+    };
+  }
+
+  function scalar(v){ if(Array.isArray(v)) return v.length ? v[0] : ''; return v==null ? '' : v; }
+  function normPersona(v){
+    if(Array.isArray(v)) return v.join(', ');
+    if(typeof v === 'string' && v.trim().charAt(0)==='['){
+      try { var arr = JSON.parse(v); if(Array.isArray(arr)) return arr.join(', '); } catch(e){}
+    }
+    return v || '';
+  }
+  function initials(name){
+    name = (name||'').trim(); if(!name) return '?';
+    var parts = name.split(/\s+/); return (parts[0][0]||'') + (parts[1] ? parts[1][0] : '');
+  }
+  function qualClass(q){ q = scalar(q); if(q==='Chaud') return 'pill-chaud'; if(q==='Tiède') return 'pill-tiede'; if(q==='Froid') return 'pill-froid'; return 'pill-empty'; }
+  function valClass(v){ v = scalar(v); if(v==='Validé') return 'pill-validated'; if(v==='Pas Validé') return 'pill-pending'; if(v==='Rejeté') return 'pill-rejected'; return 'pill-empty'; }
+  function statutEmailClass(v){ v = scalar(v); if(v==='Délivré') return 'pill-validated'; if(v==='Ouvert') return 'pill-tiede'; if(v==='Envoyé') return 'pill-pending'; if(v==='Désinscrit'||v==='Bounce') return 'pill-rejected'; return 'pill-empty'; }
+  function statutAppelClass(v){
+    v = scalar(v);
+    if(v==='RDV fixé') return 'pill-validated';
+    if(v==='A RAP') return 'pill-tiede';
+    if(v==='PI') return 'pill-rejected';
+    if(v==='NRP') return 'pill-nrp';
+    if(v==='PB NUMERO') return 'pill-pbnum';
+    if(v==='REPONDEUR') return 'pill-repondeur';
+    if(v==='BARRAGE SECRETAIRE') return 'pill-barrage';
+    return 'pill-empty';
+  }
+  function fmtEur(n){ n = Number(n)||0; return n.toLocaleString('fr-FR') + ' €'; }
+
+  function leadName(f){ return ((f['Prénom']||'') + ' ' + (f['Nom']||'')).trim() || (f['Entreprise']||'Sans nom'); }
+
+  function setPath(id){ return db.doc('leads/' + id); }
+
+  function saveLeadFields(id, patch){
+    return setPath(id).update({ fields: patch, _dirty: true, _updatedAt: Date.now() })
+      .catch(function(err){ showToast('Échec de l\'enregistrement : ' + (err && err.code || 'erreur')); });
+  }
+
+  // ---------------- rendering ----------------
+
+  var dashRange = { from: null, to: null };
+  function leadsInDashRange(){
+    if(!dashRange.from && !dashRange.to) return state.leads;
+    var fromT = dashRange.from ? new Date(dashRange.from + 'T00:00:00').getTime() : null;
+    var toT = dashRange.to ? new Date(dashRange.to + 'T23:59:59').getTime() : null;
+    return state.leads.filter(function(l){
+      var raw = l.fields['Date détection'];
+      if(!raw) return false;
+      var t = new Date(raw).getTime();
+      if(isNaN(t)) return false;
+      if(fromT !== null && t < fromT) return false;
+      if(toT !== null && t > toT) return false;
+      return true;
+    });
+  }
+  function applyDashRangePreset(preset){
+    var fromEl = document.getElementById('dash-date-from'), toEl = document.getElementById('dash-date-to'), sepEl = document.getElementById('dash-range-sep');
+    if(preset === 'custom'){
+      fromEl.hidden = false; toEl.hidden = false; sepEl.hidden = false;
+      dashRange.from = fromEl.value || null; dashRange.to = toEl.value || null;
+    } else {
+      fromEl.hidden = true; toEl.hidden = true; sepEl.hidden = true;
+      if(preset === 'all'){ dashRange.from = null; dashRange.to = null; }
+      else {
+        var days = Number(preset);
+        var to = new Date();
+        var from = new Date(); from.setDate(from.getDate() - days);
+        dashRange.to = to.toISOString().slice(0,10);
+        dashRange.from = from.toISOString().slice(0,10);
+      }
+    }
+    renderKpis(); renderFunnelQual(); renderFunnelSecteur(); renderFunnelPipeline(); renderTasks(); renderRecentLeads();
+  }
+
+  var SEEN_LEADS_KEY = 'gacPilotSeenLeadIds';
+  var seenLeadIds = null;
+  (function loadSeenLeads(){
+    try { var raw = localStorage.getItem(SEEN_LEADS_KEY); seenLeadIds = raw ? JSON.parse(raw) : null; } catch(e){ seenLeadIds = null; }
+  })();
+  function checkNewLeads(){
+    var currentIds = state.leads.map(function(l){ return l.id; });
+    if(seenLeadIds === null){
+      // premier chargement de la session : on mémorise sans notifier
+      seenLeadIds = {};
+      currentIds.forEach(function(id){ seenLeadIds[id] = true; });
+      try { localStorage.setItem(SEEN_LEADS_KEY, JSON.stringify(seenLeadIds)); } catch(e){}
+      return;
+    }
+    var nouveaux = currentIds.filter(function(id){ return !seenLeadIds[id]; });
+    if(nouveaux.length){
+      showToast(nouveaux.length + ' nouveau' + (nouveaux.length>1?'x':'') + ' lead' + (nouveaux.length>1?'s':'') + ' vien' + (nouveaux.length>1?'nent':'t') + " d'être ajouté" + (nouveaux.length>1?'s':''));
+      nouveaux.forEach(function(id){ seenLeadIds[id] = true; });
+      try { localStorage.setItem(SEEN_LEADS_KEY, JSON.stringify(seenLeadIds)); } catch(e){}
+    }
+  }
+
+  function renderAll(){
+    checkNewLeads();
+    renderKpis();
+    renderFunnelQual();
+    renderFunnelSecteur();
+    renderFunnelPipeline();
+    renderTasks();
+    renderRecentLeads();
+    renderPipelineBoard();
+    renderSourcingTable();
+    renderLeadsTable();
+    renderNavCounts();
+    renderSettings();
+  }
+
+  function renderNavCounts(){
+    var leads = state.leads;
+    document.getElementById('nav-count-leads').textContent = leads.length;
+    document.getElementById('nav-count-pipeline').textContent = leads.filter(function(l){ return !!scalar(l.fields['Étape pipeline']); }).length;
+    document.getElementById('nav-count-sourcing').textContent = leads.filter(function(l){ var v = scalar(l.fields['Validation mail']); return v==='' || v==='Pas Validé'; }).length;
+
+    var sourcingBuckets = { google_ads:0, seo:0, creation_site:0, refonte_site:0 };
+    leads.forEach(function(l){
+      var b = serviceBucket(l.fields);
+      if(Object.prototype.hasOwnProperty.call(sourcingBuckets, b)) sourcingBuckets[b]++;
+    });
+    Object.keys(sourcingBuckets).forEach(function(k){
+      var el = document.getElementById('nav-count-sourcing-' + k);
+      if(el) el.textContent = sourcingBuckets[k];
+    });
+
+    var leadsBuckets = { google_ads:0, creation_site:0, autres:0 };
+    leads.forEach(function(l){
+      var b = leadsServiceBucket(l.fields);
+      if(Object.prototype.hasOwnProperty.call(leadsBuckets, b)) leadsBuckets[b]++;
+    });
+    Object.keys(leadsBuckets).forEach(function(k){
+      var el = document.getElementById('nav-count-leads-' + k);
+      if(el) el.textContent = leadsBuckets[k];
+    });
+  }
+
+  function renderKpis(){
+    var leads = leadsInDashRange();
+    var total = leads.length;
+    var chaud = leads.filter(function(l){ return scalar(l.fields['Qualification'])==='Chaud'; }).length;
+    var tiede = leads.filter(function(l){ return scalar(l.fields['Qualification'])==='Tiède'; }).length;
+    var valides = leads.filter(function(l){ return scalar(l.fields['Validation mail'])==='Validé'; }).length;
+    var enPipeline = leads.filter(function(l){ return !!scalar(l.fields['Étape pipeline']); }).length;
+    var gagnes = leads.filter(function(l){ return scalar(l.fields['Étape pipeline'])==='Gagné'; });
+    var valeurGagnee = gagnes.reduce(function(s,l){ return s + (Number(l.fields['Valeur deal'])||0); }, 0);
+    var pipelineActifLeads = leads.filter(function(l){ var e = scalar(l.fields['Étape pipeline']); return e && e!=='Gagné' && e!=='Perdu'; });
+    var valeurPipeline = pipelineActifLeads.reduce(function(s,l){ return s + (Number(l.fields['Valeur deal'])||0); }, 0);
+
+    var tiles = [
+      {lbl:'Leads sourcés', val:total, delta: total ? (chaud+tiede)+' chauds/tièdes' : '—'},
+      {lbl:'Qualifiés (chaud+tiède)', val: chaud+tiede, delta: total ? Math.round((chaud+tiede)/total*100)+'% du total' : '—'},
+      {lbl:'Emails validés', val: valides, delta: 'sync Brevo auto'},
+      {lbl:'Deals gagnés', val: gagnes.length, delta: fmtEur(valeurGagnee)},
+      {lbl:'En pipeline actif', val: enPipeline, delta: total ? Math.round(enPipeline/total*100)+'% des leads' : '—'},
+      {lbl:'Valeur pipeline', val: fmtEur(valeurPipeline), delta: pipelineActifLeads.length + ' deals ouverts'}
+    ];
+    var grid = document.getElementById('kpi-grid');
+    grid.innerHTML = tiles.map(function(t){
+      return '<div class="kpi"><div class="lbl">'+t.lbl+'</div><div class="val">'+t.val+'</div><div class="delta flat">'+t.delta+'</div></div>';
+    }).join('');
+    document.getElementById('dash-sub').textContent = total ? (total + ' leads dans la base — données en direct') : 'Aucun lead synchronisé pour le moment';
+  }
+
+  function funnelBar(container, rows, maxVal){
+    container.innerHTML = rows.map(function(r){
+      var pct = maxVal ? Math.max(4, Math.round(r.val/maxVal*100)) : 0;
+      return '<div class="funnel-row"><div class="stage">'+r.label+'</div><div class="funnel-track"><div class="funnel-fill" style="width:'+pct+'%'+(r.color?';background:linear-gradient(90deg,'+r.color+','+r.color+')':'')+'">'+r.val+'</div></div><div class="val">'+(r.sub||'')+'</div></div>';
+    }).join('') || '<div class="empty-state">Pas encore de données</div>';
+  }
+
+  function renderFunnelQual(){
+    var leads = leadsInDashRange();
+    var rows = ['Chaud','Tiède','Froid'].map(function(q){
+      return { label:q, val: leads.filter(function(l){ return scalar(l.fields['Qualification'])===q; }).length };
+    });
+    var max = Math.max.apply(null, rows.map(function(r){return r.val;}).concat([1]));
+    funnelBar(document.getElementById('funnel-qual'), rows, max);
+  }
+
+  function renderFunnelSecteur(){
+    var leads = leadsInDashRange();
+    var counts = {};
+    leads.forEach(function(l){ var s = scalar(l.fields['Secteur']) || 'Non renseigné'; counts[s] = (counts[s]||0)+1; });
+    var rows = Object.keys(counts).map(function(k){ return {label:k, val:counts[k]}; }).sort(function(a,b){ return b.val-a.val; }).slice(0,6);
+    var max = Math.max.apply(null, rows.map(function(r){return r.val;}).concat([1]));
+    funnelBar(document.getElementById('funnel-secteur'), rows, max);
+  }
+
+  function renderFunnelPipeline(){
+    var leads = leadsInDashRange();
+    var rows = PIPELINE_STAGES.map(function(s){
+      var subset = leads.filter(function(l){ return scalar(l.fields['Étape pipeline'])===s; });
+      var val = subset.reduce(function(sum,l){ return sum + (Number(l.fields['Valeur deal'])||0); }, 0);
+      return { label:s, val: subset.length, sub: val ? fmtEur(val) : '—' };
+    }).filter(function(r){ return r.val > 0; });
+    var max = Math.max.apply(null, rows.map(function(r){return r.val;}).concat([1]));
+    if(!rows.length){ document.getElementById('funnel-pipeline').innerHTML = '<div class="empty-state">Aucun lead n\'a encore d\'étape pipeline assignée — utilise la vue Leads pour en ajouter un.</div>'; return; }
+    funnelBar(document.getElementById('funnel-pipeline'), rows, max);
+  }
+
+  function renderTasks(){
+    var leads = leadsInDashRange().filter(function(l){
+      var q = scalar(l.fields['Qualification']); var v = scalar(l.fields['Validation mail']);
+      return q==='Chaud' && (v==='' || v==='Pas Validé');
+    }).slice(0,6);
+    var el = document.getElementById('task-list');
+    if(!leads.length){ el.innerHTML = '<div class="empty-state">Rien en attente — tous les leads chauds ont été traités.</div>'; return; }
+    el.innerHTML = leads.map(function(l){
+      return '<div class="task"><div><div class="t-main">'+leadName(l.fields)+' — '+(l.fields['Entreprise']||'')+'</div><div class="t-sub">'+(l.fields['Service recommandé']||'')+'</div></div><span class="tag pill pill-chaud">Chaud</span></div>';
+    }).join('');
+  }
+
+  function renderRecentLeads(){
+    var leads = leadsInDashRange().slice().sort(function(a,b){
+      return new Date(b.fields['Date détection']||0) - new Date(a.fields['Date détection']||0);
+    }).slice(0,8);
+    document.getElementById('recent-leads-body').innerHTML = leads.map(function(l){
+      var f = l.fields;
+      return '<tr><td><div class="who-cell"><div class="ini">'+esc(initials(leadName(f)))+'</div><div><div class="name">'+esc(leadName(f))+'</div><div class="co">'+esc(f['Entreprise']||'')+'</div></div></div></td>'+
+        '<td>'+esc(scalar(f['Secteur'])||'—')+'</td>'+
+        '<td><span class="pill '+qualClass(f['Qualification'])+'">'+(scalar(f['Qualification'])||'—')+'</span></td>'+
+        '<td><span class="pill '+valClass(f['Validation mail'])+'">'+(scalar(f['Validation mail'])||'—')+'</span></td></tr>';
+    }).join('') || '<tr><td colspan="4" class="empty-state">Aucun lead</td></tr>';
+  }
+
+  function renderPipelineBoard(){
+    var leads = state.leads.filter(function(l){ return !!scalar(l.fields['Étape pipeline']); });
+    var board = document.getElementById('board');
+    board.innerHTML = PIPELINE_STAGES.map(function(stage){
+      var cards = leads.filter(function(l){ return scalar(l.fields['Étape pipeline'])===stage; });
+      var color = PIPELINE_COLORS[stage] || 'var(--muted)';
+      return '<div class="col" data-stage="'+stage+'"><div class="col-head"><span class="dot" style="background:'+color+'"></span><span class="name">'+stage+'</span><span class="n">'+cards.length+'</span></div>'+
+        '<div class="col-body" data-stage="'+stage+'">'+cards.map(function(l){
+          var f = l.fields;
+          var statutEmail = scalar(f['Statut email']);
+          var badgeEmail = statutEmail ? '<span class="pill '+statutEmailClass(statutEmail)+'" style="font-size:10px;padding:2px 7px">'+esc(statutEmail)+'</span>' : '';
+          return '<div class="card" draggable="true" data-id="'+l.id+'"><div class="co">'+esc(f['Entreprise']||leadName(f))+'</div><div class="ct">'+esc(leadName(f))+' · '+esc(scalar(f['Secteur'])||'')+'</div>'+
+            (badgeEmail ? '<div>'+badgeEmail+'</div>' : '') +
+            '<div class="foot"><span class="val">'+(f['Valeur deal'] ? fmtEur(f['Valeur deal']) : '—')+'</span><span class="pack">'+esc(f['Pack']||'—')+'</span></div></div>';
+        }).join('')+'</div></div>';
+    }).join('');
+    wireKanban();
+  }
+
+  function wireKanban(){
+    var dragged = null;
+    document.querySelectorAll('#board .card').forEach(function(card){
+      card.addEventListener('dragstart', function(){ dragged = card; card.classList.add('dragging'); });
+      card.addEventListener('dragend', function(){ card.classList.remove('dragging'); });
+    });
+    document.querySelectorAll('#board .col-body').forEach(function(body){
+      body.addEventListener('dragover', function(e){ e.preventDefault(); body.classList.add('over'); });
+      body.addEventListener('dragleave', function(){ body.classList.remove('over'); });
+      body.addEventListener('drop', function(e){
+        e.preventDefault(); body.classList.remove('over');
+        if(dragged){
+          var id = dragged.getAttribute('data-id'); var newStage = body.getAttribute('data-stage');
+          body.appendChild(dragged);
+          saveLeadFields(id, { 'Étape pipeline': newStage }).then(function(){ showToast('Étape mise à jour — synchro Airtable sous ~10 min'); });
+        }
+      });
+    });
+  }
+
+  function fmtDate(v){ if(!v) return '—'; var d = new Date(v); return isNaN(d) ? '—' : d.toLocaleDateString('fr-FR'); }
+  function telHref(v){ return 'tel:' + String(v||'').replace(/[^\d+]/g,''); }
+  function urlHref(v){ v = String(v||'').trim(); if(!v) return ''; return /^https?:\/\//i.test(v) ? v : 'https://' + v; }
+
+  function updatePinOffsets(tableId){
+    var table = document.getElementById(tableId);
+    if(!table) return;
+    var headRow = table.querySelector('thead tr');
+    if(!headRow || headRow.children.length < 3) return;
+    var w1 = headRow.children[0].getBoundingClientRect().width;
+    var w2 = headRow.children[1].getBoundingClientRect().width;
+    // Vue masquée : les largeurs valent 0. Écrire des décalages nuls empilerait
+    // Prospect, Prénom et Nom au même endroit — on attend que la vue soit visible.
+    if(!w1 || !w2) return;
+    var left2 = Math.round(w1); var left3 = Math.round(w1 + w2);
+    table.querySelectorAll('tr').forEach(function(tr){
+      if(tr.children[1]) tr.children[1].style.left = left2 + 'px';
+      if(tr.children[2]) tr.children[2].style.left = left3 + 'px';
+    });
+  }
+  function updateAllPinOffsets(){ updatePinOffsets('leads-table'); updatePinOffsets('sourcing-table'); }
+
+  function startColResize(e, key, theadRowIds){
+    e.preventDefault();
+    var startX = e.clientX; var startW = COL_WIDTHS[key] || 140;
+    var handle = e.target; handle.classList.add('resizing');
+    function onMove(ev){
+      var w = Math.max(MIN_COL_W, startW + (ev.clientX - startX));
+      COL_WIDTHS[key] = w;
+      theadRowIds.forEach(function(ids){
+        var col = document.getElementById(ids.colgroup + '-col-' + cssEscape(key));
+        if(col) col.style.width = w + 'px';
+      });
+      refreshTableWidths();
+      updateAllPinOffsets();
+    }
+    function onUp(){
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      handle.classList.remove('resizing');
+      saveColWidths();
+      updateAllPinOffsets();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+  function cssEscape(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, function(c){ return '_' + c.charCodeAt(0) + '_'; }); }
+
+  var GRID_TARGETS = [{colgroup:'leads-colgroup'}, {colgroup:'sourcing-colgroup'}];
+
+  // Sans largeur explicite, table-layout:fixed répartit l'espace disponible au
+  // prorata et écrase les colonnes. On impose la somme réelle en pixels.
+  function tableTotalWidth(hasExtraCol, tableKey){
+    var total = COL_WIDTHS[PROSPECT_KEY] || PROSPECT_DEFAULT_W;
+    activeColumns(tableKey).forEach(function(c){ total += COL_WIDTHS[c.key] || c.w || 140; });
+    return total + (hasExtraCol ? 110 : 0);
+  }
+  function refreshTableWidths(){
+    var lt = document.getElementById('leads-table');
+    if(lt) lt.style.width = tableTotalWidth(SERVICE_FILTER.leads === 'google_ads', 'leads') + 'px';
+    var st = document.getElementById('sourcing-table');
+    if(st) st.style.width = tableTotalWidth(true, 'sourcing') + 'px';
+  }
+
+  function buildGridHeader(theadRowEl, colgroupEl, extraHeaderHtml){
+    var tableKey = theadRowEl.id === 'leads-thead-row' ? 'leads' : 'sourcing';
+    var cols = activeColumns(tableKey);
+    colgroupEl.innerHTML = '<col id="'+colgroupEl.id+'-col-'+cssEscape(PROSPECT_KEY)+'" style="width:'+(COL_WIDTHS[PROSPECT_KEY]||PROSPECT_DEFAULT_W)+'px">' + cols.map(function(c){
+      return '<col id="'+colgroupEl.id+'-col-'+cssEscape(c.key)+'" style="width:'+(COL_WIDTHS[c.key]||c.w||140)+'px">';
+    }).join('') + (extraHeaderHtml ? '<col style="width:110px">' : '');
+    var st = SORT_STATE[tableKey];
+    function sortInd(key){ return st.key === key ? '<span class="sort-ind">'+(st.dir === 1 ? '▲' : '▼')+'</span>' : ''; }
+    theadRowEl.innerHTML = '<th><span class="th-label th-sort" data-sort-key="__prospect__" title="Trier">Prospect'+sortInd('__prospect__')+'</span><button type="button" class="col-filter-icon" data-filter-key="__prospect__" title="Filtrer">'+FILTER_ICON_SVG+'</button><span class="col-resizer" data-key="__prospect__"></span></th>' + cols.map(function(c){
+      return '<th><span class="th-label th-sort" data-sort-key="'+esc(c.key)+'" title="Trier">'+esc(c.label)+sortInd(c.key)+'</span><button type="button" class="col-filter-icon" data-filter-key="'+esc(c.key)+'" title="Filtrer">'+FILTER_ICON_SVG+'</button><span class="col-resizer" data-key="'+esc(c.key)+'"></span></th>';
+    }).join('') + (extraHeaderHtml ? '<th><span class="th-label">'+extraHeaderHtml+'</span></th>' : '');
+    theadRowEl.querySelectorAll('.th-sort').forEach(function(lbl){
+      lbl.addEventListener('click', function(e){ e.stopPropagation(); toggleSort(tableKey, lbl.getAttribute('data-sort-key')); });
+    });
+    theadRowEl.querySelectorAll('.col-resizer').forEach(function(handle){
+      handle.addEventListener('mousedown', function(e){ startColResize(e, handle.getAttribute('data-key'), GRID_TARGETS); });
+    });
+    theadRowEl.querySelectorAll('.col-filter-icon').forEach(function(btn){
+      var key = btn.getAttribute('data-filter-key');
+      var excluded = COL_FILTERS[tableKey][key];
+      if(excluded && excluded.size) btn.classList.add('active');
+      btn.addEventListener('click', function(e){ e.stopPropagation(); openColumnFilter(tableKey, key, btn); });
+    });
+    refreshTableWidths();
+    requestAnimationFrame(updateAllPinOffsets);
+  }
+
+  function linkishCellHtml(l, col, hrefFn, targetBlank){
+    var v = scalar(l.fields[col.key]) || '';
+    var href = v ? hrefFn(v) : '';
+    return '<td><div class="linkish-field" data-id="'+l.id+'" data-field="'+esc(col.key)+'">'+
+      '<a class="linkish-link" href="'+esc(href)+'"'+(targetBlank ? ' target="_blank" rel="noopener noreferrer"' : '')+(v ? '' : ' style="display:none"')+'>'+esc(v)+'</a>'+
+      '<span class="linkish-empty"'+(v ? ' style="display:none"' : '')+'>—</span>'+
+      '<button type="button" class="linkish-edit" title="Modifier">✎</button>'+
+      '<input type="text" class="linkish-input" style="display:none" value="'+esc(v)+'" data-orig="'+esc(v)+'">'+
+      '</div></td>';
+  }
+
+  function leadCellHtml(l, col){
+    var f = l.fields; var raw = f[col.key];
+    if(col.type === 'computed-url'){
+      var href = (COMPUTED_URL_BUILDERS[col.builder] || function(){ return ''; })(l);
+      if(!href) return '<td style="color:var(--muted)">—</td>';
+      return '<td><a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-weight:700;font-size:12px">Vérifier \u2197</a></td>';
+    }
+    if(col.type === 'phone'){
+      return linkishCellHtml(l, col, telHref, false);
+    }
+    if(col.type === 'url'){
+      return linkishCellHtml(l, col, urlHref, true);
+    }
+    if(col.type === 'readonly'){
+      var disp;
+      if(col.display==='date') disp = fmtDate(raw);
+      else if(col.display==='persona') disp = normPersona(raw);
+      else if(col.display==='bool') disp = fmtBool(raw);
+      else if(col.display==='number') disp = fmtNum(raw);
+      else disp = scalar(raw)||'—';
+      var vertOui = (col.display==='bool' && disp==='Oui');
+      return '<td style="color:'+(vertOui?'var(--good)':'var(--muted)')+(vertOui?';font-weight:700':'')+'" title="'+esc(disp)+'">'+esc(disp)+'</td>';
+    }
+    if(col.type === 'select'){
+      var cur = scalar(raw);
+      var opts = col.options.map(function(o){ return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o||'—')+'</option>'; }).join('');
+      var pillCls = '';
+      if(col.key === 'Statut email') pillCls = ' ' + statutEmailClass(raw);
+      if(col.key === 'Validation mail') pillCls = ' ' + valClass(raw);
+      if(col.key === 'STATUT' || col.key === 'RELANCE 1' || col.key === 'RELANCE 2') pillCls = ' ' + statutAppelClass(raw);
+      return '<td><select class="cell-select'+pillCls+'" data-id="'+l.id+'" data-field="'+esc(col.key)+'" data-multi="'+(col.multi?'1':'0')+'">'+opts+'</select></td>';
+    }
+    if(col.type === 'number'){
+      var n = raw==null ? '' : raw;
+      return '<td><input class="cell-number" type="number" data-id="'+l.id+'" data-field="'+esc(col.key)+'" value="'+esc(n)+'"></td>';
+    }
+    var t = scalar(raw) || '';
+    var cls = col.big ? ' class="id-cell"' : '';
+    return '<td'+cls+' title="'+esc(t)+'"><span class="editable-cell" contenteditable="true" data-id="'+l.id+'" data-field="'+esc(col.key)+'" data-orig="'+esc(t)+'">'+esc(t)+'</span></td>';
+  }
+
+  function renderLeadsTable(){
+    // Le mail n'existe que pour les leads Google Ads (pipeline LinkedIn + email) ;
+    // les leads "Création de site" (Google Maps, sans site) n'ont pas d'email.
+    var showMailCol = SERVICE_FILTER.leads === 'google_ads';
+    buildGridHeader(document.getElementById('leads-thead-row'), document.getElementById('leads-colgroup'), showMailCol ? 'Action' : null);
+    var search = (document.getElementById('lead-search').value||'').toLowerCase();
+    var qual = document.getElementById('filter-qual').value;
+    var secteur = document.getElementById('filter-secteur').value;
+
+    var secteurs = {}; state.leads.forEach(function(l){ var s = scalar(l.fields['Secteur']); if(s) secteurs[s]=true; });
+    var sel = document.getElementById('filter-secteur');
+    if(sel.getAttribute('data-built') !== String(Object.keys(secteurs).length)){
+      var current = sel.value;
+      sel.innerHTML = '<option value="">Tous secteurs</option>' + Object.keys(secteurs).sort().map(function(s){ return '<option>'+esc(s)+'</option>'; }).join('');
+      sel.value = current; sel.setAttribute('data-built', String(Object.keys(secteurs).length));
+    }
+
+    var leads = state.leads.filter(function(l){
+      var f = l.fields;
+      if(qual && scalar(f['Qualification']) !== qual) return false;
+      if(secteur && scalar(f['Secteur']) !== secteur) return false;
+      if(search && rowSearchHaystack(l).indexOf(search) === -1) return false;
+      if(!matchesColumnFilters(l, 'leads')) return false;
+      if(SERVICE_FILTER.leads && leadsServiceBucket(f) !== SERVICE_FILTER.leads) return false;
+      return true;
+    });
+    leads = applySort(leads, 'leads');
+    var totalFiltered = leads.length;
+    // Toutes les lignes qui correspondent au filtre actuel (pas seulement la page visible) :
+    // c'est cet ensemble complet que les actions groupées appliquent.
+    LAST_RENDERED.leads = leads;
+    if(typeof majComptesGroupes === 'function') majComptesGroupes();
+    var stL = PAGE_STATE.leads;
+    var totalPagesL = Math.max(1, Math.ceil(totalFiltered / stL.pageSize));
+    if(stL.page > totalPagesL) stL.page = totalPagesL;
+    if(stL.page < 1) stL.page = 1;
+    var startL = (stL.page - 1) * stL.pageSize;
+    leads = leads.slice(startL, startL + stL.pageSize);
+
+    document.getElementById('leads-sub').textContent = state.leads.length + ' prospects sourcés au total — ' + totalFiltered + ' correspondent aux filtres (page ' + stL.page + ' / ' + totalPagesL + ')';
+    var leadsCols = activeColumns('leads');
+    document.getElementById('leads-body').innerHTML = leads.map(function(l){
+      var f = l.fields;
+      return '<tr><td><div class="who-cell"><div class="ini">'+esc(initials(leadName(f)))+'</div><div><div class="name">'+esc(leadName(f))+'</div><div class="co">'+esc(f['Entreprise']||'')+'</div></div><button type="button" class="fiche-btn" data-id="'+l.id+'" title="Aperçu fiche client">👁</button></div></td>'+
+        leadsCols.map(function(c){ return leadCellHtml(l, c); }).join('') +
+        (showMailCol ? '<td><button class="btn btn-ghost edit-mail-btn" style="padding:6px 12px;font-size:12px" data-id="'+l.id+'">Voir / éditer</button></td>' : '') + '</tr>';
+    }).join('') || '<tr><td colspan="'+(leadsCols.length+1+(showMailCol?1:0))+'" class="empty-state">'+esc(texteAucunResultat('leads'))+'</td></tr>';
+    if(showMailCol){
+      document.querySelectorAll('#leads-body .edit-mail-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){ openMailModal(btn.getAttribute('data-id')); });
+      });
+    }
+    renderPager('leads', totalFiltered);
+    requestAnimationFrame(function(){ updatePinOffsets('leads-table'); });
+  }
+
+  function renderSourcingTable(){
+    buildGridHeader(document.getElementById('sourcing-thead-row'), document.getElementById('sourcing-colgroup'), 'Action');
+    var search = (document.getElementById('sourcing-search').value||'').toLowerCase();
+    var statusFilter = document.getElementById('sourcing-status-filter').value;
+    // Le menu « À traiter » masque par défaut les leads déjà validés. Si on filtre
+    // explicitement la colonne « Validation mail », c'est ce filtre-là qui doit gagner,
+    // sinon chercher les « Validé » ici ne renvoie jamais rien.
+    var filtreColonneValidation = COL_FILTERS.sourcing['Validation mail'];
+    var validationPiloteeParColonne = !!(filtreColonneValidation && filtreColonneValidation.size);
+    var leads = state.leads.filter(function(l){
+      var v = scalar(l.fields['Validation mail']);
+      if(statusFilter === '') return validationPiloteeParColonne ? true : (v==='' || v==='Pas Validé');
+      if(statusFilter === 'all') return true;
+      return v === statusFilter;
+    }).filter(function(l){
+      if(!search) return true;
+      return rowSearchHaystack(l).indexOf(search) !== -1;
+    }).filter(function(l){ return matchesColumnFilters(l, 'sourcing'); }).filter(function(l){
+      return !SERVICE_FILTER.sourcing || serviceBucket(l.fields) === SERVICE_FILTER.sourcing;
+    });
+    if(SORT_STATE.sourcing.key){
+      leads = applySort(leads, 'sourcing');
+    } else {
+      // Chaud valait 0, et 0||3 renvoyait 3 : les leads chauds finissaient en bas.
+      var QUAL_ORDER = {'Chaud':0, 'Tiède':1, 'Froid':2};
+      function qualRank(v){
+        var k = scalar(v);
+        return Object.prototype.hasOwnProperty.call(QUAL_ORDER, k) ? QUAL_ORDER[k] : 3;
+      }
+      leads = leads.sort(function(a,b){
+        return qualRank(a.fields['Qualification']) - qualRank(b.fields['Qualification']);
+      });
+    }
+    var totalFilteredS = leads.length;
+    // Toutes les lignes qui correspondent au filtre actuel (pas seulement la page visible) :
+    // c'est cet ensemble complet que les actions groupées appliquent.
+    LAST_RENDERED.sourcing = leads;
+    if(typeof majComptesGroupes === 'function') majComptesGroupes();
+    var stS = PAGE_STATE.sourcing;
+    var totalPagesS = Math.max(1, Math.ceil(totalFilteredS / stS.pageSize));
+    if(stS.page > totalPagesS) stS.page = totalPagesS;
+    if(stS.page < 1) stS.page = 1;
+    var startS = (stS.page - 1) * stS.pageSize;
+    leads = leads.slice(startS, startS + stS.pageSize);
+
+    document.getElementById('sourcing-count-sub').textContent = totalFilteredS + ' ligne(s) correspondent aux filtres sur ' + state.leads.length + ' leads (page ' + stS.page + ' / ' + totalPagesS + ')';
+    var sourcingCols = activeColumns('sourcing');
+    document.getElementById('sourcing-body').innerHTML = leads.map(function(l){
+      var f = l.fields;
+      return '<tr><td><div class="who-cell"><div class="ini">'+esc(initials(leadName(f)))+'</div><div><div class="name">'+esc(leadName(f))+'</div><div class="co">'+esc(f['Entreprise']||'')+'</div></div><button type="button" class="fiche-btn" data-id="'+l.id+'" title="Aperçu fiche client">👁</button></div></td>'+
+        sourcingCols.map(function(c){ return leadCellHtml(l, c); }).join('') +
+        '<td><button class="btn btn-ghost edit-mail-btn" style="padding:6px 12px;font-size:12px" data-id="'+l.id+'">Voir / éditer</button></td></tr>';
+    }).join('') || '<tr><td colspan="'+(sourcingCols.length+2)+'" class="empty-state">'+esc(texteAucunResultat('sourcing'))+'</td></tr>';
+
+    document.querySelectorAll('#sourcing-body .edit-mail-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ openMailModal(btn.getAttribute('data-id')); });
+    });
+    renderPager('sourcing', totalFilteredS);
+    requestAnimationFrame(function(){ updatePinOffsets('sourcing-table'); });
+  }
+
+  function patchForCell(field, multi, val){
+    if(multi) return { 'field': field, 'value': val ? [val] : [] };
+    if(field === 'Valeur deal') return { field: field, value: Number(val) || 0 };
+    return { field: field, value: val };
+  }
+
+  function savePatch(id, field, multi, rawVal){
+    var p = patchForCell(field, multi, rawVal);
+    var patch = {}; patch[p.field] = p.value;
+    saveLeadFields(id, patch);
+  }
+
+  function wireEditableGrid(body){
+    body.addEventListener('blur', function(e){
+      var el = e.target;
+      if(el.classList && el.classList.contains('editable-cell')){
+        var val = el.textContent.trim();
+        if(el.getAttribute('data-orig') === val) return;
+        el.setAttribute('data-orig', val);
+        savePatch(el.getAttribute('data-id'), el.getAttribute('data-field'), false, val);
+        showToast('Enregistré');
+        return;
+      }
+      if(el.classList && el.classList.contains('linkish-input')){
+        var field = el.closest('.linkish-field');
+        var val2 = el.value.trim();
+        if(el.getAttribute('data-orig') === val2){ field.querySelector('.linkish-input').style.display='none'; (field.querySelector('.linkish-link').style.display = val2 ? '' : 'none'); field.querySelector('.linkish-empty').style.display = val2 ? 'none' : ''; return; }
+        el.setAttribute('data-orig', val2);
+        var col = LEAD_COLUMNS.find(function(c){ return c.key === field.getAttribute('data-field'); });
+        var link = field.querySelector('.linkish-link'); var empty = field.querySelector('.linkish-empty');
+        if(val2){
+          link.textContent = val2; link.href = col && col.type==='phone' ? telHref(val2) : urlHref(val2);
+          link.style.display=''; empty.style.display='none';
+        } else {
+          link.style.display='none'; empty.style.display='';
+        }
+        el.style.display = 'none';
+        savePatch(field.getAttribute('data-id'), field.getAttribute('data-field'), false, val2);
+        showToast('Enregistré');
+      }
+    }, true);
+    body.addEventListener('click', function(e){
+      var btn = e.target.closest ? e.target.closest('.linkish-edit') : null;
+      if(!btn) return;
+      var field = btn.closest('.linkish-field');
+      field.querySelector('.linkish-link').style.display = 'none';
+      field.querySelector('.linkish-empty').style.display = 'none';
+      var input = field.querySelector('.linkish-input');
+      input.style.display = ''; input.focus(); input.select();
+    });
+    body.addEventListener('change', function(e){
+      var el = e.target;
+      if(el.classList.contains('cell-select')){
+        var cellId = el.getAttribute('data-id');
+        var cellField = el.getAttribute('data-field');
+        // STATUT (suivi d'appel Ifaliana) fait foi pour tous les leads : on répercute
+        // automatiquement sur Étape pipeline pour que le pipeline reste cohérent
+        // sans double saisie, quel que soit le type de lead.
+        if(cellField === 'STATUT'){
+          var STATUT_TO_ETAPE = {'NRP':'Contacté','REPONDEUR':'Contacté','A RAP':'Contacté','BARRAGE SECRETAIRE':'Contacté','PI':'Perdu','RDV fixé':'RDV programmé'};
+          var etape = STATUT_TO_ETAPE[el.value];
+          if(etape){
+            saveLeadFields(cellId, { 'STATUT': el.value, 'Étape pipeline': etape }).catch(function(){});
+            showToast('Enregistré');
+            return;
+          }
+        }
+        savePatch(cellId, cellField, el.getAttribute('data-multi')==='1', el.value);
+        showToast('Enregistré');
+      } else if(el.classList.contains('cell-number')){
+        savePatch(el.getAttribute('data-id'), el.getAttribute('data-field'), false, el.value);
+        showToast('Enregistré');
+      }
+    });
+    body.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && e.target.classList && (e.target.classList.contains('editable-cell') || e.target.classList.contains('linkish-input'))){ e.preventDefault(); e.target.blur(); }
+      if(e.key === 'Escape' && e.target.classList && e.target.classList.contains('linkish-input')){ e.target.value = e.target.getAttribute('data-orig'); e.target.blur(); }
+    });
+  }
+  wireEditableGrid(document.getElementById('leads-body'));
+  wireEditableGrid(document.getElementById('sourcing-body'));
+
+  // ---------------- confirmation intégrée ----------------
+  // Les fenêtres natives du navigateur sont bloquées dans le bac à sable de
+  // l'artifact : on affiche donc notre propre fenêtre, en HTML.
+  function demanderConfirmation(message, onOui){
+    var ov = document.createElement('div');
+    ov.className = 'modal-overlay';
+    ov.innerHTML = '<div class="modal" style="width:440px">' +
+      '<h3>Confirmer</h3>' +
+      '<div class="sub" style="margin-bottom:22px"></div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="btn btn-ghost conf-non">Annuler</button>' +
+        '<button type="button" class="btn btn-primary conf-oui">Confirmer</button>' +
+      '</div></div>';
+    ov.querySelector('.sub').textContent = message;
+    document.body.appendChild(ov);
+    function fermer(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }
+    ov.querySelector('.conf-non').addEventListener('click', fermer);
+    ov.querySelector('.conf-oui').addEventListener('click', function(){ fermer(); onOui(); });
+    ov.addEventListener('click', function(e){ if(e.target === ov) fermer(); });
+    ov.querySelector('.conf-oui').focus();
+  }
+
+  // ---------------- action groupée sur toutes les lignes du filtre ----------------
+  // Par petits lots (pas un par un, pas non plus en rafale totale) : assez rapide pour
+  // ne pas donner l'impression que ça ne marche pas, sans dépasser la limite Airtable.
+  var BULK_BATCH_SIZE = 4;
+  function appliquerEnSerie(cibles, field, multi, valeur, onProgress, onDone){
+    var faits = 0, rates = 0, fait = 0;
+    var total = cibles.length;
+    var i = 0;
+    function suivant(){
+      if(i >= total){ onDone(faits, rates); return; }
+      var lot = cibles.slice(i, i + BULK_BATCH_SIZE);
+      i += lot.length;
+      Promise.all(lot.map(function(id){
+        var p = patchForCell(field, multi, valeur);
+        var patch = {}; patch[p.field] = p.value;
+        return saveLeadFields(id, patch).then(function(){ faits++; }, function(){ rates++; }).then(function(){
+          fait++;
+          if(onProgress) onProgress(fait, total);
+        });
+      })).then(suivant);
+    }
+    suivant();
+  }
+
+  function setupBulkBar(bar){
+    var tableKey = bar.getAttribute('data-table');
+    var colSel = bar.querySelector('.bulk-col');
+    var slot = bar.querySelector('.bulk-value-slot');
+    var btn = bar.querySelector('.bulk-apply');
+    var countEl = bar.querySelector('.bulk-count');
+
+    var editables = LEAD_COLUMNS.filter(function(c){ return c.type !== 'readonly'; });
+    colSel.innerHTML = editables.map(function(c){
+      return '<option value="' + esc(c.key) + '">' + esc(c.label) + '</option>';
+    }).join('');
+    // Validation mail par défaut : c'est l'usage principal
+    if(editables.some(function(c){ return c.key === 'Validation mail'; })) colSel.value = 'Validation mail';
+
+    function colDef(){ return LEAD_COLUMNS.find(function(c){ return c.key === colSel.value; }); }
+
+    function renderValueControl(){
+      var c = colDef();
+      if(!c){ slot.innerHTML = ''; return; }
+      if(c.type === 'select'){
+        slot.innerHTML = '<select class="bulk-value">' + c.options.map(function(o){
+          return '<option value="' + esc(o) + '">' + esc(o || '(vide)') + '</option>';
+        }).join('') + '</select>';
+        if(c.key === 'Validation mail') slot.querySelector('.bulk-value').value = 'Validé';
+      } else if(c.type === 'number'){
+        slot.innerHTML = '<input type="text" class="bulk-value" inputmode="numeric" placeholder="0">';
+      } else {
+        slot.innerHTML = '<input type="text" class="bulk-value" placeholder="valeur à appliquer">';
+      }
+    }
+    colSel.addEventListener('change', renderValueControl);
+    renderValueControl();
+
+    bar.majCompte = function(){
+      var n = (LAST_RENDERED[tableKey] || []).length;
+      countEl.textContent = n + ' ligne(s) au total pour ce filtre';
+      btn.disabled = !n;
+      btn.style.opacity = n ? '' : '.5';
+    };
+    bar.majCompte();
+
+    btn.addEventListener('click', function(){
+      var c = colDef();
+      var input = slot.querySelector('.bulk-value');
+      if(!c || !input) return;
+      var valeur = input.value;
+      var lignes = (LAST_RENDERED[tableKey] || []).slice();
+      if(!lignes.length){ showToast('Aucune ligne ne correspond au filtre actuel'); return; }
+      var msg = 'Mettre « ' + c.label + ' » à « ' + (valeur || '(vide)') + ' » sur les '
+        + lignes.length + ' ligne(s) qui correspondent au filtre actuel (toutes les pages, pas juste celle-ci) ?';
+      demanderConfirmation(msg, function(){
+        btn.disabled = true;
+        var progress = showProgressToast('Application sur ' + lignes.length + ' ligne(s)… (0/' + lignes.length + ')');
+        appliquerEnSerie(lignes.map(function(l){ return l.id; }), c.key, !!c.multi, valeur, function(fait, total){
+          progress.update('Application en cours… (' + fait + '/' + total + ')');
+        }, function(faits, rates){
+          btn.disabled = false;
+          progress.close(faits + ' ligne(s) mises à jour' + (rates ? ' — ' + rates + ' en échec' : ''));
+          renderLeadsTable(); renderSourcingTable();
+        });
+      });
+    });
+  }
+  var BULK_BARS = [];
+  document.querySelectorAll('.bulk-bar').forEach(function(bar){ setupBulkBar(bar); BULK_BARS.push(bar); });
+  function majComptesGroupes(){ BULK_BARS.forEach(function(b){ if(b.majCompte) b.majCompte(); }); }
+
+  // ---------------- poignée de recopie (comme Google Sheets) ----------------
+  var fillHandle = null, fillSourceTd = null, fillDrag = null;
+
+  function cellMeta(td){
+    var el = td ? td.querySelector('[data-id][data-field]') : null;
+    if(!el) return null;
+    return {
+      id: el.getAttribute('data-id'),
+      field: el.getAttribute('data-field'),
+      multi: el.getAttribute('data-multi') === '1'
+    };
+  }
+  function cellValue(td){
+    var s = td.querySelector('.cell-select'); if(s) return s.value;
+    var n = td.querySelector('.cell-number'); if(n) return n.value;
+    var li = td.querySelector('.linkish-input'); if(li) return li.value;
+    var e = td.querySelector('.editable-cell'); if(e) return e.textContent.trim();
+    return null;
+  }
+  function ensureFillHandle(){
+    if(fillHandle) return fillHandle;
+    fillHandle = document.createElement('div');
+    fillHandle.className = 'fill-handle';
+    fillHandle.title = 'Tirer vers le bas pour recopier cette valeur';
+    document.body.appendChild(fillHandle);
+    fillHandle.addEventListener('mousedown', startFill);
+    return fillHandle;
+  }
+  function hideFillHandle(){
+    if(fillHandle) fillHandle.style.display = 'none';
+    if(fillSourceTd){ fillSourceTd.classList.remove('fill-source'); fillSourceTd = null; }
+  }
+  function placeFillHandle(td){
+    if(!cellMeta(td)) { hideFillHandle(); return; }
+    var h = ensureFillHandle();
+    if(fillSourceTd) fillSourceTd.classList.remove('fill-source');
+    fillSourceTd = td;
+    td.classList.add('fill-source');
+    var r = td.getBoundingClientRect();
+    h.style.left = (r.right - 7) + 'px';
+    h.style.top = (r.bottom - 7) + 'px';
+    h.style.display = 'block';
+  }
+  function clearFillTargets(){
+    document.querySelectorAll('tr.fill-target').forEach(function(tr){ tr.classList.remove('fill-target'); });
+  }
+  function startFill(e){
+    if(!fillSourceTd) return;
+    e.preventDefault();
+    var tr = fillSourceTd.parentElement;
+    var tbody = tr.parentElement;
+    fillDrag = {
+      tbody: tbody,
+      startRow: Array.prototype.indexOf.call(tbody.children, tr),
+      endRow: Array.prototype.indexOf.call(tbody.children, tr),
+      colIndex: Array.prototype.indexOf.call(tr.children, fillSourceTd),
+      value: cellValue(fillSourceTd)
+    };
+    document.addEventListener('mousemove', moveFill);
+    document.addEventListener('mouseup', endFill);
+  }
+  function moveFill(e){
+    if(!fillDrag) return;
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    var tr = el && el.closest ? el.closest('tr') : null;
+    if(!tr || tr.parentElement !== fillDrag.tbody) return;
+    fillDrag.endRow = Array.prototype.indexOf.call(fillDrag.tbody.children, tr);
+    clearFillTargets();
+    var a = Math.min(fillDrag.startRow, fillDrag.endRow);
+    var b = Math.max(fillDrag.startRow, fillDrag.endRow);
+    for(var i = a; i <= b; i++){
+      if(i !== fillDrag.startRow) fillDrag.tbody.children[i].classList.add('fill-target');
+    }
+  }
+  function endFill(){
+    document.removeEventListener('mousemove', moveFill);
+    document.removeEventListener('mouseup', endFill);
+    var d = fillDrag; fillDrag = null;
+    clearFillTargets();
+    if(!d || d.endRow === d.startRow) return;
+
+    var a = Math.min(d.startRow, d.endRow), b = Math.max(d.startRow, d.endRow);
+    var cibles = [];
+    for(var i = a; i <= b; i++){
+      if(i === d.startRow) continue;
+      var m = cellMeta(d.tbody.children[i].children[d.colIndex]);
+      if(m) cibles.push(m);
+    }
+    if(!cibles.length) return;
+
+    function lancer(){
+      showToast('Recopie sur ' + cibles.length + ' ligne(s)…');
+      var faits = 0, rates = 0;
+      cibles.reduce(function(chaine, m){
+        return chaine.then(function(){
+          var p = patchForCell(m.field, m.multi, d.value);
+          var patch = {}; patch[p.field] = p.value;
+          return saveLeadFields(m.id, patch).then(function(){ faits++; }, function(){ rates++; });
+        });
+      }, Promise.resolve()).then(function(){
+        showToast(faits + ' ligne(s) recopiée(s)' + (rates ? ' — ' + rates + ' en échec' : ''));
+        renderLeadsTable(); renderSourcingTable();
+      });
+    }
+
+    if(cibles.length > 25){
+      demanderConfirmation('Recopier « ' + d.value + ' » sur ' + cibles.length + ' lignes ?', lancer);
+    } else {
+      lancer();
+    }
+  }
+
+  ['leads-body','sourcing-body'].forEach(function(id){
+    var body = document.getElementById(id);
+    body.addEventListener('click', function(e){
+      var td = e.target.closest ? e.target.closest('td') : null;
+      if(td && td.parentElement && td.parentElement.parentElement === body) placeFillHandle(td);
+    });
+    body.addEventListener('focusin', function(e){
+      var td = e.target.closest ? e.target.closest('td') : null;
+      if(td) placeFillHandle(td);
+    });
+  });
+  document.addEventListener('scroll', hideFillHandle, true);
+  window.addEventListener('resize', hideFillHandle);
+
+  function wireWrapToggle(checkboxId, tableId){
+    var cb = document.getElementById(checkboxId); var table = document.getElementById(tableId);
+    var saved = false;
+    try { saved = localStorage.getItem('gacPilotWrap_' + tableId) === '1'; } catch(e){}
+    cb.checked = saved; table.classList.toggle('wrap-on', saved);
+    cb.addEventListener('change', function(){
+      table.classList.toggle('wrap-on', cb.checked);
+      try { localStorage.setItem('gacPilotWrap_' + tableId, cb.checked ? '1' : '0'); } catch(e){}
+    });
+  }
+  wireWrapToggle('leads-wrap-toggle', 'leads-table');
+  wireWrapToggle('sourcing-wrap-toggle', 'sourcing-table');
+
+  function renderSettings(){
+    var el = document.getElementById('settings-connection');
+    var n = state.leads.length;
+    var lastSyncTxt = state.lastSync && state.lastSync.at ? new Date(state.lastSync.at).toLocaleString('fr-FR') : 'jamais';
+    el.innerHTML = 'Base Airtable "Lead Pilot" — '+n+' leads synchronisés.<br>Dernière synchro : '+lastSyncTxt+'.<br>Les écritures (colonnes éditées, étape pipeline, validation email) sont poussées vers Airtable/Brevo par une tâche planifiée toutes les heures, tant qu\'une session Claude Code reste active sur le Mac.';
+  }
+
+  // ---------------- statistiques Brevo ----------------
+  function renderBrevoStats(s){
+    var el = document.getElementById('brevo-stats');
+    if(!el) return;
+    if(!s || !s.ok){
+      var msg = (s && s.message) ? s.message : 'Statistiques indisponibles pour le moment.';
+      el.innerHTML = '<div class="empty-state">' + esc(msg) + '</div>';
+      return;
+    }
+    document.getElementById('brevo-periode').textContent = 'Statistiques Brevo — période ' + (s.periode || '30 derniers jours');
+    var tuiles = [
+      {lbl:'Emails envoyés', val:s.envois, delta:'depuis Brevo'},
+      {lbl:'Délivrabilité', val:s.tauxDelivrabilite + '%', delta:s.delivres + ' délivrés'},
+      {lbl:"Taux d'ouverture", val:s.tauxOuverture + '%', delta:s.ouvertures + ' ouvertures uniques'},
+      {lbl:'Bounces', val:s.bounces, delta:s.bounces ? 'adresses à vérifier' : 'aucun'},
+      {lbl:'Plaintes spam', val:s.spam, delta:s.spam ? 'à surveiller' : 'aucune'},
+      {lbl:'Désabonnements', val:s.desabonnes, delta:'sur la période'}
+    ];
+    var avertissement = s.approximatif
+      ? '<div class="empty-state" style="text-align:left;padding:10px 12px;margin-bottom:10px;background:var(--warning-bg);color:var(--warning);border-radius:10px">'
+        + 'Chiffres non filtrés par campagne (incluent d\'éventuels tests) — les prochains envois de prospection seront comptabilisés précisément.</div>'
+      : '';
+    el.innerHTML = avertissement + '<div class="kpi-grid" style="margin-bottom:0">' + tuiles.map(function(t){
+      return '<div class="kpi"><div class="lbl">' + t.lbl + '</div><div class="val">' + t.val +
+        '</div><div class="delta flat">' + t.delta + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function chargerStatsBrevo(){
+    var el = document.getElementById('brevo-stats');
+    if(!el) return;
+    if(typeof API === 'undefined'){
+      el.innerHTML = '<div class="empty-state">Les statistiques Brevo sont disponibles dans la version hébergée du CRM ' +
+        '(crm.growthlab-agencycom.com). Cette vue Claude n\'a pas accès au réseau.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="empty-state">Chargement des statistiques…</div>';
+    API.call('brevo', { days: 30 }).then(function(res){
+      renderBrevoStats(Array.isArray(res) ? res[0] : res);
+    }).catch(function(){
+      el.innerHTML = '<div class="empty-state">Statistiques Brevo injoignables.</div>';
+    });
+  }
+
+  (function wireBrevo(){
+    var b = document.getElementById('brevo-refresh');
+    if(b) b.addEventListener('click', chargerStatsBrevo);
+    chargerStatsBrevo();
+  })();
+
+  // ---------------- aperçu du mail (copie de la mise en forme n8n) ----------------
+  // Reproduit le nœud « Format Email HTML » du workflow Lead Pilot.
+  function construireApercuHtml(corps){
+    var AGENDA_TXT = 'calendly.com/kateguttilla-growthlab-agencycom/30min';
+    function escapeHtml(s){
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    var parts = escapeHtml(corps || '')
+      .split(/\n\s*\n/)
+      .map(function(p){ return p.trim(); })
+      .filter(function(p){ return p.length; });
+
+    var closeIdx = -1;
+    parts.forEach(function(p, i){
+      if(closeIdx === -1 && /^(cordialement|bien à vous|à bientôt|à très vite)/i.test(p)) closeIdx = i;
+    });
+
+    var out = parts.map(function(p){
+      return '<p style="margin:0 0 16px 0">' + p.replace(/\n/g, '<br>') + '</p>';
+    });
+    var AGENDA = '<p style="margin:0 0 16px 0">Mon agenda, si vous voulez caler 30 minutes :<br>' + AGENDA_TXT + '</p>';
+    out.splice(closeIdx >= 0 ? closeIdx : out.length, 0, AGENDA);
+    out.push('<p style="margin:0">Kate Guttilla STONE<br>Traffic Manager</p>');
+
+    return '<div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;font-size:15px;line-height:24px;color:#222">'
+      + out.join('') + '</div>';
+  }
+
+  function rafraichirApercuMail(){
+    var box = document.getElementById('mail-preview');
+    if(!box) return;
+    var objet = document.getElementById('mail-objet').value || '(sans objet)';
+    var corps = document.getElementById('mail-corps').value || '';
+    box.innerHTML = '<div class="mp-objet">De : Kate de Growthlab Agencycom &lt;kate@growthlab-agencycom.com&gt;<br>Objet : <strong>'
+      + esc(objet) + '</strong></div>' + construireApercuHtml(corps);
+  }
+
+  (function wireMailTabs(){
+    var bTexte = document.getElementById('mail-tab-texte');
+    var bApercu = document.getElementById('mail-tab-apercu');
+    var cTexte = document.getElementById('mail-champ-texte');
+    var cApercu = document.getElementById('mail-champ-apercu');
+    if(!bTexte) return;
+    function voir(apercu){
+      bApercu.classList.toggle('active', apercu);
+      bTexte.classList.toggle('active', !apercu);
+      cApercu.hidden = !apercu;
+      cTexte.hidden = apercu;
+      if(apercu) rafraichirApercuMail();
+    }
+    bTexte.addEventListener('click', function(){ voir(false); });
+    bApercu.addEventListener('click', function(){ voir(true); });
+    ['mail-objet','mail-corps'].forEach(function(id){
+      document.getElementById(id).addEventListener('input', function(){
+        if(!cApercu.hidden) rafraichirApercuMail();
+      });
+    });
+  })();
+
+  // ---------------- mail modal ----------------
+  var currentMailId = null;
+  function openMailModal(id){
+    var lead = state.leads.find(function(l){ return l.id===id; });
+    if(!lead) return;
+    currentMailId = id;
+    document.getElementById('mail-modal-title').textContent = "Éditer l'email — " + leadName(lead.fields);
+    document.getElementById('mail-objet').value = lead.fields['Email objet'] || '';
+    document.getElementById('mail-corps').value = lead.fields['Email corps'] || '';
+    document.getElementById('mail-validation').value = scalar(lead.fields['Validation mail']) || 'Pas Validé';
+    document.getElementById('mail-modal').hidden = false;
+  }
+  document.getElementById('mail-cancel').addEventListener('click', function(){ document.getElementById('mail-modal').hidden = true; });
+  document.getElementById('mail-modal').addEventListener('click', function(e){ if(e.target === this) this.hidden = true; });
+
+  var sampleFn = null;
+  document.getElementById('mail-rewrite-btn').addEventListener('click', function(){
+    var btn = this;
+    if(!sampleFn){ showToast("Réécriture IA indisponible dans cette vue"); return; }
+    var instr = document.getElementById('mail-rewrite-prompt').value.trim();
+    if(!instr){ showToast('Décris comment réécrire l\'email'); return; }
+    var objet = document.getElementById('mail-objet').value;
+    var corps = document.getElementById('mail-corps').value;
+    var prompt = "Voici un email de prospection commerciale.\nObjet actuel : " + objet + "\nCorps actuel :\n" + corps +
+      "\n\nInstruction de réécriture : " + instr +
+      "\n\nRéponds UNIQUEMENT avec un JSON valide, sans markdown, au format exact : {\"objet\":\"...\",\"corps\":\"...\"}";
+    btn.disabled = true; var origLabel = btn.textContent; btn.textContent = '✨ Réécriture…';
+    sampleFn(prompt, { modelTier: 'quick' }).then(function(res){
+      var text = (res && res.text || '').trim();
+      var start = text.indexOf('{'); var end = text.lastIndexOf('}');
+      if(start === -1 || end === -1) throw new Error('parse');
+      var parsed = JSON.parse(text.substring(start, end + 1));
+      if(parsed.objet) document.getElementById('mail-objet').value = parsed.objet;
+      if(parsed.corps) document.getElementById('mail-corps').value = parsed.corps;
+      showToast("Email réécrit — relis avant d'enregistrer");
+    }).catch(function(err){
+      showToast('Échec de la réécriture (' + (err && err.code || 'réessaie') + ')');
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = origLabel;
+    });
+  });
+
+  document.getElementById('mail-save').addEventListener('click', function(){
+    if(!currentMailId) return;
+    var patch = {
+      'Email objet': document.getElementById('mail-objet').value,
+      'Email corps': document.getElementById('mail-corps').value,
+      'Validation mail': [document.getElementById('mail-validation').value]
+    };
+    saveLeadFields(currentMailId, patch).then(function(){
+      document.getElementById('mail-modal').hidden = true;
+      showToast('Email enregistré — synchro vers Airtable/Brevo sous ~10 min');
+    });
+  });
+
+  // ---------------- sourcing request ----------------
+  document.getElementById('launch-sourcing').addEventListener('click', function(){
+    if(!db){ showToast('Base indisponible'); return; }
+    var payload = {
+      company_industry: document.getElementById('icp-industry').value,
+      contact_job_title: document.getElementById('icp-title').value,
+      contact_location: document.getElementById('icp-location').value,
+      email_status: document.getElementById('icp-email-status').value,
+      file_name: document.getElementById('icp-file').value || ('sourcing-' + Date.now())
+    };
+    db.collection('sourcingRequests').add({ icp: payload, status: 'pending', createdAt: Date.now() }).then(function(){
+      document.getElementById('sourcing-modal').hidden = false;
+    }).catch(function(err){ showToast('Échec de la demande : ' + (err && err.code || 'erreur')); });
+  });
+  document.getElementById('sourcing-modal-ok').addEventListener('click', function(){ document.getElementById('sourcing-modal').hidden = true; });
+
+  // ---------------- fiche client ----------------
+  function ficheItem(label, val, isBool){
+    var cls = '';
+    if(isBool) cls = (val === 'Oui') ? ' oui' : ' non';
+    return '<div class="fiche-item"><span class="lbl">' + esc(label) + '</span><span class="val' + cls + '">' + esc(val || '—') + '</span></div>';
+  }
+  function openFicheModal(id){
+    var lead = state.leads.find(function(l){ return l.id === id; });
+    if(!lead) return;
+    var f = lead.fields;
+    document.getElementById('fiche-modal-title').textContent = leadName(f) + (f['Entreprise'] ? ' — ' + f['Entreprise'] : '');
+    document.getElementById('fiche-modal-sub').textContent = (f['Poste'] || '') + (f['Secteur'] ? ' · ' + f['Secteur'] : '') + (f['Date détection'] ? ' · Ajouté le ' + fmtDate(f['Date détection']) : '');
+    document.getElementById('fiche-grid').innerHTML = [
+      ficheItem('Trafic organique/mois', fmtNum(f['Trafic organique'])),
+      ficheItem('Autorité domaine', fmtNum(f['Autorité domaine'])),
+      ficheItem('Mots-clés SEO', fmtNum(f['Mots-clés organiques'])),
+      ficheItem('Backlinks', fmtNum(f['Backlinks'])),
+      ficheItem('CMS', f['CMS'] || '—'),
+      ficheItem('E-commerce', fmtBool(f['E-commerce']), true),
+      ficheItem('Tracking GTM', fmtBool(f['Tracking GTM']), true),
+      ficheItem('Tracking GA4', fmtBool(f['Tracking GA4']), true),
+      ficheItem('Signal Facebook Ads', fmtBool(f['Pixel Meta']), true),
+      ficheItem('Signal Google Ads', fmtBool(f['Signal Google Ads']), true),
+      ficheItem('SSL', fmtBool(f['SSL']), true),
+      ficheItem('Note Google', fmtNum(f['Note Google'])),
+      ficheItem('Avis Google', fmtNum(f['Nombre avis Google'])),
+      ficheItem('Catégorie Maps', f['Categorie Google Maps'] || '—'),
+      ficheItem('Coordonnées GPS', f['Coordonnees GPS'] || '—')
+    ].join('');
+    var gAds = COMPUTED_URL_BUILDERS.googleAds(lead);
+    var mAds = COMPUTED_URL_BUILDERS.metaAds(lead);
+    document.getElementById('fiche-links').innerHTML =
+      (gAds ? '<a href="'+esc(gAds)+'" target="_blank" rel="noopener noreferrer">🔎 Google Ads Transparency</a>' : '') +
+      (mAds ? '<a href="'+esc(mAds)+'" target="_blank" rel="noopener noreferrer">🔎 Meta Ads Library</a>' : '');
+    document.getElementById('fiche-modal').hidden = false;
+  }
+  document.body.addEventListener('click', function(e){
+    var btn = e.target.closest ? e.target.closest('.fiche-btn') : null;
+    if(btn) openFicheModal(btn.getAttribute('data-id'));
+  });
+  document.getElementById('fiche-close').addEventListener('click', function(){ document.getElementById('fiche-modal').hidden = true; });
+  document.getElementById('fiche-modal').addEventListener('click', function(e){ if(e.target === this) this.hidden = true; });
+
+  // ---------------- nav + filters ----------------
+  function activateView(target){
+    document.querySelectorAll('.nav-item[data-view]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.nav-subitem[data-view]').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.view').forEach(function(v){ v.hidden = (v.id !== 'view-' + target); });
+    requestAnimationFrame(updateAllPinOffsets);
+  }
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = btn.getAttribute('data-view');
+      activateView(target);
+      btn.classList.add('active');
+      // Revenir sur l'item principal réaffiche tout le périmètre (plus de filtre service).
+      if(target === 'sourcing') SERVICE_FILTER.sourcing = null;
+      if(target === 'leads') SERVICE_FILTER.leads = null;
+      if(target === 'sourcing') renderSourcingTable();
+      if(target === 'leads') renderLeadsTable();
+    });
+  });
+  document.querySelectorAll('.nav-subitem[data-view]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = btn.getAttribute('data-view');
+      var scope = btn.getAttribute('data-scope');
+      var bucket = btn.getAttribute('data-bucket');
+      activateView(target);
+      btn.classList.add('active');
+      SERVICE_FILTER[scope] = bucket;
+      if(scope === 'sourcing') { PAGE_STATE.sourcing.page = 1; renderSourcingTable(); }
+      if(scope === 'leads') { PAGE_STATE.leads.page = 1; renderLeadsTable(); }
+    });
+  });
+  document.querySelectorAll('[data-goto]').forEach(function(btn){
+    btn.addEventListener('click', function(){ document.querySelector('.nav-item[data-view="'+btn.getAttribute('data-goto')+'"]').click(); });
+  });
+  ['lead-search','filter-qual','filter-secteur'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ PAGE_STATE.leads.page = 1; renderLeadsTable(); });
+    document.getElementById(id).addEventListener('change', function(){ PAGE_STATE.leads.page = 1; renderLeadsTable(); });
+  });
+  ['sourcing-search','sourcing-status-filter'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){ PAGE_STATE.sourcing.page = 1; renderSourcingTable(); });
+    document.getElementById(id).addEventListener('change', function(){ PAGE_STATE.sourcing.page = 1; renderSourcingTable(); });
+  });
+  window.addEventListener('resize', updateAllPinOffsets);
+  document.getElementById('leads-reset-cols').addEventListener('click', resetColWidths);
+  document.getElementById('leads-copy-sheets').addEventListener('click', function(){ copyForSheets('leads'); });
+  document.getElementById('sourcing-reset-cols').addEventListener('click', resetColWidths);
+  document.getElementById('dash-range-preset').addEventListener('change', function(e){ applyDashRangePreset(e.target.value); });
+  ['dash-date-from','dash-date-to'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){ applyDashRangePreset('custom'); });
+  });
+
+  // ---------------- db wiring ----------------
+  function setStatus(text, warn){
+    document.getElementById('status-text').textContent = text;
+    document.getElementById('status-banner').className = 'status-banner' + (warn ? ' warn' : '');
+  }
+
+  async function init(){
+    claude.use('sample').then(function(fn){ sampleFn = fn; if(!fn){ document.getElementById('mail-rewrite-btn').title = 'Indisponible dans cette vue'; } });
+    db = await claude.use('db');
+    if(!db){ setStatus('Base de données indisponible dans cette vue — données non chargées', true); renderAll(); return; }
+    db.collection('leads').limit(1000).onSnapshot(function(snap){
+      state.leads = snap.docs.map(function(d){ var data = d.data() || {}; return { id: d.id, fields: data.fields || {} }; });
+      state.ready = true;
+      setStatus(state.leads.length + ' leads en direct depuis Airtable');
+      renderAll();
+    }, function(err){ setStatus('Erreur de lecture (' + err.code + ')', true); });
+    db.doc('meta/lastSync').onSnapshot(function(snap){
+      state.lastSync = snap.exists ? snap.data() : null;
+      renderSettings();
+    });
+  }
+  init();
+})();
+</script>
+
+</body></html>
