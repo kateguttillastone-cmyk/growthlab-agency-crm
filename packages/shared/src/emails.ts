@@ -81,6 +81,10 @@ export const emailStatsSchema = z.object({
   toReview: z.number(),
   /** À relire mais sans adresse : injoignables par e-mail. */
   toReviewNoRecipient: z.number(),
+  /** E-mails non envoyés dont l'adresse n'a pas encore été contrôlée. */
+  addressUnchecked: z.number(),
+  /** E-mails non envoyés dont l'adresse est inutilisable (mal formée, sans serveur, jetable). */
+  addressInvalid: z.number(),
   validatedNotSent: z.number(),
   rejected: z.number(),
   sent: z.number(),
@@ -156,3 +160,21 @@ export function emailWarnings({
   }
   return out;
 }
+
+export const addressCheckRequestSchema = z.object({
+  /** Nombre maximal d'adresses contrôlées par appel (le reste se fait à l'appel suivant). */
+  limit: z.number().int().min(1).max(500).default(300),
+});
+
+export const addressCheckResultSchema = z.object({
+  checked: z.number(),
+  valid: z.number(),
+  invalid: z.record(z.string(), z.number()),
+  /** Domaines dont le serveur DNS n'a pas répondu : l'adresse reste à contrôler. */
+  indeterminate: z.number(),
+  /** E-mails validés qui ont été remis à relire car leur adresse est inutilisable. */
+  revoked: z.number(),
+  /** Adresses encore à contrôler après cet appel. */
+  remaining: z.number(),
+});
+export type AddressCheckResult = z.infer<typeof addressCheckResultSchema>;
