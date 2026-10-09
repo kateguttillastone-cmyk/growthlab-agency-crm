@@ -4,33 +4,39 @@ L'ancien système (Airtable + n8n « Lead Pilot » + Netlify, dossier [`legacy/`
 la construction du nouveau. Ce document couvre (1) la **correspondance des champs**, (2) les **correctifs urgents** à
 appliquer au workflow actuel sans attendre, (3) le **plan de bascule** et son retour arrière.
 
+> **Mise à jour : l'import est réalisé et validé** sur l'export réel (1 976 lignes ; analyse chiffrée dans
+> [11](11-analyse-export-airtable.md)). La correspondance ci-dessous décrit ce que fait réellement l'importeur
+> (`apps/api/src/import/`). Les données montrent aussi que **665 e-mails sont réellement partis** : le point 2 du §2 n'est plus
+> une question mais un fait.
+
 Sources : analyse du dépôt et du workflow n8n ([01](01_conception_produit.md) §2.3, [03](03_cahier_des_charges.md) §9,
 [04](04_architecture_technique_et_systeme.md) §5bis). Les webhooks `crm-bridge-*`, le sourcing Google Maps et le retour des
 statuts email de Brevo **ne figurent pas** dans le workflow analysé : à retrouver avant la bascule (§4).
 
-## 1. Correspondance des champs Airtable → PostgreSQL
+## 1. Correspondance des champs Airtable → PostgreSQL (implémentée)
 
-| Airtable (table `BDD`) | Cible | Remarque |
+| Airtable (table `BDD`) | Cible | Traitement |
 |---|---|---|
-| Prénom, Nom, Poste, Email, Téléphone, Linkedin | `contacts.first_name / last_name / job_title / email / phone / linkedin_url` | « Téléphone » vient du **téléphone de l'entreprise** dans le workflow : à garder dans `companies.phone`, et `contacts.phone` vide tant qu'un vrai numéro direct n'existe pas |
-| Entreprise, Site web, Secteur, Taille, Année de création, Adresse complète Entreprise, Ville, Etat, Pays, Linkedin Entreprise, Description entreprise | `companies.*` | `domain` = site web normalisé (sans protocole, sans `www.`, sans chemin) ; `Taille` (texte du type « 11-20 ») → `employees_min/max` |
-| Qualification | `leads.qualification` | valeurs `Chaud`, `Tiède`, `Froid` + `À qualifier - Sans site web` + `ERREUR_PARSING` (à traiter comme « à reprendre ») |
-| Raison, Service recommandé | `leads.qualification_reason`, `leads.recommended_service` | |
-| STATUT, RELANCE 1, RELANCE 2, COMMENTAIRE | `leads.call_status`, `followup_1`, `followup_2`, `comment` | |
-| Étape pipeline, Valeur deal, Pack, Prochaine action Kate, Responsable | `leads.stage`, `deal_value`, `pack_id`, `next_action`, `owner_id` | `Responsable` (texte libre) → utilisateur existant, sinon `NULL` + rapport |
-| Date détection | `leads.detected_at` | |
-| Persona, Source | `leads.source` / `sourcing_runs.icp` | `Persona` = poste demandé au sourcing |
-| Trafic organique, Autorité domaine, Mots-clés organiques, Backlinks | `enrichments(kind='seo').data` | `source` = `semrush` |
-| CMS, E-commerce, Tracking GTM, Tracking GA4, Pixel Meta, Signal Google Ads, SSL | `enrichments(kind='web_tech').data` | `source` = `builtwith` |
-| Note Google, Nombre avis Google, Categorie Google Maps, Fiche Google My Business, Coordonnees GPS | `enrichments(kind='maps').data` | workflow d'origine non fourni ❓ |
-| Email objet, Email corps, Validation mail, Email envoyé le, Statut email | `email_messages` (`subject`, `body`, `validation`, `sent_at`, `status`) | `Validation mail` et `Statut email` sont des **listes à choix multiples** dans Airtable : prendre le premier élément |
-| Version_prompt_email | `email_messages.prompt_version` | |
-| Derniere validation | `email_messages.validated_at` | |
+| Prénom, Nom, Poste, Email, Linkedin | `contacts` | E-mail en minuscules, format vérifié (sinon ignoré avec avertissement). Pas de contact si ni nom ni e-mail |
+| Entreprise, Site web, Secteur, Taille, Année de création, Adresse complète, Ville, Etat, Pays, Linkedin Entreprise, Description | `companies` | `domain` = site sans protocole, `www.`, chemin ni port ; `Taille` = **effectif entier** ; ville et code postal **déduits de l'adresse** si absents ; `Pays` → `FR` |
+| Téléphone | `companies.phone` | Format `+33…` ; c'est le téléphone de l'**entreprise** (standard) |
+| Qualification | `leads.qualification` | Chaud / Tiède / Froid ; « À qualifier… » → **vide** (non qualifié) |
+| Raison, Service recommandé | `leads.qualification_reason`, `service`, `service_detail` | 25 formulations → 3 services ; formulation d'origine gardée |
+| STATUT, RELANCE 1, RELANCE 2 | `leads.call_status`, `followup_1`, `followup_2` | Valeur inconnue → vide + avertissement |
+| Statut appel | `leads.call_state` | « À appeler », « Pas intéressé »… |
+| COMMENTAIRE, Prochaine action Kate / Ifaliana | `leads.comment`, `next_action` | La note « Email vide suite à une panne… » est **ignorée** quand l'e-mail existe |
+| Étape pipeline, Valeur deal, Pack, Responsable | `leads.stage`, `deal_value`, `pack`, `owner_id` | `Responsable` rapproché d'un compte par nom ou e-mail, sinon avertissement |
+| Date détection | `leads.detected_at` | ISO avec fuseau |
+| Source | `leads.source` | Texte libre conservé |
+| Trafic organique, Autorité domaine, Backlinks, CMS | `companies.*` | `Mots-clés organiques` **ignoré** (toujours 0) |
+| E-commerce, GTM, GA4, Pixel Meta, Signal Google Ads, SSL | `companies.is_ecommerce`, `has_*` | « checked » → oui ; vide → non **si le site a été mesuré**, inconnu sinon |
+| Categorie Google Maps, Note Google, Nombre avis, Fiche Google My Business, Coordonnees GPS | `companies.google_*`, `gps` | |
+| Email objet, Email corps, Validation mail, Derniere validation, Email envoyé le, Statut email, Version_prompt_email | `email_messages` | Validation par défaut « Pas Validé » ; `Email envoyé le` = **date** (pas d'heure) ; `Derniere validation` lue dans le fuseau `--tz` (défaut -04:00) |
+| Statut email = Bounce / Désinscrit | `suppressions` | Rebond → `bounce`, désinscription → `unsubscribe` : ces adresses ne seront plus jamais contactées |
+| Persona | — | Ignoré (requête de sourcing, pas une donnée du prospect) |
 
-**Règles d'import** : script rejouable (idempotent), clés de rapprochement `contacts.email` et `companies.domain`,
-**rapport d'écarts** (lignes sans e-mail, e-mails invalides, doublons fusionnés, valeurs de liste inconnues), aucun
-écrasement de données saisies dans le nouveau système après la bascule, données personnelles non copiées dans les
-journaux.
+**Garanties** : simulation (`--dry-run`) ; rapport **sans donnée personnelle** ; rejouable (clés naturelles, aucun écrasement) ;
+lignes vides et doublons signalés ; une seule transaction (tout ou rien). Mode d'emploi : [11 §5](11-analyse-export-airtable.md).
 
 ## 2. Correctifs urgents sur le workflow n8n actuel (avant tout code)
 
@@ -39,7 +45,7 @@ journaux.
 | # | Action | Pourquoi (constat) | Comment |
 |---|---|---|---|
 | 1 | **Révoquer puis renouveler** le jeton Apify et la clé API Anthropic | stockés en clair dans les paramètres de 7 nœuds (jeton Apify dans 6 nœuds, clé Anthropic dans `Claude Scoring`) | Chez chaque fournisseur : créer la nouvelle clé, **révoquer l'ancienne**. Dans n8n : créer des *Credentials* (Header Auth) et les référencer depuis les nœuds ; vérifier qu'aucun export JSON du workflow n'a été partagé ou commité |
-| 2 | Lever l'ambiguïté « mode test » du nœud d'envoi | le nœud « TEST MODE » envoie à l'e-mail du lead alors que la note dit l'inverse | Décider : test ou production. Si test : destinataire fixe et préfixe `[TEST]`. Si production : renommer le nœud, supprimer la note, supprimer ou réactiver le nœud Gmail de test |
+| 2 | Lever l'ambiguïté « mode test » du nœud d'envoi | **Confirmé par les données : 665 e-mails sont réellement partis à de vrais prospects.** Le nœud « TEST MODE » envoie à l'e-mail du lead alors que sa note dit l'inverse | Décider : test ou production. Si test : destinataire fixe et préfixe `[TEST]`. Si production : renommer le nœud, supprimer la note, supprimer ou réactiver le nœud Gmail de test |
 | 3 | Authentifier le webhook `search-leads` | aucun contrôle ; n'importe qui connaissant l'URL peut lancer des exécutions Apify payantes | *Webhook → Authentication → Header Auth* avec un secret ; le même secret dans l'appel de `bridge.js` (`x-bridge-secret`) |
 | 4 | Garde anti double envoi | le déclencheur Airtable peut se rejouer ; l'envoi est différé de plusieurs jours | Avant l'envoi : relire le lead et s'arrêter si `Email envoyé le` est renseigné ; poser `Statut email = En file` dès la réception |
 | 5 | Limiter la synchronisation Brevo | renvoie **tous** les leads validés toutes les 10 min | Ajouter une case « Synchro Brevo » dans Airtable, filtrer dessus, la cocher après l'upsert |

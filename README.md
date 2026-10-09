@@ -9,7 +9,7 @@ dans [`legacy/`](legacy/) comme référence fonctionnelle.
 | Phase | Contenu | État |
 |---|---|---|
 | 1 — Socle | Monorepo, API Fastify, PostgreSQL + migrations, comptes nominatifs et rôles (ADMIN > MANAGER > AGENT > VIEWER), sessions serveur, verrouillage et limitation de débit, journal d'audit, `/health`, interface (connexion, utilisateurs, audit, profil), Docker, CI, déploiement automatique `dev`/`main`, sauvegardes, retour arrière | ✅ |
-| 2 — Leads | Entreprises / contacts / leads, grille paginée et filtrée côté serveur, édition, historique, import depuis Airtable | à venir |
+| 2 — Leads | Entreprises / contacts / leads, **import rejouable de l'export Airtable**, liste paginée et filtrée côté serveur (4 à 12 ms sur 1 971 leads), fiche, édition par rôle, historique | ✅ (reste : actions groupées, vues enregistrées) |
 | 3 — Pipeline | Kanban, règle statut d'appel → étape, valeur des deals | à venir |
 | 4 — Emails | Validation, aperçu rendu par l'API, envoi planifié avec anti-doublon, Brevo, statuts, liste de désinscription | à venir |
 | 5 — Sourcing | Apify, enrichissement, scoring Claude (sortie structurée), suivi des exécutions | à venir |
@@ -24,7 +24,7 @@ apps/api         API Fastify + Drizzle (PostgreSQL) — auth, utilisateurs, audi
 apps/web         Interface React + Vite + Tailwind, servie par nginx en production
 packages/shared  Schémas Zod, rôles et catalogue métier partagés entre l'API et l'interface
 deploy/          Scripts du serveur : deploy.sh, backup.sh, restore.sh, Caddyfile, env.prod.example
-docs/            Conception (01-05) et documentation du nouveau socle (06-10)
+docs/            Conception (01-05) et documentation du nouveau socle (06-11)
 legacy/          Ancienne application (artifact HTML, build Netlify) — à ne plus modifier
 ```
 
@@ -76,6 +76,18 @@ docker compose exec postgres createdb -U gac gac_test
 DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 ```
 
+## Importer l'ancienne base (une fois)
+
+Le CSV d'Airtable contient des données de prospects : il reste **sur votre machine**, hors du dépôt (`data/` est ignoré par Git).
+
+```bash
+docker compose up -d postgres
+docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/export.csv --dry-run   # simulation
+docker compose run --rm -v "${PWD}/data:/data:ro" api node dist/import.js /data/export.csv             # import réel
+```
+
+Rejouable sans doublon, sans écraser vos modifications. Analyse de l'export réel : [docs/11-analyse-export-airtable.md](docs/11-analyse-export-airtable.md).
+
 ## Règles de sécurité implémentées
 
 - Pas d'inscription publique : le premier `ADMIN` vient de l'environnement, puis il crée les comptes.
@@ -87,6 +99,8 @@ DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 - Contrôle de l'origine des requêtes qui modifient des données (en plus de `SameSite`).
 - Les autorisations sont appliquées **côté serveur** ; l'interface ne fait que masquer.
 - Journal d'audit des connexions, comptes et mots de passe (jamais de secret dans le journal).
+- Leads : droits **par champ et par rôle** vérifiés côté serveur (un commercial ne peut pas changer la qualification, la valeur ni
+  le responsable), historique de chaque modification, liens issus des données limités à http(s) (jamais `javascript:`).
 
 ## Branches et déploiement
 
