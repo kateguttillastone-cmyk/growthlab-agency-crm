@@ -10,12 +10,14 @@ import {
   type LeadSummary,
   type Page,
   QUALIFICATIONS,
+  type SendStatus,
 } from "@gac/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { Pager } from "../components/Pager";
 import { Button, Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { BLOCKED_LABELS, bulkFilter, nextAfter, type QueueFilters, queueQuery, TABS } from "../lib/emails";
 import { contactName, formatNumber } from "../lib/leads";
 
@@ -199,6 +201,8 @@ export function EmailsPage() {
         </section>
       </div>
 
+      <SendPanel />
+
       <AddressCheckPanel stats={stats.data} onDone={refresh} />
 
       {filters.tab === "review" && <BulkPanel filters={effective} onDone={refresh} />}
@@ -287,6 +291,8 @@ function ReviewPanel({
   onAdvance: () => void;
 }) {
   const qc = useQueryClient();
+  const { can } = useAuth();
+  const [info, setInfo] = useState<string | null>(null);
   const subjectId = useId();
   const bodyId = useId();
   const lead = useQuery({ queryKey: ["lead", id], queryFn: () => api<LeadDetail>(`/leads/${id}`) });
@@ -333,6 +339,27 @@ function ReviewPanel({
     onError: (e) => setError(errorMessage(e)),
   });
 
+  const testSend = useMutation({
+    mutationFn: () => api<{ sentTo: string }>("/emails/test-send", { method: "POST", body: { leadId: id } }),
+    onSuccess: (r) => {
+      setError(null);
+      setInfo(`E-mail de test envoyé à ${r.sentTo}.`);
+    },
+    onError: (e) => {
+      setInfo(null);
+      setError(errorMessage(e));
+    },
+  });
+  const release = useMutation({
+    mutationFn: () => api<LeadDetail>(`/leads/${id}/email/release`, { method: "POST" }),
+    onSuccess: async (data) => {
+      setError(null);
+      qc.setQueryData(["lead", id], data);
+      await onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+
   if (lead.isLoading) return <Spinner />;
   if (lead.error) return <ErrorAlert message={errorMessage(lead.error)} />;
   if (!lead.data || !message) {
@@ -367,6 +394,34 @@ function ReviewPanel({
         {message.promptVersion ? ` · prompt ${message.promptVersion}` : ""}
       </p>
       <ErrorAlert message={error} />
+      {info && (
+        <p role="status" className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
+          {info}
+        </p>
+      )}
+      {message.sendReserved && (
+        <div role="alert" className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p>
+            Envoi à vérifier : le résultat de l'envoi est inconnu ({message.sendError ?? "incertain"}). Il ne
+            sera jamais renvoyé automatiquement. Vérifiez dans l'historique de Brevo qu'il n'est pas parti.
+          </p>
+          {can("ADMIN") && (
+            <Button
+              className="mt-2"
+              variant="ghost"
+              disabled={release.isPending}
+              onClick={() => release.mutate()}
+            >
+              Non parti : le remettre dans la file
+            </Button>
+          )}
+        </div>
+      )}
+      {!message.sendReserved && message.sendError && !sent && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Dernier essai d'envoi refusé : {message.sendError}
+        </p>
+      )}
       {check && isBlockingCheck(check) && (
         <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
           L'adresse {email} est inutilisable ({ADDRESS_CHECK_LABELS[check]}) : elle ne peut pas être validée.
@@ -476,6 +531,11 @@ function ReviewPanel({
               onClick={() => save.mutate({ validation: "Pas Validé" })}
             >
               Remettre à relire
+            </Button>
+          )}
+          {can("ADMIN") && validation === "Validé" && (
+            <Button variant="ghost" disabled={testSend.isPending} onClick={() => testSend.mutate()}>
+              M'envoyer un test
             </Button>
           )}
           {cannotValidate && (
@@ -632,6 +692,95 @@ function AddressCheckPanel({
           )}
           {result.remaining > 0 && <p>Il reste {result.remaining} adresse(s) à contrôler : relancez.</p>}
         </div>
+      )}
+    </Card>
+  );
+}
+
+function SendPanel() {
+  const qc = useQueryClient();
+  const { can } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const status = useQuery({
+    queryKey: ["emails", "send-status"],
+    queryFn: () => api<SendStatus>("/emails/send-status"),
+    refetchInterval: 60_000,
+  });
+  const pause = useMutation({
+    mutationFn: (paused: boolean) =>
+      api<SendStatus>("/emails/send-pause", { method: "POST", body: { paused } }),
+    onSuccess: (data) => {
+      setError(null);
+      qc.setQueryData(["emails", "send-status"], data);
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const s = status.data;
+  if (!s) return null;
+  const label =
+    s.mode === "off"
+      ? "Désactivé"
+      : s.paused
+        ? "En pause"
+        : s.slotOpen
+          ? "Actif : créneau ouvert"
+          : "Actif : en attente du prochain créneau";
+  return (
+    <Card title="Envoi planifié">
+      <ErrorAlert message={error} />
+      <dl className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+        <dt className="text-ink/70">État</dt>
+        <dd className="font-semibold">{label}</dd>
+        <dt className="text-ink/70">Expéditeur</dt>
+        <dd>{s.from}</dd>
+        <dt className="text-ink/70">Aujourd'hui</dt>
+        <dd>
+          {s.sentToday} / {s.dailyCap} envoyés
+        </dd>
+        <dt className="text-ink/70">Prêts à partir</dt>
+        <dd>
+          {s.ready} (validés, adresse contrôlée) · {s.blocked} validés bloqués (adresse non contrôlée ou
+          inutilisable, exclue, échecs)
+        </dd>
+        <dt className="text-ink/70">Prochain créneau</dt>
+        <dd>
+          {s.nextSlot
+            ? new Date(s.nextSlot).toLocaleString("fr-FR", {
+                dateStyle: "full",
+                timeStyle: "short",
+                timeZone: "Europe/Paris",
+              })
+            : "—"}{" "}
+          (créneaux {s.slots}, ouverts {s.windowMinutes} min, un envoi toutes les {s.intervalSeconds} s)
+        </dd>
+        {s.testRecipient && (
+          <>
+            <dt className="text-ink/70">Adresse de test</dt>
+            <dd>{s.testRecipient}</dd>
+          </>
+        )}
+      </dl>
+      {s.uncertain > 0 && (
+        <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {s.uncertain} envoi(s) au résultat inconnu : ouvrez la fiche concernée et vérifiez dans Brevo avant
+          de le libérer.
+        </p>
+      )}
+      {s.mode === "off" && (
+        <p className="mt-3 text-sm text-ink/70">
+          L'envoi automatique est désactivé sur ce serveur (SEND_MODE=off). Rien ne part tant qu'un
+          administrateur ne l'active pas dans la configuration du serveur.
+        </p>
+      )}
+      {can("ADMIN") && s.mode === "prod" && (
+        <Button
+          className="mt-3"
+          variant={s.paused ? "primary" : "danger"}
+          disabled={pause.isPending}
+          onClick={() => pause.mutate(!s.paused)}
+        >
+          {s.paused ? "Reprendre l'envoi" : "Mettre l'envoi en pause"}
+        </Button>
       )}
     </Card>
   );

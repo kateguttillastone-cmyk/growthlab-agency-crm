@@ -251,6 +251,16 @@ export const emailMessages = pgTable(
     status: emailStatus("status"),
     /** Jour d'envoi (l'ancienne base ne conserve pas l'heure). */
     sentOn: date("sent_on", { mode: "string" }),
+    /** Horodatage exact de l'envoi (l'ancienne base ne conserve que le jour). */
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    /**
+     * Réservation d'envoi : posée avant l'appel au fournisseur, jamais retirée en cas de résultat incertain
+     * (délai dépassé) : un e-mail ne part pas deux fois, même si le programme s'arrête en plein envoi.
+     */
+    sendingAt: timestamp("sending_at", { withTimezone: true }),
+    providerMessageId: text("provider_message_id"),
+    sendFailures: integer("send_failures").notNull().default(0),
+    sendError: text("send_error"),
     promptVersion: text("prompt_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -259,8 +269,17 @@ export const emailMessages = pgTable(
     uniqueIndex("email_messages_lead_seq_uq").on(t.leadId, t.sequenceNo),
     index("email_messages_status_idx").on(t.status),
     index("email_messages_validation_idx").on(t.validation),
+    index("email_messages_provider_id_idx").on(t.providerMessageId),
   ],
 );
+
+/** Réglages modifiables à chaud (ex. pause de l'envoi). */
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+});
 
 /** Adresses auxquelles on n'écrit plus jamais (désinscription, rebond définitif, plainte). */
 export const suppressions = pgTable("suppressions", {

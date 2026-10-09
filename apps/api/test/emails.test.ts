@@ -63,7 +63,7 @@ describe("e-mails : relecture et validation", () => {
     const m = res.json();
     expect(m.from).toContain("<");
     expect(m.paragraphs.some((p: { type: string }) => p.type === "agenda")).toBe(true);
-    expect(m.paragraphs.at(-1).type).toBe("signature");
+    expect(m.paragraphs.map((p: { type: string }) => p.type).slice(-2)).toEqual(["signature", "footer"]); // mention d'opposition en pied
   });
 
   it("valide : enregistre qui et quand, écrit l'historique sans contenu", async () => {
