@@ -41,6 +41,8 @@ export function leadFilters(f: LeadFilter): SQL | undefined {
   if (f.callState) where.push(eqOrNone(leads.callState, f.callState));
   if (f.callStatus) where.push(eqOrNone(leads.callStatus, f.callStatus));
   if (f.sector) where.push(sql`lower(${companies.sector}) = lower(${f.sector})`);
+  if (f.city) where.push(ilike(companies.city, `${likePattern(f.city).slice(1)}`));
+  if (f.hasPhone !== undefined) where.push(f.hasPhone ? isNotNull(companies.phone) : isNull(companies.phone));
   if (f.hasEmail !== undefined) where.push(f.hasEmail ? isNotNull(contacts.email) : isNull(contacts.email));
   return where.length ? and(...where) : undefined;
 }
@@ -56,6 +58,12 @@ export function leadOrder(sort: LeadListQuery["sort"], order: LeadListQuery["ord
     employees: companies.employees,
     rating: companies.googleRating,
     traffic: companies.organicTraffic,
+    city: sql`lower(${companies.city})`,
+    // nombre d'appels déjà passés : les prospects jamais appelés d'abord (avec « asc »)
+    calls: sql`(${leads.callStatus} is not null)::int + (${leads.followup1} is not null)::int + (${leads.followup2} is not null)::int`,
   }[sort];
-  return [sql`${dir(expression)} nulls last`, asc(leads.id)];
+  // File d'appel : à nombre d'appels égal, regroupés par ville (déplacements, indicatif) puis par nom
+  const tie =
+    sort === "calls" ? [asc(sql`lower(${companies.city})`), asc(sql`lower(${companies.name})`)] : [];
+  return [sql`${dir(expression)} nulls last`, ...tie, asc(leads.id)];
 }
