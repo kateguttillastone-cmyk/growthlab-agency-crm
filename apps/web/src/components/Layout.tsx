@@ -27,6 +27,9 @@ export function Layout() {
           <NavLink to="/" end className={linkClass}>
             Tableau de bord
           </NavLink>
+          <NavLink to="/leads" className={linkClass}>
+            Leads
+          </NavLink>
           {can("ADMIN") && (
             <>
               <NavLink to="/users" className={linkClass}>
