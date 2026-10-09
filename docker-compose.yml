@@ -1,4 +1,6 @@
 # Développement.
+#   Ports (modifiables si un autre programme les utilise : fichier .env à la racine, ou variables d'environnement) :
+#     WEB_PORT (défaut 8080) · API_PORT (3001) · POSTGRES_PORT (5432)
 #   Base seule (pour `pnpm dev:api` et `pnpm dev:web`) : docker compose up -d postgres
 #   Pile complète en conteneurs                         : docker compose up --build
 #     Interface http://localhost:8080 · API (direct) http://localhost:3001/docs
@@ -9,7 +11,7 @@ services:
       POSTGRES_USER: gac
       POSTGRES_PASSWORD: gac
       POSTGRES_DB: gac
-    ports: ["5432:5432"]
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     # -h 127.0.0.1 : test par le réseau (TCP). Sans lui, pg_isready répond via le socket local, que le serveur
     # TEMPORAIRE de l'initialisation (premier démarrage) accepte déjà : l'API démarrait alors trop tôt.
@@ -27,7 +29,7 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://gac:gac@postgres:5432/gac
-      APP_ORIGIN: http://localhost:8080
+      APP_ORIGIN: http://localhost:${WEB_PORT:-8080}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@gac.local}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe-Please-123}
       SWAGGER: "true"
@@ -39,7 +41,7 @@ services:
       timeout: 5s
       retries: 20
       start_period: 20s
-    ports: ["3001:3001"]
+    ports: ["${API_PORT:-3001}:3001"]
 
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
@@ -47,7 +49,7 @@ services:
     # nginx résout « api » au démarrage : il ne doit démarrer que lorsque l'API répond
     depends_on:
       api: { condition: service_healthy }
-    ports: ["8080:8080"]
+    ports: ["${WEB_PORT:-8080}:8080"]
 
 volumes:
   pgdata:
