@@ -18,6 +18,7 @@ export function testEnv(overrides: Record<string, string> = {}): NodeJS.ProcessE
     APP_ORIGIN,
     LOGIN_RATE_LIMIT_PER_MINUTE: "1000",
     RATE_LIMIT_PER_MINUTE: "100000",
+    IMPORT_RATE_LIMIT_PER_MINUTE: "1000",
     LOGIN_MAX_FAILURES: "3",
     LOGIN_LOCK_MINUTES: "15",
     ...overrides,
@@ -93,3 +94,36 @@ export const withOrigin = (cookie?: string) => ({
   origin: APP_ORIGIN,
   ...(cookie ? { cookie } : {}),
 });
+
+export interface MultipartPart {
+  name: string;
+  /** Champ texte. */
+  value?: string;
+  /** Fichier : nom et contenu. */
+  filename?: string;
+  content?: Buffer | string;
+}
+
+/** Corps `multipart/form-data` construit à la main (aucune dépendance de test). */
+export function multipartBody(parts: MultipartPart[]) {
+  const boundary = `----gactest${Math.random().toString(16).slice(2)}`;
+  const chunks: Buffer[] = [];
+  for (const p of parts) {
+    chunks.push(Buffer.from(`--${boundary}\r\n`));
+    if (p.filename !== undefined) {
+      chunks.push(
+        Buffer.from(
+          `Content-Disposition: form-data; name="${p.name}"; filename="${p.filename}"\r\nContent-Type: text/csv\r\n\r\n`,
+        ),
+      );
+      chunks.push(Buffer.isBuffer(p.content) ? p.content : Buffer.from(p.content ?? ""));
+      chunks.push(Buffer.from("\r\n"));
+    } else {
+      chunks.push(
+        Buffer.from(`Content-Disposition: form-data; name="${p.name}"\r\n\r\n${p.value ?? ""}\r\n`),
+      );
+    }
+  }
+  chunks.push(Buffer.from(`--${boundary}--\r\n`));
+  return { payload: Buffer.concat(chunks), contentType: `multipart/form-data; boundary=${boundary}` };
+}

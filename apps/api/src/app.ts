@@ -11,6 +11,7 @@ import type { Db } from "./db/client";
 import { auditRoutes } from "./modules/audit/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { healthRoutes } from "./modules/health/routes";
+import { importsRoutes } from "./modules/imports/routes";
 import { leadsRoutes } from "./modules/leads/routes";
 import { usersRoutes } from "./modules/users/routes";
 import { registerAuth } from "./plugins/auth";
@@ -85,6 +86,7 @@ export async function buildApp({ config, db }: AppDeps): Promise<FastifyInstance
   await app.register(usersRoutes);
   await app.register(auditRoutes);
   await app.register(leadsRoutes);
+  await app.register(importsRoutes);
 
   return app;
 }

@@ -2,6 +2,7 @@ import {
   CALL_STATES,
   CALL_STATUSES,
   EMAIL_STATUSES,
+  type ImportReport,
   PIPELINE_STAGES,
   QUALIFICATIONS,
   VALIDATION_STATUSES,
@@ -39,24 +40,18 @@ import {
   parseIsoDate,
 } from "./normalize";
 
+/** Fichier inexploitable : le message est destiné à l'utilisateur (aucune donnée du fichier n'y figure). */
+export class ImportError extends Error {}
+
+export type { ImportReport };
+
 export interface ImportOptions {
+  /** Nombre maximal de lignes (l'import par l'interface est borné ; la commande en ligne ne l'est pas). */
+  maxRows?: number;
   /** Tout est exécuté puis annulé : rien n'est écrit. */
   dryRun?: boolean;
   /** Fuseau de la base d'origine pour les dates sans fuseau (« 24/9/2026 3:05pm »). L'export analysé porte -04:00. */
   timezoneOffset?: string;
-}
-
-export interface ImportReport {
-  dryRun: boolean;
-  rows: number;
-  skipped: number;
-  companies: { created: number; existing: number };
-  contacts: { created: number; existing: number };
-  leads: { created: number; existing: number };
-  emailMessages: { created: number; existing: number };
-  suppressions: { created: number; existing: number };
-  /** Anomalies par type, avec le nombre de lignes concernées (aucune donnée personnelle). */
-  warnings: Record<string, number>;
 }
 
 type Row = Record<string, string>;
@@ -73,13 +68,33 @@ export async function importAirtableCsv(
   opts: ImportOptions = {},
 ): Promise<ImportReport> {
   const offset = opts.timezoneOffset ?? "-04:00";
-  const records = parse(csv, {
-    columns: true,
-    bom: true,
-    skip_empty_lines: true,
-    relax_column_count: false,
-    trim: false,
-  }) as Row[];
+  let records: Row[];
+  try {
+    records = parse(csv, {
+      columns: true,
+      bom: true,
+      skip_empty_lines: true,
+      relax_column_count: false,
+      trim: false,
+    }) as Row[];
+  } catch (err) {
+    // le message de csv-parse ne cite que la position (ligne, nombre de colonnes), jamais le contenu
+    throw new ImportError(
+      `Fichier CSV illisible : ${err instanceof Error ? err.message : "format invalide"}`,
+    );
+  }
+  if (records.length === 0) throw new ImportError("Le fichier ne contient aucune ligne de données.");
+  if (!("Entreprise" in (records[0] ?? {}))) {
+    throw new ImportError(
+      "Ce fichier ne ressemble pas à l'export de la table Airtable : la colonne « Entreprise » est absente.",
+    );
+  }
+  const maxRows = opts.maxRows ?? Number.POSITIVE_INFINITY;
+  if (records.length > maxRows) {
+    throw new ImportError(
+      `Le fichier contient ${records.length.toLocaleString("fr-FR")} lignes (maximum ${maxRows.toLocaleString("fr-FR")} par l'interface). Utilisez la commande d'import.`,
+    );
+  }
 
   const report: ImportReport = {
     dryRun: !!opts.dryRun,
@@ -101,6 +116,8 @@ export async function importAirtableCsv(
 
   try {
     await db.transaction(async (tx) => {
+      // Un seul import à la fois : deux envois simultanés se suivent au lieu de se disputer les mêmes lignes.
+      await tx.execute(sql`select pg_advisory_xact_lock(727275)`);
       const userRows = await tx.select({ id: users.id, name: users.name, email: users.email }).from(users);
       const seenLeadKeys = new Set<string>();
 

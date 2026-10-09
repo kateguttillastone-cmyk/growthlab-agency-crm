@@ -32,6 +32,11 @@ const schema = z.object({
   LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).default(15),
   LOGIN_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(10),
 
+  /** Nombre maximal d'imports (simulation ou réel) par minute et par adresse. */
+  IMPORT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(10),
+  /** Taille maximale d'un fichier importé par l'interface (Mo). */
+  IMPORT_MAX_MB: z.coerce.number().positive().max(100).default(10),
+
   SWAGGER: bool.default(false),
 
   /** Premier administrateur, créé au démarrage s'il n'existe pas (jamais modifié ensuite). */
