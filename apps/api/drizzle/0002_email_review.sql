@@ -1,0 +1,2 @@
+ALTER TABLE "email_messages" ADD COLUMN "validated_by" uuid;--> statement-breakpoint
+ALTER TABLE "email_messages" ADD CONSTRAINT "email_messages_validated_by_users_id_fk" FOREIGN KEY ("validated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

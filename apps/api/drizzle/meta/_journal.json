@@ -15,6 +15,13 @@
       "when": 1791552966055,
       "tag": "0001_leads",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791555969416,
+      "tag": "0002_email_review",
+      "breakpoints": true
     }
   ]
 }

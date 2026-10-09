@@ -42,6 +42,9 @@ export type EmailStatus = (typeof EMAIL_STATUSES)[number];
 export const SERVICES = ["Google Ads", "Création de site", "Refonte de site"] as const;
 export type Service = (typeof SERVICES)[number];
 
+export const SUPPRESSION_REASONS = ["unsubscribe", "bounce", "complaint", "manual"] as const;
+export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
+
 export const SEGMENTS = ["with_website", "no_website"] as const;
 export type Segment = (typeof SEGMENTS)[number];
 

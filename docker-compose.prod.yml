@@ -62,6 +62,11 @@ services:
       APP_VERSION: ${APP_VERSION:-dev}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?définir SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?définir SEED_ADMIN_PASSWORD}
+      # Gabarit des e-mails (vide = valeurs de l'ancienne chaîne n8n)
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_AGENDA_TEXT: ${MAIL_AGENDA_TEXT:-}
+      MAIL_SIGNATURE: ${MAIL_SIGNATURE:-}
       SLOW_REQUEST_MS: ${SLOW_REQUEST_MS:-1000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Plafond du tas de Node, sous la limite du conteneur

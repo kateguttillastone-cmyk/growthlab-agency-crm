@@ -11,7 +11,9 @@ const eqOrNone = <T>(column: Parameters<typeof eq>[0], value: T | typeof NONE): 
   value === NONE ? isNull(column) : eq(column, value);
 
 /** Conditions SQL d'une recherche de leads (tous les filtres sont facultatifs et se cumulent). */
-export function leadFilters(f: LeadListQuery): SQL | undefined {
+export type LeadFilter = Omit<LeadListQuery, "limit" | "offset" | "sort" | "order">;
+
+export function leadFilters(f: LeadFilter): SQL | undefined {
   const where: SQL[] = [];
   if (f.q) {
     const pattern = likePattern(f.q);
@@ -34,6 +36,7 @@ export function leadFilters(f: LeadListQuery): SQL | undefined {
   if (f.segment === "no_website") where.push(isNull(companies.domain));
   if (f.source) where.push(eq(leads.source, f.source));
   if (f.validation) where.push(eq(emailMessages.validation, f.validation));
+  if (f.promptVersion) where.push(eq(emailMessages.promptVersion, f.promptVersion));
   if (f.emailStatus) where.push(eqOrNone(emailMessages.status, f.emailStatus));
   if (f.callState) where.push(eqOrNone(leads.callState, f.callState));
   if (f.callStatus) where.push(eqOrNone(leads.callStatus, f.callStatus));

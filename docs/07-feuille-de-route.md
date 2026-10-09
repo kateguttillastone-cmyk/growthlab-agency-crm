@@ -44,6 +44,11 @@ grille éditable en place, export CSV, choix du responsable (liste des utilisate
 
 ## Phase 4 — E-mails (EXG-F-042..047, EXG-A-020..024, EXG-A-043) — **prioritaire**
 
+Découpée en trois lots livrables séparément : **4a relecture et validation** (réalisée : page « E-mails », aperçu rendu par
+l'API, validation unitaire et groupée avec simulation, statistiques par version du prompt, aucun envoi), **4b fiabilité des
+adresses**, **4c envoi planifié** (Brevo, créneaux, plafond, webhooks). Le lot 4c ne démarre qu'avec une clé Brevo, une adresse
+d'expéditeur et le texte d'opposition fournis par l'équipe, d'abord en `SEND_MODE=test`, jamais en même temps que la chaîne n8n.
+
 *Pourquoi d'abord : 665 e-mails sont déjà partis à de vrais prospects, 7,1 % ont rebondi, 10 personnes se sont désinscrites, et
 520 nouveaux e-mails attendent d'être relus. Chaque envoi supplémentaire sans contrôle aggrave le risque pour la réputation de
 l'expéditeur.*

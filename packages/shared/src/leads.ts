@@ -7,6 +7,7 @@ import {
   QUALIFICATIONS,
   SEGMENTS,
   SERVICES,
+  SUPPRESSION_REASONS,
   VALIDATION_STATUSES,
 } from "./catalog";
 import { MAX_PAGE_SIZE } from "./pagination";
@@ -44,6 +45,7 @@ export const leadListQuerySchema = z.object({
   callState: withNone(CALL_STATES).optional(),
   callStatus: withNone(CALL_STATUSES).optional(),
   sector: z.string().trim().max(100).optional(),
+  promptVersion: z.string().trim().max(100).optional(),
   hasEmail: bool.optional(),
 });
 export type LeadListQuery = z.infer<typeof leadListQuerySchema>;
@@ -75,6 +77,11 @@ const emailSummary = z.object({
   validation: z.enum(VALIDATION_STATUSES),
   status: z.enum(EMAIL_STATUSES).nullable(),
   sentOn: z.string().nullable(),
+  /** Début de l'objet (120 caractères) : permet de parcourir la file de relecture sans ouvrir chaque fiche. */
+  subject: z.string().nullable(),
+  promptVersion: z.string().nullable(),
+  /** Motif d'exclusion du destinataire (rebond, désinscription…) : aucun envoi ni validation possible. */
+  blockedReason: z.enum(SUPPRESSION_REASONS).nullable(),
 });
 
 export const leadSummarySchema = z.object({
@@ -137,7 +144,10 @@ export const leadDetailSchema = leadSummarySchema.extend({
       subject: z.string().nullable(),
       body: z.string().nullable(),
       validatedAt: z.string().nullable(),
+      validatedBy: z.string().nullable(),
       promptVersion: z.string().nullable(),
+      /** À renvoyer à la modification : détecte qu'une autre personne a modifié l'e-mail entre-temps. */
+      updatedAt: z.string(),
     })
     .nullable(),
   events: z.array(leadEventSchema),

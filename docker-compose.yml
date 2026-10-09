@@ -32,6 +32,11 @@ services:
       APP_ORIGIN: http://localhost:${WEB_PORT:-8080}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@gac.local}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe-Please-123}
+      # Gabarit des e-mails (vide = valeurs de l'ancienne chaîne n8n)
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_AGENDA_TEXT: ${MAIL_AGENDA_TEXT:-}
+      MAIL_SIGNATURE: ${MAIL_SIGNATURE:-}
       SWAGGER: "true"
       COOKIE_SECURE: "false"
       PORT: 3001

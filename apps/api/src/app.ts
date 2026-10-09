@@ -10,6 +10,7 @@ import type { Config } from "./config";
 import type { Db } from "./db/client";
 import { auditRoutes } from "./modules/audit/routes";
 import { authRoutes } from "./modules/auth/routes";
+import { emailsRoutes } from "./modules/emails/routes";
 import { healthRoutes } from "./modules/health/routes";
 import { importsRoutes } from "./modules/imports/routes";
 import { leadsRoutes } from "./modules/leads/routes";
@@ -86,6 +87,7 @@ export async function buildApp({ config, db }: AppDeps): Promise<FastifyInstance
   await app.register(usersRoutes);
   await app.register(auditRoutes);
   await app.register(leadsRoutes);
+  await app.register(emailsRoutes);
   await app.register(importsRoutes);
 
   return app;
