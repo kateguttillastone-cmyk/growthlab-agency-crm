@@ -194,6 +194,14 @@ export const FIELD_LABELS: Record<string, string> = {
 export function describeEvent(e: { type: string; data: Record<string, unknown> | null }): string {
   if (e.type === "imported") return "Importé depuis l'ancienne base";
   const d = e.data ?? {};
+  if (e.type === "email_edited") {
+    const names = { subject: "l'objet", body: "le corps" };
+    const fields = Array.isArray(d.fields) ? d.fields.map((f) => names[f as keyof typeof names] ?? f) : [];
+    return `E-mail modifié (${fields.join(" et ") || "texte"})`;
+  }
+  if (e.type === "email_validation") {
+    return `Validation de l'e-mail : ${String(d.from ?? "—")} → ${String(d.to ?? "—")}${d.bulk ? " (groupée)" : ""}`;
+  }
   const show = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
   const label = FIELD_LABELS[String(d.field)] ?? String(d.field ?? e.type);
   const auto = d.auto ? ` (automatique : ${String(d.reason ?? "règle du pipeline")})` : "";

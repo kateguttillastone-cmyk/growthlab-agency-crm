@@ -105,6 +105,7 @@ erDiagram
         text body
         validation_status validation
         timestamptz validated_at
+        uuid validated_by FK "qui a validé"
         email_status status "nul = pas envoyé"
         date sent_on
         text prompt_version
@@ -175,3 +176,17 @@ erDiagram
   avec le schéma N : c'est ce qui rend le retour arrière sûr.
 - Jamais de modification d'une migration déjà fusionnée dans `dev` ou `main`.
 - Les migrations tournent au démarrage de l'API, protégées par un verrou consultatif PostgreSQL.
+
+## Relecture des e-mails (phase 4a)
+
+- Un e-mail **envoyé** (`status` ou `sent_on` renseigné) n'est plus modifiable. Modifier l'objet ou le corps d'un e-mail
+  validé le remet à « Pas Validé » (sauf validation explicite dans la même requête).
+- **Validation interdite** sans adresse, avec une adresse présente dans `suppressions` (comparaison en minuscules), ou avec
+  un objet ou un corps vide. Le rejet reste toujours possible.
+- Modification concurrente : `expectedUpdatedAt` ; refus 409 si l'e-mail a changé depuis la lecture.
+- Validation groupée : `POST /emails/bulk`, simulation (`dryRun`) puis application avec l'effectif simulé (`expectedCount`) ;
+  ne touche que les e-mails « Pas Validé » non envoyés ; tracée dans `audit_events` (`emails.bulk_validation`).
+- Historique `lead_events` : `email_edited` (noms des champs modifiés, jamais le texte) et `email_validation`
+  (avant → après, `bulk` si groupée).
+- Gabarit unique côté serveur (`apps/api/src/mail/template.ts`) : l'aperçu de l'interface et l'envoi futur l'utilisent tous
+  deux. Expéditeur, agenda et signature : variables `MAIL_FROM_NAME`, `MAIL_FROM_ADDRESS`, `MAIL_AGENDA_TEXT`, `MAIL_SIGNATURE`.
