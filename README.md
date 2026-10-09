@@ -45,6 +45,19 @@ Compte initial : celui de `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (`admin@gac
 `.env.example`). **À changer hors développement.**
 
 Pile complète en conteneurs : `docker compose up --build` → http://localhost:8080.
+Si un port est déjà pris (message « ports are not available »), créez un fichier `.env` **à la racine** du dépôt
+(il est ignoré par Git) : `WEB_PORT=8081`, et au besoin `API_PORT=3002` ou `POSTGRES_PORT=5433`. L'adresse à ouvrir
+devient http://localhost:8081. Sous Windows, pour trouver le programme qui occupe un port :
+`netstat -ano | findstr :8080` puis `tasklist /FI "PID eq <numéro>"` (ou `docker ps` si c'est un autre projet Docker).
+
+## Dépannage (Docker)
+
+| Symptôme | Cause probable | Solution |
+|---|---|---|
+| `getaddrinfo ENOTFOUND postgres` dans le journal de l'API | l'API ne trouve pas le service `postgres` : base arrêtée, ou conteneurs sur des réseaux Docker différents | `docker compose down` puis `docker compose up --build` ; vérifier `docker compose ps -a` et `docker network ls` ; l'API réessaie pendant 60 s (`DB_WAIT_SECONDS`) avant d'abandonner avec un message qui nomme l'hôte |
+| `ECONNREFUSED` vers la base | la base démarre encore (premier lancement : initialisation) | attendre ; l'API réessaie seule |
+| Anciennes données ou mot de passe qui ne change pas | le volume `pgdata` garde l'ancienne base | `docker compose down -v` (efface la base) |
+| `ports are not available` / `Only one usage of each socket address` | le port 8080, 3001 ou 5432 est pris par un autre programme ou un autre projet Docker | fichier `.env` à la racine avec `WEB_PORT=8081` (ou `API_PORT`, `POSTGRES_PORT`), puis `docker compose up --build` |
 
 ## Qualité
 

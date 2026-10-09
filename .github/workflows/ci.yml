@@ -82,6 +82,26 @@ jobs:
           docker compose -p smoke -f docker-compose.prod.yml up -d --wait --wait-timeout 120
           curl -fsS http://127.0.0.1:3020/api/health
           curl -fsS -o /dev/null http://127.0.0.1:3020/
+          # en-têtes de sécurité : présents, une seule fois, sur la page et sur l'API
+          for url in / /api/health; do
+            h="$(curl -sI "http://127.0.0.1:3020$url")"
+            for name in x-frame-options x-content-type-options content-security-policy; do
+              n="$(printf '%s\n' "$h" | grep -ci "^$name:")"
+              [ "$n" = 1 ] || { echo "$url : en-tête $name présent $n fois (attendu : 1)"; printf '%s\n' "$h"; exit 1; }
+            done
+          done
+          # connexion de bout en bout par la chaîne web -> API -> base, avec l'administrateur créé au démarrage
+          curl -fsS -c /tmp/cj -H "Origin: https://example.com" -H 'content-type: application/json' \
+            -d '{"email":"admin@example.com","password":"xxxxxxxxxxxx"}' http://127.0.0.1:3020/api/auth/login
+          curl -fsS -b /tmp/cj http://127.0.0.1:3020/api/auth/me
+      - name: La commande de développement « docker compose up --build » démarre aussi (docker-compose.yml)
+        run: |
+          docker compose -p devsmoke up -d --build --wait --wait-timeout 240
+          curl -fsS http://127.0.0.1:8080/api/health
+          # compte par défaut du développement, via nginx -> API -> base
+          curl -fsS -c /tmp/cj2 -H "Origin: http://localhost:8080" -H 'content-type: application/json' \
+            -d '{"email":"admin@gac.local","password":"ChangeMe-Please-123"}' http://127.0.0.1:8080/api/auth/login
+          curl -fsS -b /tmp/cj2 http://127.0.0.1:8080/api/auth/me
       - name: Journaux des conteneurs (en cas d'échec)
         if: failure()
         env:
@@ -89,7 +109,9 @@ jobs:
           SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
           DOMAIN: example.com
-        run: docker compose -p smoke -f docker-compose.prod.yml logs --no-color --tail 80
+        run: |
+          docker compose -p smoke -f docker-compose.prod.yml logs --no-color --tail 80
+          docker compose -p devsmoke logs --no-color --tail 80
       - name: Nettoyage
         if: always()
         env:
@@ -97,4 +119,6 @@ jobs:
           SEED_ADMIN_EMAIL: admin@example.com
           SEED_ADMIN_PASSWORD: xxxxxxxxxxxx
           DOMAIN: example.com
-        run: docker compose -p smoke -f docker-compose.prod.yml down -v
+        run: |
+          docker compose -p smoke -f docker-compose.prod.yml down -v
+          docker compose -p devsmoke down -v

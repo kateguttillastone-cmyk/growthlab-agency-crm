@@ -45,7 +45,7 @@ services:
     logging: *logging
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gac -d gac"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U gac -d gac"]
       interval: 5s
       retries: 10
 

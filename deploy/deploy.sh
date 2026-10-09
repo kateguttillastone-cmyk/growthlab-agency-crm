@@ -4,7 +4,7 @@
 #
 #   deploy/deploy.sh main            # production -> ~/growthlab      (.env.prod, projet « growthlab »)
 #   deploy/deploy.sh dev             # test       -> ~/growthlab-dev  (.env.dev,  projet « growthlab-dev »)
-#   deploy/deploy.sh rollback main   # revient à la dernière version qui a démarré correctement
+#   deploy/deploy.sh rollback main   # revient à la version d'AVANT le dernier changement (annule le dernier déploiement)
 #   deploy/deploy.sh rollback main <sha>   # revient à un commit précis
 #
 # Étapes : récupérer le code, sauvegarder la base, reconstruire, vérifier l'API de bout en bout (web -> API -> base),
@@ -56,8 +56,8 @@ run() {
 
   PREVIOUS="$(git rev-parse HEAD)"
   if [ "$mode" = "rollback" ]; then
-    TARGET="${TARGET_SHA:-$(cat .deploy/last_good 2>/dev/null || true)}"
-    [ -n "$TARGET" ] || { echo "Aucune version de référence (.deploy/last_good absent) : précisez un commit."; exit 4; }
+    TARGET="${TARGET_SHA:-$(cat .deploy/previous 2>/dev/null || true)}"
+    [ -n "$TARGET" ] || { echo "Aucune version précédente connue (.deploy/previous absent) : précisez un commit."; exit 4; }
     git fetch --quiet origin "$BRANCH"
     TARGET="$(git rev-parse "$TARGET")"
     echo "→ RETOUR ARRIÈRE $BRANCH : $PREVIOUS -> $TARGET"
@@ -82,7 +82,8 @@ run() {
 
   if wait_healthy; then
     echo "$TARGET" > .deploy/last_good
-    [ "$mode" = "deploy" ] && echo "$PREVIOUS" > .deploy/previous
+    # « previous » = la version qu'on vient de quitter : un retour arrière sans commit précisé y revient
+    [ "$PREVIOUS" != "$TARGET" ] && echo "$PREVIOUS" > .deploy/previous
     docker image prune -f >/dev/null
     echo "OK : $BRANCH déployé ($TARGET)"
     exit 0

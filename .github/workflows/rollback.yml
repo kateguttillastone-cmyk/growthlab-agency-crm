@@ -1,6 +1,6 @@
 name: Retour arrière
 
-# Manuel (Actions → Retour arrière → Run workflow). Redéploie la dernière version qui a démarré correctement
+# Manuel (Actions → Retour arrière → Run workflow). Redéploie la version d'AVANT le dernier changement
 # (ou le commit indiqué) sur l'environnement choisi. Les migrations ne sont PAS annulées : elles sont conçues
 # pour rester compatibles avec la version précédente (docs/09-exploitation.md).
 on:
@@ -12,7 +12,7 @@ on:
         options: [dev, main]
         default: dev
       sha:
-        description: "Commit cible (vide = dernière version saine)"
+        description: "Commit cible (vide = version d'avant le dernier déploiement)"
         required: false
         type: string
 
