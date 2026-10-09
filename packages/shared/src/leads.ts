@@ -153,6 +153,10 @@ export const leadDetailSchema = leadSummarySchema.extend({
       body: z.string().nullable(),
       validatedAt: z.string().nullable(),
       validatedBy: z.string().nullable(),
+      /** Dernier échec ou incertitude d'envoi (sans donnée personnelle). */
+      sendError: z.string().nullable(),
+      /** Envoi réservé sans résultat connu : à vérifier chez Brevo avant toute libération. */
+      sendReserved: z.boolean(),
       promptVersion: z.string().nullable(),
       /** À renvoyer à la modification : détecte qu'une autre personne a modifié l'e-mail entre-temps. */
       updatedAt: z.string(),

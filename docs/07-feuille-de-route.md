@@ -38,7 +38,7 @@ grille éditable en place, export CSV, choix du responsable (liste des utilisate
   deux clics, relances 1 et 2 ; l'étape du pipeline suit **sans jamais reculer** (déjà implémenté côté API).
 - Kanban accessible (glisser-déposer **et** clavier), valeur des deals, packs issus de la table `packs` — à n'entreprendre
   que si l'équipe s'en sert (aucun usage à ce jour).
-- KPI et entonnoirs calculés en SQL sur la période choisie (**réalisé** : `GET /dashboard`, page d'accueil : 6 indicateurs, entonnoirs qualification / secteurs / pipeline, leads chauds à valider, 8 derniers leads ; période : toute / 7 / 30 / 90 jours / personnalisée, sur la date de détection). Les statistiques Brevo (EXG-F-015) viendront avec le lot 4c.
+- KPI et entonnoirs calculés en SQL sur la période choisie (**réalisé** : `GET /dashboard`, page d'accueil : 6 indicateurs, entonnoirs qualification / secteurs / pipeline, leads chauds à valider, 8 derniers leads ; période : toute / 7 / 30 / 90 jours / personnalisée, sur la date de détection). Les statistiques d'envoi viennent des statuts reçus par webhook (EXG-F-015 non repris tel quel).
 
 **Acceptation** : CA-02, CA-06, CA-07 du PRD passent en test automatisé ; un commercial traite 20 prospects de la file sans quitter l'écran
 (vérifié dans Chromium sur des données fictives pour la file d'appel).
@@ -52,8 +52,7 @@ sur l'état verrouillé du lead (`POST /leads/:id/call`) : deux appels simultan�
 
 Découpée en trois lots livrables séparément : **4a relecture et validation** (réalisée : page « E-mails », aperçu rendu par
 l'API, validation unitaire et groupée avec simulation, statistiques par version du prompt, aucun envoi), **4b fiabilité des
-adresses** (réalisée : contrôle de syntaxe, adresses jetables et DNS du domaine, validation interdite sur adresse inutilisable), **4c envoi planifié** (Brevo, créneaux, plafond, webhooks). Le lot 4c ne démarre qu'avec une clé Brevo, une adresse
-d'expéditeur et le texte d'opposition fournis par l'équipe, d'abord en `SEND_MODE=test`, jamais en même temps que la chaîne n8n.
+adresses** (réalisée : contrôle de syntaxe, adresses jetables et DNS du domaine, validation interdite sur adresse inutilisable), **4c envoi planifié** (réalisée, **désactivée par défaut** : Brevo, créneaux, plafond, webhooks, désinscription ; voir [12](12-envoi-brevo.md)). La mise en service réelle suit la procédure du doc 12 (clé Brevo, expéditeur vérifié, e-mail de test réel, webhook), jamais en même temps que la chaîne n8n.
 
 *Pourquoi d'abord : 665 e-mails sont déjà partis à de vrais prospects, 7,1 % ont rebondi, 10 personnes se sont désinscrites, et
 520 nouveaux e-mails attendent d'être relus. Chaque envoi supplémentaire sans contrôle aggrave le risque pour la réputation de

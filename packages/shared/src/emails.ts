@@ -16,7 +16,7 @@ export const emailPreviewRequestSchema = z.object({
 });
 
 const previewParagraph = z.object({
-  type: z.enum(["text", "agenda", "signature"]),
+  type: z.enum(["text", "agenda", "signature", "footer"]),
   lines: z.array(z.string()),
 });
 
@@ -178,3 +178,33 @@ export const addressCheckResultSchema = z.object({
   remaining: z.number(),
 });
 export type AddressCheckResult = z.infer<typeof addressCheckResultSchema>;
+
+export const sendStatusSchema = z.object({
+  mode: z.enum(["off", "prod"]),
+  /** Clé Brevo, secrets et expéditeur présents (jamais leur valeur). */
+  configured: z.boolean(),
+  paused: z.boolean(),
+  testRecipient: z.string().nullable(),
+  from: z.string(),
+  dailyCap: z.number(),
+  intervalSeconds: z.number(),
+  slots: z.string(),
+  windowMinutes: z.number(),
+  sentToday: z.number(),
+  /** Validés, adresse contrôlée valable, pas exclus : prêts à partir. */
+  ready: z.number(),
+  /** Validés mais bloqués (adresse non contrôlée ou inutilisable, exclue, trop d'échecs). */
+  blocked: z.number(),
+  /** Envois dont le résultat est incertain (délai dépassé) : à vérifier chez Brevo puis libérer. */
+  uncertain: z.number(),
+  slotOpen: z.boolean(),
+  nextSlot: z.string().nullable(),
+});
+export type SendStatus = z.infer<typeof sendStatusSchema>;
+
+export const pauseSchema = z.object({ paused: z.boolean() });
+export const testSendSchema = z.object({ leadId: z.uuid() });
+export const addSuppressionSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  note: z.string().trim().max(500).optional(),
+});

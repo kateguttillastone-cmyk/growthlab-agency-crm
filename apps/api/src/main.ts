@@ -1,6 +1,7 @@
 import { buildApp } from "./app";
 import { loadConfig } from "./config";
 import { createDb } from "./db/client";
+import { startSendScheduler } from "./modules/sending/scheduler";
 import { ensureSeedAdmin } from "./seed";
 
 async function main(): Promise<void> {
@@ -10,8 +11,11 @@ async function main(): Promise<void> {
 
   await ensureSeedAdmin(db, config, app.log);
 
+  const stopScheduler = startSendScheduler(app);
+
   const stop = async (signal: string) => {
     app.log.info(`${signal} reçu, arrêt en cours`);
+    stopScheduler();
     await app.close();
     await pool.end();
     process.exit(0);

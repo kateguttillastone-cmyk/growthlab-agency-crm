@@ -103,6 +103,8 @@ export function toDetail(
       body: message.body,
       validatedAt: message.validatedAt?.toISOString() ?? null,
       validatedBy: row.validatorName,
+      sendError: message.sendError,
+      sendReserved: message.sendingAt !== null && message.status === null,
       promptVersion: message.promptVersion,
       updatedAt: message.updatedAt.toISOString(),
     },
