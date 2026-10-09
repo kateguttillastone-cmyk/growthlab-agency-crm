@@ -46,7 +46,7 @@ grille éditable en place, export CSV, choix du responsable (liste des utilisate
 
 Découpée en trois lots livrables séparément : **4a relecture et validation** (réalisée : page « E-mails », aperçu rendu par
 l'API, validation unitaire et groupée avec simulation, statistiques par version du prompt, aucun envoi), **4b fiabilité des
-adresses**, **4c envoi planifié** (Brevo, créneaux, plafond, webhooks). Le lot 4c ne démarre qu'avec une clé Brevo, une adresse
+adresses** (réalisée : contrôle de syntaxe, adresses jetables et DNS du domaine, validation interdite sur adresse inutilisable), **4c envoi planifié** (Brevo, créneaux, plafond, webhooks). Le lot 4c ne démarre qu'avec une clé Brevo, une adresse
 d'expéditeur et le texte d'opposition fournis par l'équipe, d'abord en `SEND_MODE=test`, jamais en même temps que la chaîne n8n.
 
 *Pourquoi d'abord : 665 e-mails sont déjà partis à de vrais prospects, 7,1 % ont rebondi, 10 personnes se sont désinscrites, et

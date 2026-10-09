@@ -81,7 +81,7 @@ DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 Menu **E-mails** (responsables et administrateurs) : file des e-mails à relire (les plus chauds d'abord), aperçu exact de l'e-mail
 final (gabarit du serveur : agenda et signature ajoutés), points d'attention non bloquants, validation ou rejet unitaire
 avec passage au suivant, et **validation groupée** sur les filtres affichés (simulation puis confirmation). Une adresse
-exclue (rebond, désinscription) ne peut pas être validée. **Aucun envoi n'a lieu** depuis cet écran. Détails : `docs/06-modele-donnees.md`.
+exclue (rebond, désinscription) ne peut pas être validée. Le bouton **Vérifier les adresses** écarte les adresses mal formées, jetables ou dont le domaine ne reçoit pas de courrier. **Aucun envoi n'a lieu** depuis cet écran. Détails : `docs/06-modele-donnees.md`.
 
 ## Importer l'ancienne base (une fois)
 

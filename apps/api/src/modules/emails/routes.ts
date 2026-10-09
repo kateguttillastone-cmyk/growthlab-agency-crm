@@ -1,4 +1,6 @@
 import {
+  addressCheckRequestSchema,
+  addressCheckResultSchema,
   BULK_MAX,
   type BulkEmailResult,
   bulkEmailResultSchema,
@@ -21,6 +23,7 @@ import { AppError, conflict, notFound } from "../../lib/errors";
 import { renderEmail } from "../../mail/template";
 import { leadFilters } from "../leads/queries";
 import { leadReader } from "../leads/read";
+import { runAddressCheck } from "./address-check";
 import { bulkClassification, reviewBlocker } from "./rules";
 
 const idParams = z.object({ id: z.uuid() });
@@ -54,6 +57,8 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
       const { rows } = await db.execute<{
         to_review: string;
         to_review_no_recipient: string;
+        address_unchecked: string;
+        address_invalid: string;
         validated_not_sent: string;
         rejected: string;
         sent: string;
@@ -61,6 +66,8 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
       select
         count(*) filter (where m.validation = 'Pas Validé' and m.status is null and c.email is not null and s.email is null)::text as to_review,
         count(*) filter (where m.validation = 'Pas Validé' and m.status is null and (c.email is null or s.email is not null))::text as to_review_no_recipient,
+        count(*) filter (where m.status is null and m.validation <> 'Rejeté' and c.email is not null and c.email_check is null)::text as address_unchecked,
+        count(*) filter (where m.status is null and m.validation <> 'Rejeté' and c.email_check is not null and c.email_check <> 'valid')::text as address_invalid,
         count(*) filter (where m.validation = 'Validé' and m.status is null)::text as validated_not_sent,
         count(*) filter (where m.validation = 'Rejeté' and m.status is null)::text as rejected,
         count(*) filter (where m.status is not null)::text as sent
@@ -89,6 +96,8 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
       const stats: EmailStats = {
         toReview: Number(x?.to_review ?? 0),
         toReviewNoRecipient: Number(x?.to_review_no_recipient ?? 0),
+        addressUnchecked: Number(x?.address_unchecked ?? 0),
+        addressInvalid: Number(x?.address_invalid ?? 0),
         validatedNotSent: Number(x?.validated_not_sent ?? 0),
         rejected: Number(x?.rejected ?? 0),
         sent: Number(x?.sent ?? 0),
@@ -105,6 +114,32 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  /** Contrôle des adresses (syntaxe, adresse jetable, serveur de messagerie) avant relecture et envoi. */
+  r.post(
+    "/emails/address-check",
+    {
+      preHandler: manager,
+      schema: { body: addressCheckRequestSchema, response: { 200: addressCheckResultSchema } },
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    },
+    async (req) => {
+      const actor = authOf(req).user;
+      const result = await runAddressCheck(db, {
+        limit: req.body.limit,
+        actorId: actor.id,
+        resolver: app.dnsResolver,
+      });
+      await audit(db, {
+        actorId: actor.id,
+        action: "emails.address_check",
+        entityType: "contact",
+        data: { ...result },
+        ip: req.ip,
+      });
+      return result;
+    },
+  );
+
   r.patch(
     "/leads/:id/email",
     {
@@ -117,7 +152,12 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
       const actor = authOf(req).user;
       await db.transaction(async (tx) => {
         const [row] = await tx
-          .select({ message: emailMessages, email: contacts.email, blocked: suppressions.reason })
+          .select({
+            message: emailMessages,
+            email: contacts.email,
+            addressCheck: contacts.emailCheck,
+            blocked: suppressions.reason,
+          })
           .from(emailMessages)
           .innerJoin(leads, eq(leads.id, emailMessages.leadId))
           .leftJoin(contacts, eq(contacts.id, leads.contactId))
@@ -145,7 +185,13 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
         // Un texte modifié doit être relu à nouveau, sauf si la même requête le valide explicitement.
         const target = input.validation ?? (edited ? "Pas Validé" : current.validation);
         if (target === "Validé") {
-          const blocker = reviewBlocker({ subject, body, email: row.email, blocked: row.blocked });
+          const blocker = reviewBlocker({
+            subject,
+            body,
+            email: row.email,
+            blocked: row.blocked,
+            addressCheck: row.addressCheck,
+          });
           if (blocker) throw conflict(blocker);
         }
 
@@ -217,6 +263,7 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
             subject: emailMessages.subject,
             body: emailMessages.body,
             email: contacts.email,
+            addressCheck: contacts.emailCheck,
             blocked: suppressions.reason,
           })
           .from(leads)

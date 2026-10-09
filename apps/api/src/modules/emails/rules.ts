@@ -1,17 +1,21 @@
-import type { BulkEmailResult } from "@gac/shared";
+import { ADDRESS_CHECK_LABELS, type AddressCheck, type BulkEmailResult, isBlockingCheck } from "@gac/shared";
 
 export interface ReviewState {
   subject: string | null;
   body: string | null;
   email: string | null;
   blocked: string | null;
+  addressCheck?: AddressCheck | null;
 }
 
 /** Motif pour lequel un e-mail ne peut pas être validé (null = validable). */
-export function reviewBlocker({ subject, body, email, blocked }: ReviewState): string | null {
+export function reviewBlocker({ subject, body, email, blocked, addressCheck }: ReviewState): string | null {
   if (!email) return "Ce prospect n'a pas d'adresse e-mail : impossible de valider l'envoi";
   if (blocked)
     return "Cette adresse est dans la liste d'exclusion (rebond, désinscription…) : validation interdite";
+  if (addressCheck && isBlockingCheck(addressCheck)) {
+    return `Adresse inutilisable (${ADDRESS_CHECK_LABELS[addressCheck]}) : corrigez-la ou rejetez cet e-mail`;
+  }
   if (!subject?.trim() || !body?.trim()) return "L'objet et le corps doivent être renseignés";
   return null;
 }
@@ -20,6 +24,7 @@ const LABELS = {
   already: "Déjà traités ou envoyés",
   no_recipient: "Sans adresse e-mail",
   suppressed: "Adresse exclue",
+  bad_address: "Adresse inutilisable",
   empty: "Objet ou corps vide",
 } as const;
 
@@ -36,6 +41,7 @@ export function bulkClassification<
     else if (target === "Rejeté") eligible.push(row);
     else if (!row.email) skip("no_recipient");
     else if (row.blocked) skip("suppressed");
+    else if (isBlockingCheck(row.addressCheck)) skip("bad_address");
     else if (!row.subject?.trim() || !row.body?.trim()) skip("empty");
     else eligible.push(row);
   }

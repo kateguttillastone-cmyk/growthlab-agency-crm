@@ -42,6 +42,18 @@ export type EmailStatus = (typeof EMAIL_STATUSES)[number];
 export const SERVICES = ["Google Ads", "Création de site", "Refonte de site"] as const;
 export type Service = (typeof SERVICES)[number];
 
+/** Résultat du contrôle d'une adresse e-mail (avant tout envoi). `null` = pas encore contrôlée ou indéterminé. */
+export const ADDRESS_CHECKS = ["valid", "invalid_syntax", "no_mail_server", "disposable"] as const;
+export type AddressCheck = (typeof ADDRESS_CHECKS)[number];
+export const ADDRESS_CHECK_LABELS: Record<AddressCheck, string> = {
+  valid: "valide",
+  invalid_syntax: "adresse mal formée",
+  no_mail_server: "domaine sans serveur de messagerie",
+  disposable: "adresse jetable",
+};
+/** Une adresse dans l'un de ces états ne peut pas être validée pour l'envoi. */
+export const isBlockingCheck = (c: AddressCheck | null | undefined): boolean => !!c && c !== "valid";
+
 export const SUPPRESSION_REASONS = ["unsubscribe", "bounce", "complaint", "manual"] as const;
 export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
 

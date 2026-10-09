@@ -8,6 +8,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
+import { type DnsResolver, systemResolver } from "./mail/address-check";
 import { auditRoutes } from "./modules/audit/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { emailsRoutes } from "./modules/emails/routes";
@@ -22,9 +23,10 @@ import { registerOriginCheck } from "./plugins/origin-check";
 export interface AppDeps {
   config: Config;
   db: Db;
+  dnsResolver?: DnsResolver;
 }
 
-export async function buildApp({ config, db }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ config, db, dnsResolver }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
     logger: {
@@ -48,6 +50,7 @@ export async function buildApp({ config, db }: AppDeps): Promise<FastifyInstance
 
   app.decorate("config", config);
   app.decorate("db", db);
+  app.decorate("dnsResolver", dnsResolver ?? systemResolver);
 
   registerErrorHandling(app);
 

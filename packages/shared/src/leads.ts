@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ADDRESS_CHECKS,
   CALL_STATES,
   CALL_STATUSES,
   EMAIL_STATUSES,
@@ -82,6 +83,8 @@ const emailSummary = z.object({
   promptVersion: z.string().nullable(),
   /** Motif d'exclusion du destinataire (rebond, désinscription…) : aucun envoi ni validation possible. */
   blockedReason: z.enum(SUPPRESSION_REASONS).nullable(),
+  /** Contrôle de l'adresse du contact (null = pas encore contrôlée). */
+  addressCheck: z.enum(ADDRESS_CHECKS).nullable(),
 });
 
 export const leadSummarySchema = z.object({

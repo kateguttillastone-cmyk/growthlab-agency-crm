@@ -1,4 +1,5 @@
 import {
+  ADDRESS_CHECKS,
   CALL_STATES,
   CALL_STATUSES,
   EMAIL_STATUSES,
@@ -98,6 +99,7 @@ export const callState = pgEnum("call_state", CALL_STATES);
 export const leadService = pgEnum("lead_service", SERVICES);
 export const validationStatus = pgEnum("validation_status", VALIDATION_STATUSES);
 export const emailStatus = pgEnum("email_status", EMAIL_STATUSES);
+export const addressCheck = pgEnum("address_check", ADDRESS_CHECKS);
 export const suppressionReason = pgEnum("suppression_reason", SUPPRESSION_REASONS);
 
 /**
@@ -170,6 +172,9 @@ export const contacts = pgTable(
     jobTitle: text("job_title"),
     /** Toujours en minuscules. */
     email: text("email"),
+    /** Contrôle de l'adresse (syntaxe, domaine, adresse jetable) ; null = pas encore contrôlée. */
+    emailCheck: addressCheck("email_check"),
+    emailCheckedAt: timestamp("email_checked_at", { withTimezone: true }),
     linkedinUrl: text("linkedin_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

@@ -7,6 +7,7 @@ import { createDb } from "../src/db/client";
 import { users } from "../src/db/schema";
 import { one } from "../src/lib/assert";
 import { hashPassword } from "../src/lib/password";
+import type { DnsResolver } from "../src/mail/address-check";
 
 export const DEFAULT_PASSWORD = "Un-mot-de-passe-solide-1";
 const APP_ORIGIN = "http://localhost:5173";
@@ -32,10 +33,13 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(overrides: Record<string, string> = {}): Promise<TestApp> {
+export async function createTestApp(
+  overrides: Record<string, string> = {},
+  dnsResolver?: DnsResolver,
+): Promise<TestApp> {
   const config = loadConfig(testEnv(overrides));
   const { db, pool } = createDb(config.DATABASE_URL);
-  const app = await buildApp({ config, db });
+  const app = await buildApp({ config, db, dnsResolver });
   await app.ready();
   return {
     app,
