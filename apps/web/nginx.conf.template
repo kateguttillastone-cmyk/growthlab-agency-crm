@@ -18,6 +18,11 @@ server {
 
   location /api/ {
     proxy_pass ${API_UPSTREAM}/;
+    # l'API (Helmet) envoie déjà ces en-têtes avec d'autres valeurs : on garde ceux de nginx, une seule fois
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Content-Security-Policy;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Referrer-Policy;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

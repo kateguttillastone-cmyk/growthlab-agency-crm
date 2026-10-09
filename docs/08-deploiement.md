@@ -129,7 +129,7 @@ requises, historique linéaire). **Settings → Code security** : activez *secre
 | Situation | Action |
 |---|---|
 | Le nouveau code ne démarre pas | **Automatique** : `deploy.sh` rétablit le commit précédent et le dit dans le journal |
-| Le code démarre mais se comporte mal | Actions → **Retour arrière** → environnement (`main`), SHA vide = dernière version saine, ou `deploy/deploy.sh rollback main` |
+| Le code démarre mais se comporte mal | Actions → **Retour arrière** → environnement (`main`), SHA vide = version d'avant le dernier déploiement, ou `deploy/deploy.sh rollback main` |
 | Retour à un commit précis | `deploy/deploy.sh rollback main <sha>` |
 | La migration a abîmé des données | `deploy/restore.sh main <sauvegarde>` — voir [09](09-exploitation.md). Une sauvegarde est prise **avant chaque déploiement** |
 
