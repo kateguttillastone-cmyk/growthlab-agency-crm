@@ -38,7 +38,7 @@ grille éditable en place, export CSV, choix du responsable (liste des utilisate
   deux clics, relances 1 et 2 ; l'étape du pipeline suit **sans jamais reculer** (déjà implémenté côté API).
 - Kanban accessible (glisser-déposer **et** clavier), valeur des deals, packs issus de la table `packs` — à n'entreprendre
   que si l'équipe s'en sert (aucun usage à ce jour).
-- KPI et entonnoirs calculés en SQL sur la période choisie.
+- KPI et entonnoirs calculés en SQL sur la période choisie (**réalisé** : `GET /dashboard`, page d'accueil : 6 indicateurs, entonnoirs qualification / secteurs / pipeline, leads chauds à valider, 8 derniers leads ; période : toute / 7 / 30 / 90 jours / personnalisée, sur la date de détection). Les statistiques Brevo (EXG-F-015) viendront avec le lot 4c.
 
 **Acceptation** : CA-02, CA-06, CA-07 du PRD passent en test automatisé ; un commercial traite 20 prospects de la file sans quitter l'écran
 (vérifié dans Chromium sur des données fictives pour la file d'appel).

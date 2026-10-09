@@ -76,6 +76,10 @@ docker compose exec postgres createdb -U gac gac_test
 DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test
 ```
 
+## Tableau de bord
+
+Page d'accueil : indicateurs (leads, qualifiés, e-mails validés et envoyés, à appeler, RDV, deals), trois entonnoirs, leads chauds à traiter en priorité et derniers leads, sur la période choisie. Les montants affichent « aucune valeur saisie » tant que la valeur des deals n'est pas renseignée.
+
 ## File d'appel
 
 Menu **Appels** (agents et plus) : un prospect à la fois, les jamais-appelés d'abord et regroupés par ville, numéro cliquable,
