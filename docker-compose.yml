@@ -37,6 +37,9 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       MAIL_AGENDA_TEXT: ${MAIL_AGENDA_TEXT:-}
       MAIL_SIGNATURE: ${MAIL_SIGNATURE:-}
+      # Test d'envoi réel depuis son poste (SEND_MODE reste « off » : aucun envoi automatique en local)
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      SEND_TEST_RECIPIENT: ${SEND_TEST_RECIPIENT:-}
       SWAGGER: "true"
       COOKIE_SECURE: "false"
       PORT: 3001

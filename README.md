@@ -93,6 +93,20 @@ final (gabarit du serveur : agenda et signature ajoutés), points d'attention no
 avec passage au suivant, et **validation groupée** sur les filtres affichés (simulation puis confirmation). Une adresse
 exclue (rebond, désinscription) ne peut pas être validée. Le bouton **Vérifier les adresses** écarte les adresses mal formées, jetables ou dont le domaine ne reçoit pas de courrier. **Aucun envoi n'a lieu** depuis cet écran. Détails : `docs/06-modele-donnees.md`.
 
+## Tester l'envoi réel depuis son poste (sans rien envoyer aux prospects)
+
+Dans un fichier `.env` à la racine (ignoré par Git, jamais commité), à côté de `docker-compose.yml` :
+
+```
+BREVO_API_KEY=<la clé Brevo>
+SEND_TEST_RECIPIENT=<votre propre adresse>
+MAIL_FROM_ADDRESS=kate@growthlab-agencycom.com
+```
+
+Puis `docker compose up -d --force-recreate api`. Dans la page **E-mails**, ouvrir un e-mail validé (compte administrateur) et
+cliquer **« M'envoyer un test »** : un seul message part, vers votre adresse de test, objet préfixé `[TEST]`. `SEND_MODE` reste `off` :
+aucun envoi automatique en local. Procédure complète de mise en service : `docs/12-envoi-brevo.md`.
+
 ## Importer l'ancienne base (une fois)
 
 Le CSV d'Airtable contient des données de prospects : il ne va **jamais dans le dépôt** (`data/` et `*.csv` sont ignorés par Git).
