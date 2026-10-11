@@ -24,6 +24,15 @@ flowchart LR
 
 Seul `127.0.0.1:WEB_PORT` est exposé par Docker ; l'API et la base ne sont jamais publiées sur le réseau de l'hôte.
 
+> **Serveur partagé avec d'autres applications (cas réel).** Notre déploiement n'expose que `127.0.0.1:<port>` et utilise un projet
+> Docker distinct : il cohabite avec d'autres applications du même serveur tant que le port est libre (`ss -ltnp`) et que le
+> bloc Caddy est **ajouté** au fichier existant (jamais remplacé). Ajoutez du swap avant la première construction.
+>
+> **Mise en service progressive** : démarrer par l'environnement de **test** seul (`~/growthlab-dev`, `.env.dev`), en gardant
+> aussi un clone de `main` dans `~/growthlab` (le script de déploiement lancé par la clé SSH s'y trouve). Les secrets GitHub
+> ne se déclarent d'abord que dans l'environnement `test` : un push sur `main` échoue alors proprement, avec un message clair,
+> tant que la production n'est pas configurée.
+
 ## 1. Préparer le serveur (une fois)
 
 Hypothèse : Debian/Ubuntu récent, accès `root` ou `sudo`. **Aucun nom de fournisseur n'est imposé.**
