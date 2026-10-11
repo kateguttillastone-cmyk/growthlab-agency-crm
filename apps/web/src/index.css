@@ -3,11 +3,14 @@
 @theme {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --color-brand-50: #f5f3ff;
-  --color-brand-100: #ede9fe;
-  --color-brand-600: #6d28d9;
-  --color-brand-700: #5b21b6;
+  /* Charte de l'ancienne version (legacy/source-artifact.html) : violet sur fond lavande, barre latérale violet profond */
+  --color-brand-50: #f7f5ff; /* fond de page */
+  --color-brand-100: #eae5f8; /* traits et bordures */
+  --color-brand-600: #5b3fe0; /* accent */
+  --color-brand-700: #4a31c2; /* accent survolé (dérivé, absent de l'ancienne charte) */
   --color-ink: #210b2c;
+  --color-sidebar: #2a1b66;
+  --color-sidebar-2: #221656;
 }
 
 html {

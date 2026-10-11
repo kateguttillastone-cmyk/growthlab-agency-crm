@@ -18,7 +18,7 @@ export function Layout() {
       >
         Aller au contenu
       </a>
-      <aside className="bg-ink p-4 text-white md:w-60 md:shrink-0">
+      <aside className="bg-linear-to-b from-sidebar to-sidebar-2 p-4 text-white md:w-60 md:shrink-0">
         <div className="mb-6">
           <p className="text-lg font-extrabold">GAC Pilot</p>
           <p className="text-xs text-white/70">GrowthLab Agency</p>
