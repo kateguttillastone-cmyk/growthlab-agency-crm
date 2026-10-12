@@ -11,7 +11,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
-    "import:airtable": "tsx --env-file-if-exists=.env src/import/cli.ts"
+    "import:airtable": "tsx --env-file-if-exists=.env src/import/cli.ts",
+    "demo:seed": "tsx --env-file-if-exists=.env src/demo/cli.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
