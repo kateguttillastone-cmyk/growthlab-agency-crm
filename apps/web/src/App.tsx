@@ -24,7 +24,7 @@ function RequireRole({ minimum, children }: { minimum: Role; children: React.Rea
   const { can } = useAuth();
   if (!can(minimum)) {
     return (
-      <div role="alert" className="rounded-2xl bg-white p-6">
+      <div role="alert" className="rounded-2xl bg-ds-surface p-6">
         <h1 className="text-xl font-bold">Accès refusé</h1>
         <p className="mt-2 text-sm">Votre rôle ne permet pas d'ouvrir cette page.</p>
       </div>

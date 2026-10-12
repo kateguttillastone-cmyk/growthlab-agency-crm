@@ -59,7 +59,7 @@ export function UsersPage() {
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">Liste des comptes utilisateurs</caption>
                 <thead>
-                  <tr className="border-b border-brand-100">
+                  <tr className="border-b border-ds-line">
                     <th scope="col" className="py-2 pr-4">
                       Nom
                     </th>
@@ -81,16 +81,18 @@ export function UsersPage() {
                   {list.data.items.map((u) => {
                     const self = u.id === me?.id;
                     return (
-                      <tr key={u.id} className="border-b border-brand-50 align-middle">
+                      <tr key={u.id} className="border-b border-ds-line align-middle">
                         <th scope="row" className="py-2 pr-4 font-semibold">
                           {u.name}{" "}
-                          {!u.active && <span className="ml-1 text-xs text-red-700">(désactivé)</span>}
+                          {!u.active && (
+                            <span className="ml-1 text-xs text-ds-critical-ink">(désactivé)</span>
+                          )}
                         </th>
                         <td className="py-2 pr-4">{u.email}</td>
                         <td className="py-2 pr-4">
                           <select
                             aria-label={`Rôle de ${u.name}`}
-                            className="rounded border border-brand-100 bg-white px-2 py-1"
+                            className="rounded border border-ds-line bg-ds-surface px-2 py-1"
                             value={u.role}
                             disabled={self || patch.isPending}
                             onChange={(e) =>
@@ -205,7 +207,7 @@ function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => voi
     onError: (e) => setError(errorMessage(e)),
   });
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-ds-overlay p-4">
       <form
         role="dialog"
         aria-modal="true"
@@ -214,12 +216,12 @@ function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => voi
           e.preventDefault();
           reset.mutate();
         }}
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-2xl bg-ds-surface p-6 shadow-xl"
       >
         <h2 id="reset-title" className="mb-1 text-lg font-bold">
           Réinitialiser le mot de passe
         </h2>
-        <p className="mb-4 text-sm text-ink/70">{user.name} sera déconnecté(e) de tous ses appareils.</p>
+        <p className="mb-4 text-sm text-ds-muted">{user.name} sera déconnecté(e) de tous ses appareils.</p>
         <ErrorAlert message={error} />
         <Field
           label="Nouveau mot de passe"

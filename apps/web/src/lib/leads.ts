@@ -145,17 +145,17 @@ export function displayPhone(phone: string | null | undefined): string {
 
 // Etiquettes visuelles : toujours un texte, jamais la couleur seule.
 export const QUALIFICATION_STYLE: Record<string, string> = {
-  Chaud: "bg-red-100 text-red-900",
-  Tiède: "bg-amber-100 text-amber-900",
-  Froid: "bg-sky-100 text-sky-900",
+  Chaud: "pill pill--good",
+  Tiède: "pill pill--warning",
+  Froid: "pill pill--neutral",
 };
 
 export const EMAIL_STATUS_STYLE: Record<string, string> = {
-  Envoyé: "bg-slate-100 text-slate-800",
-  Délivré: "bg-green-100 text-green-900",
-  Ouvert: "bg-emerald-100 text-emerald-900",
-  Bounce: "bg-red-100 text-red-900",
-  Désinscrit: "bg-orange-100 text-orange-900",
+  Envoyé: "pill pill--slate",
+  Délivré: "pill pill--good",
+  Ouvert: "pill pill--info",
+  Bounce: "pill pill--critical",
+  Désinscrit: "pill pill--warning",
 };
 
 export const CALL_STATUS_LIST = CALL_STATUSES;

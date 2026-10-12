@@ -16,5 +16,7 @@ export default defineConfig({
       },
     },
   },
+  // les polices et images restent des fichiers (la politique de sécurité du serveur refuse les données en ligne pour les polices)
+  build: { assetsInlineLimit: 0 },
   test: { environment: "node", include: ["src/**/*.test.ts"] },
 });

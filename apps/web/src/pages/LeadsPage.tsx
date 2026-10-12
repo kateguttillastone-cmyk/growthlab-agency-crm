@@ -103,13 +103,13 @@ export function LeadsPage() {
   return (
     <>
       <h1 className="mb-1 text-2xl font-extrabold">Leads</h1>
-      <p className="mb-4 text-sm text-ink/70" aria-live="polite">
+      <p className="mb-4 text-sm text-ds-muted" aria-live="polite">
         {f ? `${f.total.toLocaleString("fr-FR")} prospects au total` : "Chargement…"}
         {list.data ? ` — ${list.data.total.toLocaleString("fr-FR")} correspondent aux filtres` : ""}
       </p>
 
       {f?.total === 0 && (
-        <p className="mb-4 rounded-lg bg-white p-4 text-sm" role="note">
+        <p className="mb-4 rounded-lg bg-ds-surface p-4 text-sm" role="note">
           Aucun prospect pour l'instant.{" "}
           {can("ADMIN") ? (
             <>
@@ -134,8 +134,8 @@ export function LeadsPage() {
             onClick={() => update({ ...p.filters, sort: filters.sort, order: filters.order })}
             className={`rounded-full border px-3 py-1 text-sm font-medium ${
               preset === p.id
-                ? "border-brand-600 bg-brand-600 text-white"
-                : "border-brand-100 bg-white hover:bg-brand-50"
+                ? "border-ds-accent bg-ds-accent text-ds-accent-ink"
+                : "border-ds-line bg-ds-surface hover:bg-ds-surface-2"
             }`}
           >
             {p.label}
@@ -154,7 +154,7 @@ export function LeadsPage() {
               <input
                 id={id}
                 type="search"
-                className="w-full rounded border border-brand-100 bg-white px-2 py-1.5"
+                className="w-full rounded border border-ds-line bg-ds-surface px-2 py-1.5"
                 placeholder="Entreprise, nom, e-mail, site, téléphone…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -244,7 +244,7 @@ export function LeadsPage() {
                   {order === "asc" ? "croissant" : "décroissant"})
                 </caption>
                 <thead>
-                  <tr className="border-b border-brand-100">
+                  <tr className="border-b border-ds-line">
                     {COLUMNS.map((c) => (
                       <th
                         key={c.label}
@@ -272,7 +272,7 @@ export function LeadsPage() {
                 </thead>
                 <tbody className={list.isPlaceholderData ? "opacity-60" : ""}>
                   {list.data.items.map((l) => (
-                    <tr key={l.id} className="border-b border-brand-50 align-top hover:bg-brand-50/60">
+                    <tr key={l.id} className="border-b border-ds-line align-top hover:bg-ds-surface-2">
                       <th scope="row" className="py-2 pr-4 font-normal">
                         <button
                           type="button"
@@ -281,17 +281,13 @@ export function LeadsPage() {
                         >
                           {l.company.name}
                         </button>
-                        <span className="block text-xs text-ink/70">{contactName(l.contact) || "—"}</span>
+                        <span className="block text-xs text-ds-muted">{contactName(l.contact) || "—"}</span>
                       </th>
                       <td className="py-2 pr-4">
                         {l.qualification ? (
-                          <span
-                            className={`rounded px-2 py-0.5 text-xs font-semibold ${QUALIFICATION_STYLE[l.qualification]}`}
-                          >
-                            {l.qualification}
-                          </span>
+                          <span className={QUALIFICATION_STYLE[l.qualification]}>{l.qualification}</span>
                         ) : (
-                          <span className="text-ink/60">À qualifier</span>
+                          <span className="text-ds-muted">À qualifier</span>
                         )}
                       </td>
                       <td className="py-2 pr-4">{l.service ?? "—"}</td>
@@ -308,11 +304,7 @@ export function LeadsPage() {
                       </td>
                       <td className="py-2 pr-4">
                         {l.email?.status ? (
-                          <span
-                            className={`rounded px-2 py-0.5 text-xs font-semibold ${EMAIL_STATUS_STYLE[l.email.status]}`}
-                          >
-                            {l.email.status}
-                          </span>
+                          <span className={EMAIL_STATUS_STYLE[l.email.status]}>{l.email.status}</span>
                         ) : l.email ? (
                           <span className="text-xs">{l.email.validation}</span>
                         ) : (
@@ -326,7 +318,7 @@ export function LeadsPage() {
                   ))}
                   {list.data.items.length === 0 && (
                     <tr>
-                      <td colSpan={COLUMNS.length} className="py-8 text-center text-ink/70">
+                      <td colSpan={COLUMNS.length} className="py-8 text-center text-ds-muted">
                         Aucun prospect ne correspond à ces filtres.{" "}
                         <button
                           type="button"
@@ -399,7 +391,7 @@ function Select({
       {(id) => (
         <select
           id={id}
-          className="w-full rounded border border-brand-100 bg-white px-2 py-1.5 font-normal"
+          className="w-full rounded border border-ds-line bg-ds-surface px-2 py-1.5 font-normal"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value || undefined)}
         >

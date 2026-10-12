@@ -68,7 +68,7 @@ export function EmailsPage() {
   return (
     <>
       <h1 className="mb-1 text-2xl font-extrabold">E-mails à relire</h1>
-      <p className="mb-6 max-w-3xl text-sm text-ink/70">
+      <p className="mb-6 max-w-3xl text-sm text-ds-muted">
         Relisez l'e-mail tel qu'il partira, corrigez-le si besoin, puis validez-le. Rien n'est envoyé depuis
         cet écran. Une adresse exclue (rebond, désinscription) ne peut pas être validée.
       </p>
@@ -85,7 +85,9 @@ export function EmailsPage() {
               aria-selected={filters.tab === t.id}
               onClick={() => change({ tab: t.id })}
               className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                filters.tab === t.id ? "bg-brand-600 text-white" : "border border-brand-100 bg-white"
+                filters.tab === t.id
+                  ? "bg-ds-accent text-ds-accent-ink"
+                  : "border border-ds-line bg-ds-surface"
               }`}
             >
               {t.label}
@@ -99,7 +101,7 @@ export function EmailsPage() {
               type="search"
               value={filters.q}
               onChange={(e) => change({ q: e.target.value })}
-              className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
             />
           )}
         </Filter>
@@ -109,7 +111,7 @@ export function EmailsPage() {
               id={id}
               value={filters.qualification}
               onChange={(e) => change({ qualification: e.target.value })}
-              className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
             >
               <option value="">Toutes</option>
               {QUALIFICATIONS.map((v) => (
@@ -124,7 +126,7 @@ export function EmailsPage() {
               id={id}
               value={filters.promptVersion}
               onChange={(e) => change({ promptVersion: e.target.value })}
-              className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
             >
               <option value="">Toutes</option>
               {(stats.data?.byPrompt ?? [])
@@ -144,7 +146,7 @@ export function EmailsPage() {
           {queue.isLoading ? (
             <Spinner />
           ) : items.length === 0 ? (
-            <p className="rounded-2xl bg-white p-6 text-sm">Aucun e-mail dans cette liste.</p>
+            <p className="rounded-2xl bg-ds-surface p-6 text-sm">Aucun e-mail dans cette liste.</p>
           ) : (
             <ul className="space-y-2">
               {items.map((l) => (
@@ -154,21 +156,21 @@ export function EmailsPage() {
                     onClick={() => setSelected(l.id)}
                     aria-current={selected === l.id}
                     className={`w-full rounded-xl border p-3 text-left text-sm ${
-                      selected === l.id ? "border-brand-600 bg-brand-50" : "border-brand-100 bg-white"
+                      selected === l.id ? "border-ds-accent bg-ds-surface-2" : "border-ds-line bg-ds-surface"
                     }`}
                   >
                     <span className="block font-semibold">{l.company.name}</span>
-                    <span className="block text-xs text-ink/70">
+                    <span className="block text-xs text-ds-muted">
                       {contactName(l.contact) || "Sans contact"} · {l.qualification ?? "Non qualifié"}
                     </span>
                     <span className="mt-1 block truncate">{l.email?.subject ?? "(sans objet)"}</span>
                     {l.email?.addressCheck && isBlockingCheck(l.email.addressCheck) && (
-                      <span className="mt-1 mr-1 inline-block rounded bg-red-100 px-2 py-0.5 text-xs text-red-900">
+                      <span className="mt-1 mr-1 inline-block rounded bg-ds-critical-bg px-2 py-0.5 text-xs text-ds-critical-ink">
                         Adresse inutilisable ({ADDRESS_CHECK_LABELS[l.email.addressCheck]})
                       </span>
                     )}
                     {l.email?.blockedReason && (
-                      <span className="mt-1 inline-block rounded bg-red-100 px-2 py-0.5 text-xs text-red-900">
+                      <span className="mt-1 inline-block rounded bg-ds-critical-bg px-2 py-0.5 text-xs text-ds-critical-ink">
                         Adresse exclue ({BLOCKED_LABELS[l.email.blockedReason]})
                       </span>
                     )}
@@ -196,7 +198,7 @@ export function EmailsPage() {
               }
             />
           ) : (
-            <p className="rounded-2xl bg-white p-6 text-sm">Choisissez un e-mail dans la liste.</p>
+            <p className="rounded-2xl bg-ds-surface p-6 text-sm">Choisissez un e-mail dans la liste.</p>
           )}
         </section>
       </div>
@@ -237,8 +239,8 @@ function StatsCards({ stats }: { stats: EmailStats | undefined }) {
   return (
     <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
       {cards.map(([label, n]) => (
-        <div key={label} className="rounded-2xl bg-white p-4 shadow-sm">
-          <dt className="text-xs text-ink/70">{label}</dt>
+        <div key={label} className="rounded-2xl bg-ds-surface p-4 shadow-sm">
+          <dt className="text-xs text-ds-muted">{label}</dt>
           <dd className="text-2xl font-extrabold">{formatNumber(n)}</dd>
         </div>
       ))}
@@ -263,7 +265,7 @@ function PromptTable({ stats }: { stats: EmailStats }) {
           </thead>
           <tbody>
             {stats.byPrompt.map((p) => (
-              <tr key={p.version} className="border-t border-brand-100">
+              <tr key={p.version} className="border-t border-ds-line">
                 <th scope="row" className="py-2 pr-4 font-medium">
                   {p.version}
                 </th>
@@ -363,7 +365,7 @@ function ReviewPanel({
   if (lead.isLoading) return <Spinner />;
   if (lead.error) return <ErrorAlert message={errorMessage(lead.error)} />;
   if (!lead.data || !message) {
-    return <p className="rounded-2xl bg-white p-6 text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
+    return <p className="rounded-2xl bg-ds-surface p-6 text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
   }
 
   const dirty = subject !== (message.subject ?? "") || body !== (message.body ?? "");
@@ -386,21 +388,21 @@ function ReviewPanel({
   const validation = lead.data.email?.validation;
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
+    <div className="rounded-2xl bg-ds-surface p-6 shadow-sm">
       <h2 className="text-lg font-bold">{lead.data.company.name}</h2>
-      <p className="mb-4 text-sm text-ink/70">
+      <p className="mb-4 text-sm text-ds-muted">
         {contactName(lead.data.contact) || "Sans contact"} · {email ?? "pas d'adresse"} ·{" "}
         {lead.data.qualification ?? "Non qualifié"}
         {message.promptVersion ? ` · prompt ${message.promptVersion}` : ""}
       </p>
       <ErrorAlert message={error} />
       {info && (
-        <p role="status" className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">
+        <p role="status" className="mb-4 rounded-lg bg-ds-good-bg px-3 py-2 text-sm text-ds-good-ink">
           {info}
         </p>
       )}
       {message.sendReserved && (
-        <div role="alert" className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div role="alert" className="mb-4 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
           <p>
             Envoi à vérifier : le résultat de l'envoi est inconnu ({message.sendError ?? "incertain"}). Il ne
             sera jamais renvoyé automatiquement. Vérifiez dans l'historique de Brevo qu'il n'est pas parti.
@@ -418,18 +420,18 @@ function ReviewPanel({
         </div>
       )}
       {!message.sendReserved && message.sendError && !sent && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="mb-4 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
           Dernier essai d'envoi refusé : {message.sendError}
         </p>
       )}
       {check && isBlockingCheck(check) && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="mb-4 rounded-lg bg-ds-critical-bg px-3 py-2 text-sm text-ds-critical-ink">
           L'adresse {email} est inutilisable ({ADDRESS_CHECK_LABELS[check]}) : elle ne peut pas être validée.
           Rejetez cet e-mail ou corrigez l'adresse.
         </p>
       )}
       {blocked && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="mb-4 rounded-lg bg-ds-critical-bg px-3 py-2 text-sm text-ds-critical-ink">
           Cette adresse est dans la liste d'exclusion ({BLOCKED_LABELS[blocked]}) : elle ne peut pas être
           validée.
         </p>
@@ -453,7 +455,7 @@ function ReviewPanel({
             maxLength={200}
             readOnly={sent}
             onChange={(e) => setSubject(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-brand-100 px-3 py-2 text-sm"
+            className="mb-4 w-full rounded-lg border border-ds-line px-3 py-2 text-sm"
           />
           <label htmlFor={bodyId} className="mb-1 block text-sm font-medium">
             Corps (paragraphes séparés par une ligne vide)
@@ -465,12 +467,12 @@ function ReviewPanel({
             maxLength={10000}
             readOnly={sent}
             onChange={(e) => setBody(e.target.value)}
-            className="w-full rounded-lg border border-brand-100 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-ds-line px-3 py-2 text-sm"
           />
           {warnings.length > 0 && (
-            <ul aria-label="Points d'attention" className="mt-3 space-y-1 text-sm text-amber-900">
+            <ul aria-label="Points d'attention" className="mt-3 space-y-1 text-sm text-ds-warning-ink">
               {warnings.map((w) => (
-                <li key={w.code} className="rounded bg-amber-50 px-2 py-1">
+                <li key={w.code} className="rounded bg-ds-warning-bg px-2 py-1">
                   {w.message}
                 </li>
               ))}
@@ -479,14 +481,14 @@ function ReviewPanel({
         </div>
         <section aria-label="Aperçu de l'e-mail final">
           <p className="mb-1 text-sm font-medium">Aperçu (tel qu'il partira)</p>
-          <div className="rounded-lg border border-brand-100 bg-brand-50/40 p-4 text-sm">
+          <div className="rounded-lg border border-ds-line bg-ds-surface-2 p-4 text-sm">
             {preview.data ? (
               <>
-                <p className="text-xs text-ink/70">De : {preview.data.from}</p>
+                <p className="text-xs text-ds-muted">De : {preview.data.from}</p>
                 <p className="mb-3 font-semibold">Objet : {preview.data.subject || "(vide)"}</p>
                 {preview.data.paragraphs.map((p, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: aperçu en lecture seule, l'ordre fait l'identité
-                  <p key={i} className={`mb-3 ${p.type === "agenda" ? "text-brand-700" : ""}`}>
+                  <p key={i} className={`mb-3 ${p.type === "agenda" ? "text-ds-accent" : ""}`}>
                     {p.lines.map((l, j) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: idem
                       <span key={j} className="block">
@@ -494,7 +496,7 @@ function ReviewPanel({
                       </span>
                     ))}
                     {p.type === "agenda" && (
-                      <span className="block text-xs text-ink/60">(ajouté automatiquement)</span>
+                      <span className="block text-xs text-ds-muted">(ajouté automatiquement)</span>
                     )}
                   </p>
                 ))}
@@ -539,7 +541,7 @@ function ReviewPanel({
             </Button>
           )}
           {cannotValidate && (
-            <span className="text-sm text-red-800">Validation impossible : {cannotValidate}</span>
+            <span className="text-sm text-ds-critical-ink">Validation impossible : {cannotValidate}</span>
           )}
         </div>
       )}
@@ -593,7 +595,7 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
     : "tous les e-mails à relire";
   return (
     <Card title="Validation groupée">
-      <p className="mb-3 text-sm text-ink/70">
+      <p className="mb-3 text-sm text-ds-muted">
         Agit sur {describe}. Une simulation indique d'abord combien d'e-mails seraient concernés ; les
         adresses exclues et les e-mails vides ne sont jamais validés.
       </p>
@@ -607,7 +609,7 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
         </Button>
       </div>
       {result && (
-        <div role="status" className="mt-4 rounded-lg bg-brand-50 p-4 text-sm">
+        <div role="status" className="mt-4 rounded-lg bg-ds-surface-2 p-4 text-sm">
           <p className="font-semibold">
             {result.eligible} e-mail(s) seraient {target === "Validé" ? "validés" : "rejetés"}.
           </p>
@@ -663,7 +665,7 @@ function AddressCheckPanel({
 
   return (
     <Card title="Fiabilité des adresses">
-      <p className="mb-3 max-w-3xl text-sm text-ink/70">
+      <p className="mb-3 max-w-3xl text-sm text-ds-muted">
         Avant d'envoyer, on vérifie chaque adresse : forme correcte, adresse jetable, et domaine capable de
         recevoir du courrier. Une adresse inutilisable ne peut pas être validée ; un e-mail déjà validé vers
         une telle adresse repart en relecture. Le contrôle porte sur 300 adresses à la fois et reste valable
@@ -676,7 +678,7 @@ function AddressCheckPanel({
           : `Vérifier les adresses (${stats?.addressUnchecked ?? "…"} à contrôler)`}
       </Button>
       {result && (
-        <div role="status" className="mt-4 rounded-lg bg-brand-50 p-4 text-sm">
+        <div role="status" className="mt-4 rounded-lg bg-ds-surface-2 p-4 text-sm">
           <p className="font-semibold">
             {result.checked} adresse(s) contrôlée(s) : {result.valid} utilisable(s),{" "}
             {Object.values(result.invalid).reduce((a, b) => a + b, 0)} inutilisable(s).
@@ -729,20 +731,20 @@ function SendPanel() {
     <Card title="Envoi planifié">
       <ErrorAlert message={error} />
       <dl className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
-        <dt className="text-ink/70">État</dt>
+        <dt className="text-ds-muted">État</dt>
         <dd className="font-semibold">{label}</dd>
-        <dt className="text-ink/70">Expéditeur</dt>
+        <dt className="text-ds-muted">Expéditeur</dt>
         <dd>{s.from}</dd>
-        <dt className="text-ink/70">Aujourd'hui</dt>
+        <dt className="text-ds-muted">Aujourd'hui</dt>
         <dd>
           {s.sentToday} / {s.dailyCap} envoyés
         </dd>
-        <dt className="text-ink/70">Prêts à partir</dt>
+        <dt className="text-ds-muted">Prêts à partir</dt>
         <dd>
           {s.ready} (validés, adresse contrôlée) · {s.blocked} validés bloqués (adresse non contrôlée ou
           inutilisable, exclue, échecs)
         </dd>
-        <dt className="text-ink/70">Prochain créneau</dt>
+        <dt className="text-ds-muted">Prochain créneau</dt>
         <dd>
           {s.nextSlot
             ? new Date(s.nextSlot).toLocaleString("fr-FR", {
@@ -755,19 +757,19 @@ function SendPanel() {
         </dd>
         {s.testRecipient && (
           <>
-            <dt className="text-ink/70">Adresse de test</dt>
+            <dt className="text-ds-muted">Adresse de test</dt>
             <dd>{s.testRecipient}</dd>
           </>
         )}
       </dl>
       {s.uncertain > 0 && (
-        <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p role="alert" className="mt-3 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
           {s.uncertain} envoi(s) au résultat inconnu : ouvrez la fiche concernée et vérifiez dans Brevo avant
           de le libérer.
         </p>
       )}
       {s.mode === "off" && (
-        <p className="mt-3 text-sm text-ink/70">
+        <p className="mt-3 text-sm text-ds-muted">
           L'envoi automatique est désactivé sur ce serveur (SEND_MODE=off). Rien ne part tant qu'un
           administrateur ne l'active pas dans la configuration du serveur.
         </p>
