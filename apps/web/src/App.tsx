@@ -13,6 +13,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { NewLeadPage } from "./pages/NewLeadPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { SuppressionsPage } from "./pages/SuppressionsPage";
 import { UsersPage } from "./pages/UsersPage";
 
 function RequireAuth() {
@@ -88,6 +90,22 @@ export function App() {
           element={
             <RequireRole minimum="ADMIN">
               <AuditPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="suppressions"
+          element={
+            <RequireRole minimum="MANAGER">
+              <SuppressionsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <RequireRole minimum="MANAGER">
+              <SettingsPage />
             </RequireRole>
           }
         />
