@@ -123,23 +123,25 @@ export function PipelinePage() {
             </select>
           </div>
         )}
-        <div className="field md:hidden">
-          <label htmlFor={stageId} className="label">
-            Étape affichée
-          </label>
-          <select
-            id={stageId}
-            className="select"
-            value={active}
-            onChange={(e) => setActive(e.target.value as PipelineStage)}
-          >
-            {PIPELINE_STAGES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-                {board.data ? ` (${board.data.stages.find((x) => x.stage === s)?.count ?? 0})` : ""}
-              </option>
-            ))}
-          </select>
+        <div className="md:hidden">
+          <div className="field">
+            <label htmlFor={stageId} className="label">
+              Étape affichée
+            </label>
+            <select
+              id={stageId}
+              className="select"
+              value={active}
+              onChange={(e) => setActive(e.target.value as PipelineStage)}
+            >
+              {PIPELINE_STAGES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                  {board.data ? ` (${board.data.stages.find((x) => x.stage === s)?.count ?? 0})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </form>
 
