@@ -79,9 +79,9 @@ function MoreSheet({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-end bg-ds-overlay md:hidden">
+    <div className="anim-scrim-in fixed inset-0 z-40 flex flex-col justify-end bg-ds-overlay md:hidden">
       <button type="button" className="flex-1 cursor-default" aria-label="Fermer le menu" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-modal="true" aria-label="Plus">
+      <div className="sheet anim-sheet-in" role="dialog" aria-modal="true" aria-label="Plus">
         <div className="sheet-handle" />
         {items.map((d, i) => (
           <NavLink

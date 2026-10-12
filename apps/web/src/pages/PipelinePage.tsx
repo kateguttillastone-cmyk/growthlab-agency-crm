@@ -30,6 +30,7 @@ export function PipelinePage() {
   const [active, setActive] = useState<PipelineStage>("Nouveau");
   const [error, setError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
+  const [movedId, setMovedId] = useState<string | null>(null);
   const qualId = useId();
   const ownerId = useId();
   const searchId = useId();
@@ -52,6 +53,7 @@ export function PipelinePage() {
       api(`/leads/${v.lead.id}`, { method: "PATCH", body: { stage: v.stage } }),
     onSuccess: async (_d, v) => {
       setError(null);
+      setMovedId(v.lead.id);
       setAnnounce(`${v.lead.company.name} déplacé vers « ${v.stage} ».`);
       await qc.invalidateQueries({ queryKey: ["pipeline"] });
       await qc.invalidateQueries({ queryKey: ["leads"] });
@@ -161,6 +163,7 @@ export function PipelinePage() {
               visibleOnMobile={col.stage === active}
               canMove={can("AGENT")}
               busy={move.isPending}
+              movedId={movedId}
               ownerName={(id) => (id ? (owners.data?.find((o) => o.id === id)?.name ?? null) : null)}
               onMove={(lead, stage) => move.mutate({ lead, stage })}
               onOpen={openLead}
@@ -180,6 +183,7 @@ function Column({
   visibleOnMobile,
   canMove,
   busy,
+  movedId,
   ownerName,
   onMove,
   onOpen,
@@ -189,6 +193,7 @@ function Column({
   visibleOnMobile: boolean;
   canMove: boolean;
   busy: boolean;
+  movedId: string | null;
   ownerName: (id: string | null) => string | null;
   onMove: (lead: LeadSummary, stage: PipelineStage) => void;
   onOpen: (id: string) => void;
@@ -231,7 +236,7 @@ function Column({
       {items.length === 0 && <p className="card t-small text-ds-muted">Aucun lead à cette étape.</p>}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
         {items.map((l) => (
-          <li key={l.id} className="card flex flex-col gap-1 p-3">
+          <li key={l.id} className={`card flex flex-col gap-1 p-3 ${l.id === movedId ? "anim-settle" : ""}`}>
             <button
               type="button"
               className="text-left font-semibold hover:underline"

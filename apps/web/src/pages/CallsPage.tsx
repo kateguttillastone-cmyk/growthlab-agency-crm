@@ -210,7 +210,7 @@ function CallCard({
   ].filter(([, v]) => v);
 
   return (
-    <>
+    <div className="anim-enter-right">
       <article aria-label={`Prospect : ${d.company.name}`} className="card mb-4 flex flex-col gap-3">
         <div>
           <h2 className="t-card text-xl">{d.company.name}</h2>
@@ -300,6 +300,6 @@ function CallCard({
           Passer
         </Button>
       </fieldset>
-    </>
+    </div>
   );
 }

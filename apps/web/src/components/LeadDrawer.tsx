@@ -73,14 +73,14 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
         type="button"
         tabIndex={-1}
         aria-label="Fermer la fiche"
-        className="absolute inset-0 cursor-default bg-ds-overlay"
+        className="anim-scrim-in absolute inset-0 cursor-default bg-ds-overlay"
         onClick={onClose}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative h-full w-full max-w-xl overflow-y-auto bg-ds-surface p-6 shadow-xl"
+        className="anim-drawer-in relative h-full w-full max-w-xl overflow-y-auto bg-ds-surface p-6 shadow-xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
