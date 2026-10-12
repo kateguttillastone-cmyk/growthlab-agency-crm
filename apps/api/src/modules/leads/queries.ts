@@ -43,6 +43,7 @@ export function leadFilters(f: LeadFilter): SQL | undefined {
   if (f.sector) where.push(sql`lower(${companies.sector}) = lower(${f.sector})`);
   if (f.city) where.push(ilike(companies.city, `${likePattern(f.city).slice(1)}`));
   if (f.hasPhone !== undefined) where.push(f.hasPhone ? isNotNull(companies.phone) : isNull(companies.phone));
+  if (f.owner) where.push(f.owner === NONE ? isNull(leads.ownerId) : eq(leads.ownerId, f.owner));
   if (f.hasEmail !== undefined) where.push(f.hasEmail ? isNotNull(contacts.email) : isNull(contacts.email));
   return where.length ? and(...where) : undefined;
 }

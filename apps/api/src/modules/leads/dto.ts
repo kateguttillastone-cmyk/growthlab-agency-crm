@@ -43,6 +43,7 @@ export function toSummary({ lead, company, contact, message, blockedReason }: Jo
     qualification: lead.qualification,
     service: lead.service,
     source: lead.source,
+    ownerId: lead.ownerId,
     stage: lead.stage,
     callStatus: lead.callStatus,
     callState: lead.callState,

@@ -31,7 +31,7 @@ export function DashboardPage() {
   return (
     <>
       <h1 className="mb-1 text-2xl font-extrabold">Bonjour {user?.name}</h1>
-      <p className="mb-6 text-sm text-ink/70">
+      <p className="mb-6 text-sm text-ds-muted">
         Vue d'ensemble de la prospection. La période porte sur la date de détection des leads ; un lead sans
         date est exclu d'une période bornée.
       </p>
@@ -45,7 +45,7 @@ export function DashboardPage() {
             id={periodId}
             value={period}
             onChange={(e) => setPeriod(e.target.value as PeriodChoice)}
-            className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
           >
             {Object.entries(PERIOD_LABELS).map(([v, label]) => (
               <option key={v} value={v}>
@@ -65,7 +65,7 @@ export function DashboardPage() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+                className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
               />
             </div>
             <div>
@@ -77,14 +77,14 @@ export function DashboardPage() {
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+                className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
               />
             </div>
           </>
         )}
       </div>
       {query === null && (
-        <p role="alert" className="mb-4 text-sm text-amber-900">
+        <p role="alert" className="mb-4 text-sm text-ds-warning-ink">
           Choisissez deux dates, la première avant la seconde.
         </p>
       )}
@@ -167,10 +167,10 @@ export function DashboardPage() {
 
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <dt className="text-xs text-ink/70">{label}</dt>
+    <div className="rounded-2xl bg-ds-surface p-4 shadow-sm">
+      <dt className="text-xs text-ds-muted">{label}</dt>
       <dd className="text-2xl font-extrabold">{value}</dd>
-      {hint && <dd className="text-xs text-ink/70">{hint}</dd>}
+      {hint && <dd className="text-xs text-ds-muted">{hint}</dd>}
     </div>
   );
 }
@@ -188,7 +188,7 @@ function Funnel({
   return (
     <Card title={title}>
       {rows.length === 0 ? (
-        <p className="text-sm text-ink/70">{empty}</p>
+        <p className="text-sm text-ds-muted">{empty}</p>
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
@@ -204,7 +204,7 @@ function Funnel({
                 max={max}
                 value={r.count}
                 aria-label={`${title} : ${r.label}`}
-                className="h-2 w-full overflow-hidden rounded-full accent-brand-600"
+                className="h-2 w-full overflow-hidden rounded-full "
               />
             </li>
           ))}
@@ -227,7 +227,7 @@ function LeadList({
 }) {
   return (
     <Card title={title}>
-      <div className="mb-3 flex items-center justify-between text-sm text-ink/70">
+      <div className="mb-3 flex items-center justify-between text-sm text-ds-muted">
         <span>{caption}</span>
         {action}
       </div>
@@ -251,7 +251,7 @@ function LeadList({
           </thead>
           <tbody>
             {leads.map((l) => (
-              <tr key={l.id} className="border-t border-brand-100">
+              <tr key={l.id} className="border-t border-ds-line">
                 <th scope="row" className="py-2 pr-2 font-medium">
                   <Link to={`/leads?lead=${l.id}`} className="underline">
                     {l.company.name}
@@ -259,9 +259,7 @@ function LeadList({
                 </th>
                 <td className="pr-2">
                   {l.qualification ? (
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs ${QUALIFICATION_STYLE[l.qualification] ?? ""}`}
-                    >
+                    <span className={QUALIFICATION_STYLE[l.qualification] ?? "pill pill--neutral"}>
                       {l.qualification}
                     </span>
                   ) : (

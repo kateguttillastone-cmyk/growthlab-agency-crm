@@ -49,7 +49,7 @@ export function ProfilePage() {
         <form onSubmit={onSubmit} className="max-w-md">
           <ErrorAlert message={error} />
           {done && (
-            <p role="status" className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+            <p role="status" className="mb-4 rounded-lg bg-ds-good-bg px-3 py-2 text-sm text-ds-good-ink">
               Mot de passe modifié. Vos autres appareils ont été déconnectés.
             </p>
           )}

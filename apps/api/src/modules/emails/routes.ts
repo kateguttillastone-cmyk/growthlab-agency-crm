@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   addressCheckRequestSchema,
   addressCheckResultSchema,
@@ -5,6 +6,7 @@ import {
   type BulkEmailResult,
   bulkEmailResultSchema,
   bulkEmailSchema,
+  bulkUndoResultSchema,
   type EmailStats,
   emailPreviewRequestSchema,
   emailPreviewSchema,
@@ -24,6 +26,7 @@ import { mailIdentity } from "../../mail/identity";
 import { renderEmail } from "../../mail/template";
 import { leadFilters } from "../leads/queries";
 import { leadReader } from "../leads/read";
+import { effectiveConfig } from "../settings/effective";
 import { runAddressCheck } from "./address-check";
 import { bulkClassification, reviewBlocker } from "./rules";
 
@@ -34,7 +37,6 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
   const r = app.withTypeProvider<ZodTypeProvider>();
   const manager = app.requireRole("MANAGER");
   const { detail } = leadReader(db);
-  const identity = mailIdentity(config);
 
   /** Aperçu fidèle : le même gabarit que l'envoi, appliqué au texte en cours d'édition. */
   r.post(
@@ -43,7 +45,7 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: manager,
       schema: { body: emailPreviewRequestSchema, response: { 200: emailPreviewSchema } },
     },
-    async (req) => renderEmail(req.body, identity),
+    async (req) => renderEmail(req.body, mailIdentity(await effectiveConfig(db, config))),
   );
 
   r.get(
@@ -202,6 +204,7 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
             validation: target,
             validatedAt: target === "Validé" ? now : null,
             validatedBy: target === "Validé" ? actor.id : null,
+            bulkBatch: null,
             updatedAt: now,
           })
           .where(eq(emailMessages.id, current.id));
@@ -274,14 +277,16 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
           .for("update", { of: emailMessages });
 
         const { eligible, skipped } = bulkClassification(rows, validation);
-        if (dryRun) return { dryRun: true, eligible: eligible.length, skipped };
+        if (dryRun) return { dryRun: true, batchId: null, eligible: eligible.length, skipped };
         if (eligible.length !== expectedCount) {
           throw conflict(
             `Le nombre d'e-mails concernés a changé (${eligible.length} au lieu de ${expectedCount}) : relancez la simulation`,
           );
         }
         if (eligible.length > BULK_MAX) throw conflict("Trop d'e-mails d'un coup : affinez le filtre");
+        let batchId: string | null = null;
         if (eligible.length) {
+          batchId = randomUUID();
           const now = new Date();
           const ids = eligible.map((e) => e.id);
           await tx
@@ -290,6 +295,7 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
               validation,
               validatedAt: validation === "Validé" ? now : null,
               validatedBy: validation === "Validé" ? actor.id : null,
+              bulkBatch: batchId,
               updatedAt: now,
             })
             .where(inArray(emailMessages.id, ids));
@@ -302,17 +308,84 @@ export async function emailsRoutes(app: FastifyInstance): Promise<void> {
             })),
           );
         }
-        return { dryRun: false, eligible: eligible.length, skipped };
+        return { dryRun: false, batchId, eligible: eligible.length, skipped };
       });
       if (!result.dryRun && result.eligible > 0) {
         await audit(db, {
           actorId: actor.id,
           action: "emails.bulk_validation",
           entityType: "email_message",
-          data: { validation, count: result.eligible, filter },
+          data: { validation, count: result.eligible, batchId: result.batchId, filter },
           ip: req.ip,
         });
       }
+      return result;
+    },
+  );
+
+  /**
+   * Annule un lot de validation ou de rejet groupé : remet « Pas Validé » les e-mails qui ont encore la décision de ce
+   * lot et ne sont pas partis. Un e-mail modifié à la main depuis, ou déjà envoyé, n'est pas touché.
+   */
+  r.post(
+    "/emails/bulk/:batchId/undo",
+    {
+      preHandler: manager,
+      schema: { params: z.object({ batchId: z.uuid() }), response: { 200: bulkUndoResultSchema } },
+    },
+    async (req) => {
+      const actor = authOf(req).user;
+      const { batchId } = req.params;
+      const result = await db.transaction(async (tx) => {
+        const inBatch = await tx
+          .select({
+            id: emailMessages.id,
+            leadId: emailMessages.leadId,
+            validation: emailMessages.validation,
+            status: emailMessages.status,
+            sendingAt: emailMessages.sendingAt,
+          })
+          .from(emailMessages)
+          .where(eq(emailMessages.bulkBatch, batchId))
+          .for("update");
+        if (!inBatch.length) throw notFound("Lot introuvable ou déjà annulé");
+        const undoable = inBatch.filter(
+          (m) => m.status === null && m.sendingAt === null && m.validation !== "Pas Validé",
+        );
+        if (undoable.length) {
+          await tx
+            .update(emailMessages)
+            .set({
+              validation: "Pas Validé",
+              validatedAt: null,
+              validatedBy: null,
+              bulkBatch: null,
+              updatedAt: new Date(),
+            })
+            .where(
+              inArray(
+                emailMessages.id,
+                undoable.map((m) => m.id),
+              ),
+            );
+          await tx.insert(leadEvents).values(
+            undoable.map((m) => ({
+              leadId: m.leadId,
+              actorId: actor.id,
+              type: "email_validation",
+              data: { from: m.validation, to: "Pas Validé", undo: true },
+            })),
+          );
+        }
+        return { reverted: undoable.length, skipped: inBatch.length - undoable.length };
+      });
+      await audit(db, {
+        actorId: actor.id,
+        action: "emails.bulk_undo",
+        entityType: "email_message",
+        data: { batchId, ...result },
+        ip: req.ip,
+      });
       return result;
     },
   );

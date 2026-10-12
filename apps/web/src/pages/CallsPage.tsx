@@ -44,7 +44,7 @@ export function CallsPage() {
   return (
     <>
       <h1 className="mb-1 text-2xl font-extrabold">File d'appel</h1>
-      <p className="mb-6 max-w-3xl text-sm text-ink/70">
+      <p className="mb-6 max-w-3xl text-sm text-ds-muted">
         Les prospects jamais appelés passent en premier, regroupés par ville. Choisissez l'issue de l'appel :
         le prospect suivant s'affiche aussitôt. Trois essais sans réponse classent un prospect « Injoignable
         ».
@@ -60,7 +60,7 @@ export function CallsPage() {
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
               className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                tab === t.id ? "bg-brand-600 text-white" : "border border-brand-100 bg-white"
+                tab === t.id ? "bg-ds-accent text-ds-accent-ink" : "border border-ds-line bg-ds-surface"
               }`}
             >
               {t.label}
@@ -75,7 +75,7 @@ export function CallsPage() {
             id={cityId}
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -86,7 +86,7 @@ export function CallsPage() {
             id={qualId}
             value={qualification}
             onChange={(e) => setQualification(e.target.value)}
-            className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
           >
             <option value="">Toutes</option>
             {QUALIFICATIONS.map((q) => (
@@ -176,16 +176,16 @@ function CallCard({
   ].filter(([, v]) => v);
 
   return (
-    <article aria-label={`Prospect : ${d.company.name}`} className="rounded-2xl bg-white p-6 shadow-sm">
+    <article aria-label={`Prospect : ${d.company.name}`} className="rounded-2xl bg-ds-surface p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold">{d.company.name}</h2>
-          <p className="text-sm text-ink/70">
+          <p className="text-sm text-ds-muted">
             {[d.company.sector, d.company.city, d.qualification].filter(Boolean).join(" · ")}
           </p>
         </div>
         {tel ? (
-          <a href={tel} className="rounded-xl bg-brand-600 px-5 py-3 text-xl font-bold text-white">
+          <a href={tel} className="rounded-xl bg-ds-accent px-5 py-3 text-xl font-bold text-ds-accent-ink">
             {displayPhone(d.company.phone)}
           </a>
         ) : (
@@ -196,17 +196,17 @@ function CallCard({
       <dl className="mt-4 grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
         {contactName(d.contact) && (
           <>
-            <dt className="text-ink/70">Contact</dt>
+            <dt className="text-ds-muted">Contact</dt>
             <dd>{contactName(d.contact)}</dd>
           </>
         )}
-        <dt className="text-ink/70">Note Google</dt>
+        <dt className="text-ds-muted">Note Google</dt>
         <dd>
           {d.company.googleRating ?? "—"} ({formatNumber(d.company.googleReviews)} avis)
         </dd>
-        <dt className="text-ink/70">Adresse</dt>
+        <dt className="text-ds-muted">Adresse</dt>
         <dd>{d.companyDetail.address ?? "—"}</dd>
-        <dt className="text-ink/70">Site web</dt>
+        <dt className="text-ds-muted">Site web</dt>
         <dd>
           {site ? (
             <a href={site} target="_blank" rel="noreferrer noopener" className="underline">
@@ -218,7 +218,7 @@ function CallCard({
         </dd>
         {maps && (
           <>
-            <dt className="text-ink/70">Fiche Google</dt>
+            <dt className="text-ds-muted">Fiche Google</dt>
             <dd>
               <a href={maps} target="_blank" rel="noreferrer noopener" className="underline">
                 Ouvrir
@@ -234,7 +234,7 @@ function CallCard({
         </p>
       )}
       {d.comment && (
-        <div className="mt-2 rounded-lg bg-brand-50 p-3 text-sm">
+        <div className="mt-2 rounded-lg bg-ds-surface-2 p-3 text-sm">
           <p className="mb-1 font-semibold">Notes précédentes</p>
           <p className="whitespace-pre-wrap">{d.comment}</p>
         </div>
@@ -250,7 +250,7 @@ function CallCard({
           onChange={(e) => setNote(e.target.value)}
           maxLength={1000}
           rows={2}
-          className="w-full rounded-lg border border-brand-100 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-ds-line px-3 py-2 text-sm"
         />
       </div>
 

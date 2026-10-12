@@ -204,3 +204,11 @@ erDiagram
 - Limite assumée : on écarte les cas certains, on ne prouve pas qu'une boîte existe. Les rebonds réels (webhooks Brevo, lot 4c)
   alimentent `suppressions`. Un fournisseur de vérification de boîtes pourra s'ajouter derrière la même interface si le taux de
   rebond le justifie.
+
+## Compléments (lot « interface »)
+
+- `email_messages.bulk_batch` : identifiant du lot de validation ou de rejet groupé qui a posé la décision actuelle ; sert à
+  **annuler** le lot. Une décision individuelle ultérieure retire l'e-mail de son lot.
+- `saved_views` : vues enregistrées (utilisateur, page, nom unique par utilisateur et page, critères en JSON).
+- `settings` : clé `mail_overrides` (réglages de l'e-mail et de l'envoi modifiés dans l'interface) et `sending_paused`.
+- Un lead peut être créé à la main (`source = « Saisie manuelle »`) avec les mêmes clés de déduplication que l'import.

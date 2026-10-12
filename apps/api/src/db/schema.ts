@@ -262,6 +262,8 @@ export const emailMessages = pgTable(
     sendFailures: integer("send_failures").notNull().default(0),
     sendError: text("send_error"),
     promptVersion: text("prompt_version"),
+    /** Lot de validation ou de rejet groupé qui a posé la décision actuelle : permet de l'annuler en bloc. */
+    bulkBatch: uuid("bulk_batch"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -270,6 +272,7 @@ export const emailMessages = pgTable(
     index("email_messages_status_idx").on(t.status),
     index("email_messages_validation_idx").on(t.validation),
     index("email_messages_provider_id_idx").on(t.providerMessageId),
+    index("email_messages_bulk_batch_idx").on(t.bulkBatch),
   ],
 );
 
@@ -303,6 +306,22 @@ export const leadEvents = pgTable(
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("lead_events_lead_idx").on(t.leadId, t.at.desc())],
+);
+
+/** Vues enregistrées par utilisateur (critères de filtre d'une page, nommés). */
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    page: text("page").notNull(),
+    name: text("name").notNull(),
+    filters: jsonb("filters").$type<Record<string, string>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("saved_views_user_page_name_uq").on(t.userId, t.page, t.name)],
 );
 
 export type CompanyRow = typeof companies.$inferSelect;
