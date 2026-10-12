@@ -308,6 +308,22 @@ export const leadEvents = pgTable(
   (t) => [index("lead_events_lead_idx").on(t.leadId, t.at.desc())],
 );
 
+/** Vues enregistrées par utilisateur (critères de filtre d'une page, nommés). */
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    page: text("page").notNull(),
+    name: text("name").notNull(),
+    filters: jsonb("filters").$type<Record<string, string>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("saved_views_user_page_name_uq").on(t.userId, t.page, t.name)],
+);
+
 export type CompanyRow = typeof companies.$inferSelect;
 export type ContactRow = typeof contacts.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;

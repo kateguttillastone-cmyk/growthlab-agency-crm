@@ -24,8 +24,9 @@ reculer le pipeline ») ; écran **Leads** (vues rapides, filtres dans l'adresse
 Mesuré sur les 1 971 leads réels (environnement de test, hors VPS) : liste, filtres et recherche en 4 à 12 ms.
 Détails et chiffres : [11](11-analyse-export-airtable.md).
 
-**Reste de la phase 2** (non livré) : actions groupées sur les lignes filtrées, vues enregistrées par utilisateur,
-grille éditable en place, export CSV, choix du responsable (liste des utilisateurs pour les responsables).
+**Phase 2, compléments livrés côté serveur** : actions groupées (lignes choisies ou filtre, simulation puis application), vues
+enregistrées par utilisateur, export CSV, choix du responsable, création manuelle d'un lead, tableau du pipeline (voir [14](14-contrat-interface.md)).
+Reste : grille éditable en place (écran).
 
 > **Priorités revues d'après les données réelles ([11](11-analyse-export-airtable.md)).** Le Kanban et la valeur des deals
 > n'ont aucun usage à ce jour (0 ligne renseignée) ; l'équipe a besoin de **(1) la file d'appel de 783 prospects**, **(2) la
