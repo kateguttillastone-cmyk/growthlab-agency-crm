@@ -159,6 +159,7 @@ export function PipelinePage() {
               visibleOnMobile={col.stage === active}
               canMove={can("AGENT")}
               busy={move.isPending}
+              ownerName={(id) => (id ? (owners.data?.find((o) => o.id === id)?.name ?? null) : null)}
               onMove={(lead, stage) => move.mutate({ lead, stage })}
               onOpen={openLead}
             />
@@ -177,6 +178,7 @@ function Column({
   visibleOnMobile,
   canMove,
   busy,
+  ownerName,
   onMove,
   onOpen,
 }: {
@@ -185,6 +187,7 @@ function Column({
   visibleOnMobile: boolean;
   canMove: boolean;
   busy: boolean;
+  ownerName: (id: string | null) => string | null;
   onMove: (lead: LeadSummary, stage: PipelineStage) => void;
   onOpen: (id: string) => void;
 }) {
@@ -239,7 +242,7 @@ function Column({
             </span>
             <div className="flex flex-wrap gap-1.5">
               {l.qualification && <span className="pill pill--outline">{l.qualification}</span>}
-              {l.owner && <span className="pill pill--neutral">{l.owner.name}</span>}
+              {ownerName(l.ownerId) && <span className="pill pill--neutral">{ownerName(l.ownerId)}</span>}
             </div>
             {l.company.phone && <span className="t-small num">{displayPhone(l.company.phone)}</span>}
             {canMove && <MoveSelect lead={l} current={col.stage} disabled={busy} onMove={onMove} />}
