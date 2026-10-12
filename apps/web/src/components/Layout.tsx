@@ -26,6 +26,7 @@ const DESTINATIONS: Destination[] = [
     end: true,
     group: "Pilotage",
   },
+  { to: "/pipeline", label: "Pipeline", icon: "pipeline", minRole: "VIEWER", group: "Pilotage" },
   { to: "/leads", label: "Leads", icon: "leads", minRole: "VIEWER", group: "Prospection" },
   { to: "/calls", label: "Appels", icon: "phone", minRole: "AGENT", group: "Prospection" },
   { to: "/emails", label: "E-mails", icon: "mail", minRole: "MANAGER", group: "Prospection" },
