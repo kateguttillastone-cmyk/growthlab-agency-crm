@@ -8,6 +8,7 @@ import { mailIdentity } from "../../mail/identity";
 import { inSlot, nextSlotStart, parseSlots } from "../../mail/slots";
 import { renderEmail } from "../../mail/template";
 import { signUnsubscribe } from "../../mail/unsubscribe-token";
+import { effectiveConfig } from "../settings/effective";
 
 /** Après ce nombre de refus définitifs du fournisseur, l'e-mail n'est plus tenté (à corriger par une personne). */
 export const MAX_SEND_FAILURES = 3;
@@ -90,7 +91,13 @@ interface Deps {
  * au fournisseur ; la réservation est atomique (SKIP LOCKED), donc plusieurs exécutions simultanées ne peuvent jamais
  * choisir le même message. Un résultat incertain garde la réservation : aucun renvoi automatique.
  */
-export async function sendTick({ db, config, sender, now = () => new Date() }: Deps): Promise<TickOutcome> {
+export async function sendTick({
+  db,
+  config: baseConfig,
+  sender,
+  now = () => new Date(),
+}: Deps): Promise<TickOutcome> {
+  const config = await effectiveConfig(db, baseConfig);
   if (config.SEND_MODE !== "prod" || !sender) return { kind: "idle", reason: "envoi désactivé" };
   if (await isPaused(db)) return { kind: "idle", reason: "en pause" };
   if (!inSlot(now(), parseSlots(config.SEND_SLOTS), config.SEND_WINDOW_MINUTES)) {
@@ -168,7 +175,8 @@ export async function sendTick({ db, config, sender, now = () => new Date() }: D
   return { kind: "uncertain", leadId: claimed.lead_id };
 }
 
-export async function sendStatus(db: Db, config: Config, now: Date = new Date()): Promise<SendStatus> {
+export async function sendStatus(db: Db, baseConfig: Config, now: Date = new Date()): Promise<SendStatus> {
+  const config = await effectiveConfig(db, baseConfig);
   const { rows } = await db.execute<{
     sent_today: string;
     ready: string;

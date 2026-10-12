@@ -262,6 +262,8 @@ export const emailMessages = pgTable(
     sendFailures: integer("send_failures").notNull().default(0),
     sendError: text("send_error"),
     promptVersion: text("prompt_version"),
+    /** Lot de validation ou de rejet groupé qui a posé la décision actuelle : permet de l'annuler en bloc. */
+    bulkBatch: uuid("bulk_batch"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -270,6 +272,7 @@ export const emailMessages = pgTable(
     index("email_messages_status_idx").on(t.status),
     index("email_messages_validation_idx").on(t.validation),
     index("email_messages_provider_id_idx").on(t.providerMessageId),
+    index("email_messages_bulk_batch_idx").on(t.bulkBatch),
   ],
 );
 

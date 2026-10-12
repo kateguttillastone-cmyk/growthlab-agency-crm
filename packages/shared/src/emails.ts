@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VALIDATION_STATUSES } from "./catalog";
+import { SUPPRESSION_REASONS, VALIDATION_STATUSES } from "./catalog";
 import { leadListQuerySchema } from "./leads";
 import type { Role } from "./roles";
 
@@ -69,6 +69,8 @@ export type BulkEmailInput = z.infer<typeof bulkEmailSchema>;
 
 export const bulkEmailResultSchema = z.object({
   dryRun: z.boolean(),
+  /** Identifiant du lot appliqué (null en simulation ou si rien n'a changé) : sert à l'annulation. */
+  batchId: z.uuid().nullable(),
   /** E-mails qui seront (ou ont été) modifiés. */
   eligible: z.number(),
   /** E-mails du filtre qui ne le seront pas, par motif. */
@@ -208,3 +210,98 @@ export const addSuppressionSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   note: z.string().trim().max(500).optional(),
 });
+
+export const bulkUndoResultSchema = z.object({
+  /** E-mails remis « Pas Validé ». */
+  reverted: z.number(),
+  /** E-mails du lot qui n'ont pas pu l'être (déjà envoyés, déjà modifiés une autre fois). */
+  skipped: z.number(),
+});
+export type BulkUndoResult = z.infer<typeof bulkUndoResultSchema>;
+
+/** Résultat connu d'un envoi resté incertain : l'e-mail est bien parti (identifiant Brevo facultatif, pour les retours). */
+export const markSentSchema = z.object({
+  messageId: z.string().trim().min(3).max(300).optional(),
+});
+
+export const suppressionListQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+  reason: z.enum(SUPPRESSION_REASONS).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+export type SuppressionListQuery = z.infer<typeof suppressionListQuerySchema>;
+
+export const suppressionItemSchema = z.object({
+  email: z.string(),
+  reason: z.enum(SUPPRESSION_REASONS),
+  note: z.string().nullable(),
+  at: z.string(),
+});
+export const suppressionPageSchema = z.object({
+  items: z.array(suppressionItemSchema),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+  byReason: z.record(z.string(), z.number()),
+});
+export type SuppressionPage = z.infer<typeof suppressionPageSchema>;
+
+const SLOT_LIST =
+  /^(?:(?:sun|mon|tue|wed|thu|fri|sat)@(?:[01]\d|2[0-3]):[0-5]\d)(?:,(?:sun|mon|tue|wed|thu|fri|sat)@(?:[01]\d|2[0-3]):[0-5]\d)*$/i;
+
+const mailSettingsFields = {
+  fromName: z.string().trim().min(1).max(100),
+  agendaText: z.string().trim().min(1).max(200),
+  signature: z.string().trim().min(1).max(500),
+  /** Mention d'opposition : jamais vide, elle fait partie de nos obligations. */
+  optOutText: z.string().trim().min(20).max(600),
+  dailyCap: z.number().int().min(1).max(2000),
+  intervalSeconds: z.number().int().min(5).max(3600),
+  slots: z
+    .string()
+    .trim()
+    .regex(SLOT_LIST, "Créneaux : jour@HH:MM séparés par des virgules (ex. mon@14:00,tue@09:00)"),
+  windowMinutes: z.number().int().min(5).max(720),
+};
+
+export const MAIL_SETTING_KEYS = Object.keys(mailSettingsFields) as Array<keyof typeof mailSettingsFields>;
+export type MailSettingKey = (typeof MAIL_SETTING_KEYS)[number];
+
+/** Modification partielle : une valeur remplace le réglage, `null` le remet à la valeur par défaut du serveur. */
+export const mailSettingsUpdateSchema = z
+  .object(
+    Object.fromEntries(MAIL_SETTING_KEYS.map((k) => [k, mailSettingsFields[k].nullable().optional()])) as {
+      [K in MailSettingKey]: z.ZodOptional<z.ZodNullable<(typeof mailSettingsFields)[K]>>;
+    },
+  )
+  .refine((v) => MAIL_SETTING_KEYS.some((k) => v[k] !== undefined), "Au moins un réglage à modifier");
+export type MailSettingsUpdate = z.infer<typeof mailSettingsUpdateSchema>;
+
+const mailValues = z.object({
+  fromName: z.string(),
+  agendaText: z.string(),
+  signature: z.string(),
+  optOutText: z.string(),
+  dailyCap: z.number(),
+  intervalSeconds: z.number(),
+  slots: z.string(),
+  windowMinutes: z.number(),
+});
+
+export const mailSettingsSchema = z.object({
+  /** Valeurs en vigueur (réglage modifié, sinon valeur du serveur). */
+  values: mailValues,
+  /** Valeurs par défaut du serveur : celles où l'on revient avec « réinitialiser ». */
+  defaults: mailValues,
+  /** Réglages actuellement modifiés par rapport au serveur. */
+  overridden: z.array(z.string()),
+  /** Réglages qu'on ne change que sur le serveur (sécurité) : affichés, jamais modifiables ici. */
+  serverOnly: z.object({
+    fromAddress: z.string(),
+    testRecipient: z.string().nullable(),
+    mode: z.enum(["off", "prod"]),
+    configured: z.boolean(),
+  }),
+});
+export type MailSettings = z.infer<typeof mailSettingsSchema>;

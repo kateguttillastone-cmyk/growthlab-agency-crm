@@ -1,11 +1,14 @@
 import {
   addSuppressionSchema,
   leadDetailSchema,
+  markSentSchema,
   pauseSchema,
   sendStatusSchema,
+  suppressionListQuerySchema,
+  suppressionPageSchema,
   testSendSchema,
 } from "@gac/shared";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
@@ -14,6 +17,7 @@ import { authOf } from "../../lib/assert";
 import { audit } from "../../lib/audit";
 import { AppError, conflict, notFound } from "../../lib/errors";
 import { leadReader } from "../leads/read";
+import { effectiveConfig } from "../settings/effective";
 import { buildOutgoing, sendStatus, setPaused } from "./service";
 
 const idParams = z.object({ id: z.uuid() });
@@ -155,6 +159,91 @@ export async function sendingRoutes(app: FastifyInstance): Promise<void> {
         where status is null and validation = 'Validé' and lead_id in
         (select l.id from leads l join contacts c on c.id = l.contact_id where lower(c.email) = ${email})`);
       return { email, created: inserted.length > 0 };
+    },
+  );
+
+  /**
+   * Un envoi resté incertain est en réalité parti (constaté dans l'historique Brevo) : on le marque envoyé, sans rien
+   * renvoyer. L'identifiant Brevo, s'il est fourni, permet de recevoir ensuite les retours (ouvert, rebond…).
+   */
+  r.post(
+    "/leads/:id/email/mark-sent",
+    {
+      preHandler: admin,
+      schema: { params: idParams, body: markSentSchema, response: { 200: leadDetailSchema } },
+    },
+    async (req) => {
+      const actor = authOf(req).user;
+      const rows = await db
+        .update(emailMessages)
+        .set({
+          status: "Envoyé",
+          sentAt: sql`${emailMessages.sendingAt}`,
+          sentOn: sql`(${emailMessages.sendingAt} at time zone 'Europe/Paris')::date`,
+          providerMessageId: req.body.messageId ?? null,
+          sendError: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(emailMessages.leadId, req.params.id),
+            eq(emailMessages.sequenceNo, 1),
+            isNotNull(emailMessages.sendingAt),
+            isNull(emailMessages.status),
+          ),
+        )
+        .returning({ id: emailMessages.id });
+      if (!rows.length) throw conflict("Aucun envoi incertain à marquer pour ce lead");
+      await db.insert(leadEvents).values({
+        leadId: req.params.id,
+        actorId: actor.id,
+        type: "email_marked_sent",
+        data: { withMessageId: Boolean(req.body.messageId) },
+      });
+      await audit(db, {
+        actorId: actor.id,
+        action: "emails.marked_sent",
+        entityType: "lead",
+        entityId: req.params.id,
+        ip: req.ip,
+      });
+      return detail(req.params.id);
+    },
+  );
+
+  r.get(
+    "/suppressions",
+    {
+      preHandler: manager,
+      schema: { querystring: suppressionListQuerySchema, response: { 200: suppressionPageSchema } },
+    },
+    async (req) => {
+      const { q, reason, limit, offset } = req.query;
+      const conditions: SQL[] = [];
+      if (q) conditions.push(ilike(suppressions.email, `%${q.replace(/[\\%_]/g, "\\$&")}%`));
+      if (reason) conditions.push(eq(suppressions.reason, reason));
+      const where = conditions.length ? and(...conditions) : undefined;
+      const [rows, [total], groups] = await Promise.all([
+        db
+          .select()
+          .from(suppressions)
+          .where(where)
+          .orderBy(desc(suppressions.at), suppressions.email)
+          .limit(limit)
+          .offset(offset),
+        db.select({ n: count() }).from(suppressions).where(where),
+        db
+          .select({ reason: suppressions.reason, n: count() })
+          .from(suppressions)
+          .groupBy(suppressions.reason),
+      ]);
+      return {
+        items: rows.map((s) => ({ email: s.email, reason: s.reason, note: s.note, at: s.at.toISOString() })),
+        total: total?.n ?? 0,
+        limit,
+        offset,
+        byReason: Object.fromEntries(groups.map((g) => [g.reason, g.n])),
+      };
     },
   );
 }

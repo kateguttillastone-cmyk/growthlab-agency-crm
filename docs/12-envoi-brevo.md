@@ -77,3 +77,19 @@ Générer les secrets : `openssl rand -hex 24` (webhook), `openssl rand -hex 32`
 - Le contrôle d'adresse (lot 4b) écarte les cas certains ; les rebonds réels sont traités par les webhooks.
 - Pas de relances automatiques (séquences) : `email_messages.sequence_no` les prépare.
 - Les statistiques Brevo en direct (EXG-F-015) ne sont pas reprises : les compteurs viennent de la base (statuts reçus par webhook).
+
+## 7. Compléments (réglages, annulation, envoi incertain)
+
+- **Réglages modifiables sans toucher au serveur** (`GET/PUT /settings/mail`, lecture responsables, modification administrateurs) :
+  nom d'expéditeur, texte d'agenda, signature, mention d'opposition (20 caractères minimum, jamais vide), plafond du jour,
+  délai entre envois, créneaux, durée d'ouverture. Une valeur remplace celle du serveur ; `null` revient à la valeur du serveur.
+  **Restent côté serveur, jamais modifiables ici** : mode d'envoi, clés, secrets, adresse d'expéditeur, adresse de test.
+  Le changement est journalisé (clés modifiées) et s'applique à l'aperçu comme à l'envoi.
+- **Annuler une validation ou un rejet groupé** (`POST /emails/bulk/:lot/annuler`, en pratique `/emails/bulk/:batchId/undo`) :
+  remet « Pas Validé » les e-mails qui ont encore la décision du lot et ne sont pas partis. Un e-mail modifié à la main depuis, ou
+  déjà envoyé, n'est pas touché (compté « ignoré »).
+- **Envoi incertain** : deux issues, toutes deux réservées aux administrateurs. *Remettre dans la file* (`/leads/:id/email/release`)
+  seulement après avoir vérifié dans Brevo que l'e-mail n'est **pas** parti. *Marquer comme envoyé* (`/leads/:id/email/mark-sent`) quand
+  il **est** parti : rien n'est renvoyé ; l'identifiant Brevo, s'il est donné, permet de recevoir les retours (ouvert, rebond…).
+- **Adresses exclues** : `GET /suppressions` (recherche, motif, pagination, total par motif). Il n'existe volontairement **aucune**
+  suppression d'exclusion depuis l'interface.

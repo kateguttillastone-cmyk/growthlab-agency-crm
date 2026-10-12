@@ -20,6 +20,7 @@ import { importsRoutes } from "./modules/imports/routes";
 import { leadsRoutes } from "./modules/leads/routes";
 import { sendingRoutes } from "./modules/sending/routes";
 import { sendingPublicRoutes } from "./modules/sending/webhooks";
+import { settingsRoutes } from "./modules/settings/routes";
 import { usersRoutes } from "./modules/users/routes";
 import { registerAuth } from "./plugins/auth";
 import { registerErrorHandling } from "./plugins/errors";
@@ -120,6 +121,7 @@ export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps)
   await app.register(callsRoutes);
   await app.register(dashboardRoutes);
   await app.register(sendingRoutes);
+  await app.register(settingsRoutes);
   await app.register(sendingPublicRoutes);
   await app.register(importsRoutes);
 
