@@ -31,6 +31,15 @@ const DESTINATIONS: Destination[] = [
   { to: "/calls", label: "Appels", icon: "phone", minRole: "AGENT", group: "Prospection" },
   { to: "/emails", label: "E-mails", icon: "mail", minRole: "MANAGER", group: "Prospection" },
   { to: "/users", label: "Utilisateurs", icon: "users", minRole: "ADMIN", group: "Administration" },
+  {
+    to: "/suppressions",
+    label: "Adresses exclues",
+    short: "Exclues",
+    icon: "x-circle",
+    minRole: "MANAGER",
+    group: "Administration",
+  },
+  { to: "/settings", label: "Réglages", icon: "list", minRole: "MANAGER", group: "Administration" },
   { to: "/import", label: "Import", icon: "upload", minRole: "ADMIN", group: "Administration" },
   {
     to: "/audit",
