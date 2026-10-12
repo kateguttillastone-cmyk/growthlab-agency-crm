@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPreference, readPreference, resolveTheme } from "./theme";
+import { applyMotion, isPreference, readPreference, readReducedMotion, resolveTheme } from "./theme";
 
 describe("thème", () => {
   it("un choix explicite l'emporte, « système » suit le système", () => {
@@ -17,5 +17,10 @@ describe("thème", () => {
 
   it("retombe sur « système » quand le stockage est indisponible", () => {
     expect(readPreference()).toBe("system");
+  });
+
+  it("réduire les animations : faux par défaut, applicable sans stockage", () => {
+    expect(readReducedMotion()).toBe(false);
+    expect(() => applyMotion(true)).not.toThrow();
   });
 });

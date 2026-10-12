@@ -49,9 +49,37 @@ export function setPreference(pref: ThemePreference): void {
 /** Applique le thème au démarrage et suit le système tant que la préférence est « Système ». */
 export function initTheme(): void {
   applyTheme(readPreference());
+  applyMotion(readReducedMotion());
   if (typeof matchMedia === "function") {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
       if (readPreference() === "system") applyTheme("system");
     });
   }
+}
+
+const MOTION_KEY = "gac-motion";
+
+/** « Réduire les animations » : le choix de Mon profil ; sans choix, la préférence du système s'applique (CSS). */
+export function readReducedMotion(): boolean {
+  try {
+    return localStorage.getItem(MOTION_KEY) === "reduced";
+  } catch {
+    return false;
+  }
+}
+
+export function applyMotion(reduced: boolean): void {
+  if (typeof document === "undefined") return;
+  if (reduced) document.documentElement.dataset.motion = "reduced";
+  else delete document.documentElement.dataset.motion;
+}
+
+export function setReducedMotion(reduced: boolean): void {
+  try {
+    if (reduced) localStorage.setItem(MOTION_KEY, "reduced");
+    else localStorage.removeItem(MOTION_KEY);
+  } catch {
+    // stockage indisponible : le choix vaut pour cette page seulement
+  }
+  applyMotion(reduced);
 }
