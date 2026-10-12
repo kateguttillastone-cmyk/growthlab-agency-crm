@@ -319,6 +319,7 @@ export const pipelineMoreSchema = z.object({
 });
 
 export const userOptionSchema = z.object({ id: z.uuid(), name: z.string() });
+export type UserOption = z.infer<typeof userOptionSchema>;
 
 export const SAVED_VIEW_PAGES = ["leads", "calls", "emails"] as const;
 export const SAVED_VIEWS_MAX = 30;

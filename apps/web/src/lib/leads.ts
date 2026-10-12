@@ -26,7 +26,7 @@ export type LeadFilters = Partial<
     | "sort"
     | "order"
   >
-> & { hasEmail?: "true" | "false" };
+> & { hasEmail?: "true" | "false"; owner?: string };
 
 const KEYS = [
   "q",
@@ -40,6 +40,7 @@ const KEYS = [
   "sort",
   "order",
   "hasEmail",
+  "owner",
 ] as const;
 
 const ALLOWED: Partial<Record<(typeof KEYS)[number], readonly string[]>> = {

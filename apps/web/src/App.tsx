@@ -10,6 +10,7 @@ import { EmailsPage } from "./pages/EmailsPage";
 import { ImportPage } from "./pages/ImportPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { NewLeadPage } from "./pages/NewLeadPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { UsersPage } from "./pages/UsersPage";
 
@@ -40,6 +41,14 @@ export function App() {
       <Route element={<RequireAuth />}>
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route
+          path="leads/new"
+          element={
+            <RequireRole minimum="AGENT">
+              <NewLeadPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="calls"
           element={

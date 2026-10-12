@@ -1,11 +1,12 @@
 import type { LeadFacets, LeadSummary, Page } from "@gac/shared";
 import { NONE } from "@gac/shared";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { LeadDrawer } from "../components/LeadDrawer";
+import { BulkBar, SavedViews, useOwnerOptions } from "../components/LeadsTools";
 import { Pager } from "../components/Pager";
-import { Card, ErrorAlert, Spinner } from "../components/ui";
+import { Button, Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
@@ -40,6 +41,10 @@ const COLUMNS: Array<{ key: SortKey | null; label: string }> = [
 
 export function LeadsPage() {
   const { can } = useAuth();
+  const qc = useQueryClient();
+  const owners = useOwnerOptions();
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [params, setParams] = useSearchParams();
   const filters = filtersFromParams(params);
   const page = Math.max(1, Number(params.get("page")) || 1);
@@ -102,7 +107,26 @@ export function LeadsPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Leads</h1>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold">Leads</h1>
+        <div className="flex flex-wrap gap-2">
+          {can("MANAGER") && (
+            <a className="btn btn--secondary" href={`/api/leads/export?${toQueryString(filters)}`} download>
+              Exporter en CSV
+            </a>
+          )}
+          {can("AGENT") && (
+            <Button variant="secondary" aria-pressed={bulkOpen} onClick={() => setBulkOpen((o) => !o)}>
+              Actions groupées
+            </Button>
+          )}
+          {can("AGENT") && (
+            <Link to="/leads/new" className="btn btn--primary">
+              Nouveau lead
+            </Link>
+          )}
+        </div>
+      </div>
       <p className="mb-4 text-sm text-ds-muted" aria-live="polite">
         {f ? `${f.total.toLocaleString("fr-FR")} prospects au total` : "Chargement…"}
         {list.data ? ` — ${list.data.total.toLocaleString("fr-FR")} correspondent aux filtres` : ""}
@@ -143,6 +167,20 @@ export function LeadsPage() {
         ))}
       </nav>
 
+      <SavedViews filters={filters} onApply={(f) => update(f)} />
+      {bulkOpen && list.data && (
+        <BulkBar
+          ids={selected}
+          filters={filters}
+          total={list.data.total}
+          onClear={() => setSelected([])}
+          onDone={async () => {
+            setSelected([]);
+            await qc.invalidateQueries({ queryKey: ["leads"] });
+          }}
+        />
+      )}
+
       <Card>
         <form
           aria-label="Filtres des leads"
@@ -154,7 +192,7 @@ export function LeadsPage() {
               <input
                 id={id}
                 type="search"
-                className="w-full rounded border border-ds-line bg-ds-surface px-2 py-1.5"
+                className="input"
                 placeholder="Entreprise, nom, e-mail, site, téléphone…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -217,6 +255,20 @@ export function LeadsPage() {
               </option>
             ))}
           </Select>
+          {can("MANAGER") && (
+            <Select
+              label="Responsable"
+              value={filters.owner}
+              onChange={(v) => update({ ...filters, owner: v })}
+            >
+              <option value={NONE}>Sans responsable</option>
+              {(owners.data ?? []).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </Select>
+          )}
           <Select
             label="Envoi e-mail"
             value={filters.emailStatus}
@@ -245,6 +297,23 @@ export function LeadsPage() {
                 </caption>
                 <thead>
                   <tr className="border-b border-ds-line">
+                    {bulkOpen && (
+                      <th scope="col" className="py-2 pr-2">
+                        <input
+                          type="checkbox"
+                          aria-label="Cocher toutes les lignes de la page"
+                          checked={
+                            list.data.items.length > 0 &&
+                            list.data.items.every((l) => selected.includes(l.id))
+                          }
+                          onChange={(e) =>
+                            setSelected(
+                              e.target.checked ? list.data.items.map((l) => l.id).slice(0, 500) : [],
+                            )
+                          }
+                        />
+                      </th>
+                    )}
                     {COLUMNS.map((c) => (
                       <th
                         key={c.label}
@@ -273,6 +342,22 @@ export function LeadsPage() {
                 <tbody className={list.isPlaceholderData ? "opacity-60" : ""}>
                   {list.data.items.map((l) => (
                     <tr key={l.id} className="border-b border-ds-line align-top hover:bg-ds-surface-2">
+                      {bulkOpen && (
+                        <td className="py-2 pr-2">
+                          <input
+                            type="checkbox"
+                            aria-label={`Cocher ${l.company.name}`}
+                            checked={selected.includes(l.id)}
+                            onChange={(e) =>
+                              setSelected((cur) =>
+                                e.target.checked
+                                  ? [...cur, l.id].slice(0, 500)
+                                  : cur.filter((x) => x !== l.id),
+                              )
+                            }
+                          />
+                        </td>
+                      )}
                       <th scope="row" className="py-2 pr-4 font-normal">
                         <button
                           type="button"
@@ -318,7 +403,7 @@ export function LeadsPage() {
                   ))}
                   {list.data.items.length === 0 && (
                     <tr>
-                      <td colSpan={COLUMNS.length} className="py-8 text-center text-ds-muted">
+                      <td colSpan={COLUMNS.length + 1} className="py-8 text-center text-ds-muted">
                         Aucun prospect ne correspond à ces filtres.{" "}
                         <button
                           type="button"
@@ -367,7 +452,7 @@ function Filter({
   const id = useId();
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+      <label htmlFor={id} className="label">
         {label}
       </label>
       {children(id)}
@@ -391,7 +476,7 @@ function Select({
       {(id) => (
         <select
           id={id}
-          className="w-full rounded border border-ds-line bg-ds-surface px-2 py-1.5 font-normal"
+          className="select"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value || undefined)}
         >
