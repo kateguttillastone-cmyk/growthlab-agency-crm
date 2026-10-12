@@ -77,7 +77,7 @@ export async function sendingRoutes(app: FastifyInstance): Promise<void> {
         throw notFound("E-mail introuvable ou vide pour ce lead");
       const result = await app.mailSender.send(
         buildOutgoing(
-          config,
+          await effectiveConfig(db, config),
           { to, subject: row.subject, body: row.body, promptVersion: row.prompt },
           { test: true },
         ),

@@ -262,6 +262,15 @@ describe("lot envoi : marquer envoyé, annuler un lot, adresses exclues, réglag
       ).toContain("Traffic Manager");
     });
 
+    it("l'envoi de test utilise les réglages modifiés (signature, mention d'opposition)", async () => {
+      await seed([row("Alpha", { "Validation mail": "Validé" })]);
+      const admin = await as("ADMIN");
+      await call("PUT", "/settings/mail", admin, { signature: "Marie Test\nResponsable" });
+      const id = await leadId(admin, "Alpha");
+      expect((await call("POST", "/emails/test-send", admin, { leadId: id })).statusCode).toBe(200);
+      expect(sender.sent[0]?.text).toContain("Marie Test\nResponsable");
+    });
+
     it("refuse les valeurs dangereuses : mention d'opposition trop courte, plafond absurde, créneau mal écrit, requête vide", async () => {
       const admin = await as("ADMIN");
       for (const bad of [
