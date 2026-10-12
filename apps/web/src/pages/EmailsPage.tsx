@@ -2,6 +2,7 @@ import {
   ADDRESS_CHECK_LABELS,
   type AddressCheckResult,
   type BulkEmailResult,
+  type BulkUndoResult,
   type EmailPreview,
   type EmailStats,
   emailWarnings,
@@ -101,7 +102,7 @@ export function EmailsPage() {
               type="search"
               value={filters.q}
               onChange={(e) => change({ q: e.target.value })}
-              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
+              className="select"
             />
           )}
         </Filter>
@@ -111,7 +112,7 @@ export function EmailsPage() {
               id={id}
               value={filters.qualification}
               onChange={(e) => change({ qualification: e.target.value })}
-              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
+              className="select"
             >
               <option value="">Toutes</option>
               {QUALIFICATIONS.map((v) => (
@@ -126,7 +127,7 @@ export function EmailsPage() {
               id={id}
               value={filters.promptVersion}
               onChange={(e) => change({ promptVersion: e.target.value })}
-              className="rounded-lg border border-ds-line bg-ds-surface px-3 py-2 text-sm"
+              className="select"
             >
               <option value="">Toutes</option>
               {(stats.data?.byPrompt ?? [])
@@ -146,7 +147,7 @@ export function EmailsPage() {
           {queue.isLoading ? (
             <Spinner />
           ) : items.length === 0 ? (
-            <p className="rounded-2xl bg-ds-surface p-6 text-sm">Aucun e-mail dans cette liste.</p>
+            <p className="card text-sm">Aucun e-mail dans cette liste.</p>
           ) : (
             <ul className="space-y-2">
               {items.map((l) => (
@@ -198,7 +199,7 @@ export function EmailsPage() {
               }
             />
           ) : (
-            <p className="rounded-2xl bg-ds-surface p-6 text-sm">Choisissez un e-mail dans la liste.</p>
+            <p className="card text-sm">Choisissez un e-mail dans la liste.</p>
           )}
         </section>
       </div>
@@ -239,7 +240,7 @@ function StatsCards({ stats }: { stats: EmailStats | undefined }) {
   return (
     <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
       {cards.map(([label, n]) => (
-        <div key={label} className="rounded-2xl bg-ds-surface p-4 shadow-sm">
+        <div key={label} className="card">
           <dt className="text-xs text-ds-muted">{label}</dt>
           <dd className="text-2xl font-extrabold">{formatNumber(n)}</dd>
         </div>
@@ -362,10 +363,20 @@ function ReviewPanel({
     onError: (e) => setError(errorMessage(e)),
   });
 
+  const markSent = useMutation({
+    mutationFn: () => api<LeadDetail>(`/leads/${id}/email/mark-sent`, { method: "POST", body: {} }),
+    onSuccess: async (data) => {
+      setError(null);
+      qc.setQueryData(["lead", id], data);
+      await onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+
   if (lead.isLoading) return <Spinner />;
   if (lead.error) return <ErrorAlert message={errorMessage(lead.error)} />;
   if (!lead.data || !message) {
-    return <p className="rounded-2xl bg-ds-surface p-6 text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
+    return <p className="card text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
   }
 
   const dirty = subject !== (message.subject ?? "") || body !== (message.body ?? "");
@@ -388,7 +399,7 @@ function ReviewPanel({
   const validation = lead.data.email?.validation;
 
   return (
-    <div className="rounded-2xl bg-ds-surface p-6 shadow-sm">
+    <div className="card">
       <h2 className="text-lg font-bold">{lead.data.company.name}</h2>
       <p className="mb-4 text-sm text-ds-muted">
         {contactName(lead.data.contact) || "Sans contact"} · {email ?? "pas d'adresse"} ·{" "}
@@ -397,12 +408,12 @@ function ReviewPanel({
       </p>
       <ErrorAlert message={error} />
       {info && (
-        <p role="status" className="mb-4 rounded-lg bg-ds-good-bg px-3 py-2 text-sm text-ds-good-ink">
+        <p role="status" className="alert alert--good mb-4">
           {info}
         </p>
       )}
       {message.sendReserved && (
-        <div role="alert" className="mb-4 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
+        <div role="alert" className="alert alert--warning mb-4">
           <p>
             Envoi à vérifier : le résultat de l'envoi est inconnu ({message.sendError ?? "incertain"}). Il ne
             sera jamais renvoyé automatiquement. Vérifiez dans l'historique de Brevo qu'il n'est pas parti.
@@ -417,21 +428,32 @@ function ReviewPanel({
               Non parti : le remettre dans la file
             </Button>
           )}
+          {can("ADMIN") && (
+            <Button
+              className="mt-2 ml-2"
+              variant="ghost"
+              disabled={markSent.isPending}
+              onClick={() => {
+                if (window.confirm("Confirmer que cet e-mail est bien parti ? Il sera marqué « Envoyé »."))
+                  markSent.mutate();
+              }}
+            >
+              Bien parti : le marquer comme envoyé
+            </Button>
+          )}
         </div>
       )}
       {!message.sendReserved && message.sendError && !sent && (
-        <p className="mb-4 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
-          Dernier essai d'envoi refusé : {message.sendError}
-        </p>
+        <p className="alert alert--warning mb-4">Dernier essai d'envoi refusé : {message.sendError}</p>
       )}
       {check && isBlockingCheck(check) && (
-        <p role="alert" className="mb-4 rounded-lg bg-ds-critical-bg px-3 py-2 text-sm text-ds-critical-ink">
+        <p role="alert" className="alert alert--critical mb-4">
           L'adresse {email} est inutilisable ({ADDRESS_CHECK_LABELS[check]}) : elle ne peut pas être validée.
           Rejetez cet e-mail ou corrigez l'adresse.
         </p>
       )}
       {blocked && (
-        <p role="alert" className="mb-4 rounded-lg bg-ds-critical-bg px-3 py-2 text-sm text-ds-critical-ink">
+        <p role="alert" className="alert alert--critical mb-4">
           Cette adresse est dans la liste d'exclusion ({BLOCKED_LABELS[blocked]}) : elle ne peut pas être
           validée.
         </p>
@@ -455,7 +477,7 @@ function ReviewPanel({
             maxLength={200}
             readOnly={sent}
             onChange={(e) => setSubject(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-ds-line px-3 py-2 text-sm"
+            className="input mb-4"
           />
           <label htmlFor={bodyId} className="mb-1 block text-sm font-medium">
             Corps (paragraphes séparés par une ligne vide)
@@ -467,7 +489,7 @@ function ReviewPanel({
             maxLength={10000}
             readOnly={sent}
             onChange={(e) => setBody(e.target.value)}
-            className="w-full rounded-lg border border-ds-line px-3 py-2 text-sm"
+            className="textarea"
           />
           {warnings.length > 0 && (
             <ul aria-label="Points d'attention" className="mt-3 space-y-1 text-sm text-ds-warning-ink">
@@ -553,6 +575,8 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
   const [target, setTarget] = useState<"Validé" | "Rejeté">("Validé");
   const [result, setResult] = useState<BulkEmailResult | null>(null);
   const [applied, setApplied] = useState<number | null>(null);
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [undone, setUndone] = useState<BulkUndoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const filter = bulkFilter(filters);
@@ -563,7 +587,25 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
   useEffect(() => {
     setResult(null);
     setApplied(null);
+    setBatchId(null);
+    setUndone(null);
   }, [key]);
+
+  async function undo() {
+    if (!batchId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setUndone(await api<BulkUndoResult>(`/emails/bulk/${batchId}/undo`, { method: "POST" }));
+      setBatchId(null);
+      setApplied(null);
+      await onDone();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function run(validation: "Validé" | "Rejeté", dryRun: boolean) {
     setBusy(true);
@@ -580,6 +622,8 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
       } else {
         setResult(null);
         setApplied(res.eligible);
+        setBatchId(res.batchId);
+        setUndone(null);
         await onDone();
       }
     } catch (e) {
@@ -633,6 +677,17 @@ function BulkPanel({ filters, onDone }: { filters: QueueFilters; onDone: () => P
       {applied !== null && (
         <p role="status" className="mt-4 text-sm font-semibold">
           {applied} e-mail(s) {target === "Validé" ? "validés" : "rejetés"}.
+          {batchId && (
+            <Button className="ml-3" variant="secondary" disabled={busy} onClick={undo}>
+              Annuler ce lot
+            </Button>
+          )}
+        </p>
+      )}
+      {undone && (
+        <p role="status" className="mt-4 text-sm font-semibold">
+          Lot annulé : {undone.reverted} e-mail(s) remis à relire
+          {undone.skipped > 0 ? `, ${undone.skipped} non modifié(s) (déjà envoyés ou changés depuis)` : ""}.
         </p>
       )}
     </Card>
@@ -763,7 +818,7 @@ function SendPanel() {
         )}
       </dl>
       {s.uncertain > 0 && (
-        <p role="alert" className="mt-3 rounded-lg bg-ds-warning-bg px-3 py-2 text-sm text-ds-warning-ink">
+        <p role="alert" className="alert alert--warning mt-3">
           {s.uncertain} envoi(s) au résultat inconnu : ouvrez la fiche concernée et vérifiez dans Brevo avant
           de le libérer.
         </p>
