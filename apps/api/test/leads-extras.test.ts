@@ -259,7 +259,12 @@ describe("leads : tableau du pipeline, actions groupées, création, export, vue
       });
       expect(res.statusCode).toBe(201);
       const lead = res.json();
-      expect(lead).toMatchObject({ source: "Saisie manuelle", qualification: null, stage: null });
+      expect(lead).toMatchObject({
+        source: "Saisie manuelle",
+        qualification: null,
+        stage: "Nouveau",
+        callState: "À appeler",
+      });
       expect(lead.company).toMatchObject({
         name: "Boulangerie Éclair",
         domain: "eclair-test.fr",

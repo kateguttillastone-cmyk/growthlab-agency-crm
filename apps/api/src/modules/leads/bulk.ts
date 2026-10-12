@@ -247,6 +247,9 @@ export async function leadsBulkRoutes(app: FastifyInstance): Promise<void> {
             companyId: company.id,
             contactId,
             source: "Saisie manuelle",
+            stage: "Nouveau",
+            // un prospect avec un numéro entre aussitôt dans la file d'appel
+            callState: phone ? "À appeler" : null,
             qualification: b.qualification ?? null,
             service: b.service ?? null,
             comment: cleanText(b.comment),
