@@ -1,8 +1,10 @@
 import { PASSWORD_MIN_LENGTH, ROLE_LABELS } from "@gac/shared";
 import { type FormEvent, useState } from "react";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import { Button, Card, ErrorAlert, Field } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { readReducedMotion, setReducedMotion } from "../lib/theme";
 
 export function ProfilePage() {
   const { user } = useAuth();
@@ -32,6 +34,8 @@ export function ProfilePage() {
     }
   }
 
+  const [reduced, setReduced] = useState(readReducedMotion);
+
   return (
     <>
       <h1 className="mb-6 text-2xl font-extrabold">Mon profil</h1>
@@ -45,11 +49,28 @@ export function ProfilePage() {
           <dd>{user ? ROLE_LABELS[user.role] : ""}</dd>
         </dl>
       </Card>
+      <Card title="Affichage">
+        <div className="mb-4 max-w-md">
+          <p className="label mb-2">Thème</p>
+          <ThemeSwitch />
+        </div>
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={reduced}
+            onChange={(e) => {
+              setReduced(e.target.checked);
+              setReducedMotion(e.target.checked);
+            }}
+          />
+          Réduire les animations (les déplacements deviennent de simples fondus)
+        </label>
+      </Card>
       <Card title="Changer mon mot de passe">
         <form onSubmit={onSubmit} className="max-w-md">
           <ErrorAlert message={error} />
           {done && (
-            <p role="status" className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+            <p role="status" className="mb-4 rounded-lg bg-ds-good-bg px-3 py-2 text-sm text-ds-good-ink">
               Mot de passe modifié. Vos autres appareils ont été déconnectés.
             </p>
           )}

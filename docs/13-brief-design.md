@@ -65,6 +65,15 @@ Qualification : **Chaud** = succès, **Tiède** = avertissement, **Froid** = sur
 
 Ancienne version : **Plus Jakarta Sans** (400 à 800) pour le texte, **JetBrains Mono** (500, 600) pour les chiffres (indicateurs, compteurs, entonnoirs). Corps 14,5 px, interligne 1,45. Voir §7 pour l'hébergement des polices.
 
+## 2 bis. Mise à jour : système de design étape 1 intégré dans l'application
+
+Le système de design validé (canevas « GAC Pilot — Système de design », étape 1) est **intégré** : feuille de variables et de
+composants (`apps/web/src/styles/gac-ds.css`, copie à remplacer par chaque nouvelle version), polices **embarquées** (Plus Jakarta
+Sans, JetBrains Mono), **thème clair / sombre / système** mémorisé, barre latérale par rôle sur ordinateur, **barre inférieure et
+feuille « Plus »** sur mobile, boutons, champs, alertes, pastilles de statut aux couleurs du système, barres d'entonnoir aux
+couleurs de la charte. Vérifié sous la **même politique de sécurité que le serveur** (aucune violation) et sur ordinateur et mobile.
+Les mises en page des écrans restent celles d'origine jusqu'aux maquettes des étapes 2 et 3.
+
 ## 2. État actuel de l'application (ce que le designer verra sur les captures)
 
 | Point | Constat |

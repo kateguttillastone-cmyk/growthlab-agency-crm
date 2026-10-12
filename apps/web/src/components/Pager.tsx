@@ -14,7 +14,7 @@ export function Pager({
   const page = Math.floor(offset / pageSize) + 1;
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm">
+    <nav aria-label="Pagination" className="pager mt-4">
       <span aria-live="polite">
         {total} résultat(s) — page {page} / {pages}
       </span>

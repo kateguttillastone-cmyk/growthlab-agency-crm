@@ -36,7 +36,7 @@ export function AuditPage() {
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">Événements enregistrés, du plus récent au plus ancien</caption>
                 <thead>
-                  <tr className="border-b border-brand-100">
+                  <tr className="border-b border-ds-line">
                     <th scope="col" className="py-2 pr-4">
                       Date
                     </th>
@@ -53,7 +53,7 @@ export function AuditPage() {
                 </thead>
                 <tbody>
                   {events.data.items.map((e) => (
-                    <tr key={e.id} className="border-b border-brand-50">
+                    <tr key={e.id} className="border-b border-ds-line">
                       <td className="py-2 pr-4 whitespace-nowrap">
                         {new Date(e.at).toLocaleString("fr-FR")}
                       </td>

@@ -73,14 +73,14 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
         type="button"
         tabIndex={-1}
         aria-label="Fermer la fiche"
-        className="absolute inset-0 cursor-default bg-black/40"
+        className="anim-scrim-in absolute inset-0 cursor-default bg-ds-overlay"
         onClick={onClose}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-xl"
+        className="anim-drawer-in relative h-full w-full max-w-xl overflow-y-auto bg-ds-surface p-6 shadow-xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
@@ -88,7 +88,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
               {d?.company.name ?? "Fiche du lead"}
             </h2>
             {d && (
-              <p className="text-sm text-ink/70">
+              <p className="text-sm text-ds-muted">
                 {contactName(d.contact) || "Aucun contact nommé"}
                 {d.contact?.jobTitle ? ` · ${d.contact.jobTitle}` : ""}
               </p>
@@ -148,11 +148,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
                   label="Qualification"
                   display={
                     d.qualification ? (
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-semibold ${QUALIFICATION_STYLE[d.qualification]}`}
-                      >
-                        {d.qualification}
-                      </span>
+                      <span className={QUALIFICATION_STYLE[d.qualification]}>{d.qualification}</span>
                     ) : (
                       "Non qualifié"
                     )
@@ -168,7 +164,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
                   busy={save.isPending}
                   label="Service recommandé"
                 />
-                {d.serviceDetail && <span className="block text-xs text-ink/70">{d.serviceDetail}</span>}
+                {d.serviceDetail && <span className="block text-xs text-ds-muted">{d.serviceDetail}</span>}
               </Item>
               <Item label="Raison">{d.qualificationReason ?? "—"}</Item>
               <Item label="Origine">{d.source}</Item>
@@ -326,11 +322,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
                   <Item label="Validation">{d.email?.validation}</Item>
                   <Item label="Envoi">
                     {d.email?.status ? (
-                      <span
-                        className={`rounded px-2 py-0.5 text-xs font-semibold ${EMAIL_STATUS_STYLE[d.email.status]}`}
-                      >
-                        {d.email.status}
-                      </span>
+                      <span className={EMAIL_STATUS_STYLE[d.email.status]}>{d.email.status}</span>
                     ) : (
                       "Pas encore envoyé"
                     )}
@@ -338,11 +330,11 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
                   </Item>
                   <Item label="Objet">{d.emailMessage.subject ?? "—"}</Item>
                   <Item label="Message">
-                    <pre className="whitespace-pre-wrap rounded bg-brand-50 p-3 font-sans text-sm">
+                    <pre className="whitespace-pre-wrap rounded bg-ds-surface-2 p-3 font-sans text-sm">
                       {d.emailMessage.body ?? "—"}
                     </pre>
                   </Item>
-                  <p className="text-xs text-ink/70">
+                  <p className="text-xs text-ds-muted">
                     La relecture, la validation et l'envoi depuis cet écran arrivent avec la phase 4.
                   </p>
                 </>
@@ -356,7 +348,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
               <ol className="space-y-2 text-sm">
                 {d.events.map((e) => (
                   <li key={e.id}>
-                    <span className="text-ink/70">
+                    <span className="text-ds-muted">
                       {new Date(e.at).toLocaleString("fr-FR")}
                       {e.actorName ? ` · ${e.actorName}` : ""}
                     </span>
@@ -376,7 +368,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-2 border-b border-brand-100 pb-1 text-sm font-bold uppercase tracking-wide text-ink/70">
+      <h3 className="mb-2 border-b border-ds-line pb-1 text-sm font-bold uppercase tracking-wide text-ds-muted">
         {title}
       </h3>
       <dl className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-2 text-sm">{children}</dl>
@@ -426,7 +418,7 @@ function Editable<T extends string>({
   return (
     <select
       aria-label={label}
-      className="w-full rounded border border-brand-100 bg-white px-2 py-1"
+      className="w-full rounded border border-ds-line bg-ds-surface px-2 py-1"
       value={value ?? ""}
       disabled={busy}
       onChange={(e) => onChange(e.target.value === "" ? null : (e.target.value as T))}
@@ -466,7 +458,7 @@ function EditableText({
     "aria-label": label,
     value: text,
     maxLength: max,
-    className: "w-full rounded border border-brand-100 bg-white px-2 py-1",
+    className: "w-full rounded border border-ds-line bg-ds-surface px-2 py-1",
     onChange: (e: { target: { value: string } }) => setText(e.target.value),
   };
   return (
@@ -507,7 +499,7 @@ function EditableNumber({
       <input
         aria-label={label}
         inputMode="decimal"
-        className="w-32 rounded border border-brand-100 bg-white px-2 py-1"
+        className="w-32 rounded border border-ds-line bg-ds-surface px-2 py-1"
         value={text}
         onChange={(e) => setText(e.target.value)}
         aria-invalid={!valid}

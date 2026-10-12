@@ -69,7 +69,7 @@ export function ImportPage() {
   return (
     <>
       <h1 className="mb-1 text-2xl font-extrabold">Import de l'ancienne base</h1>
-      <p className="mb-6 max-w-3xl text-sm text-ink/70">
+      <p className="mb-6 max-w-3xl text-sm text-ds-muted">
         Envoyez l'export CSV de la table Airtable. Le fichier est d'abord <strong>simulé</strong> : vous
         relisez le rapport, puis vous confirmez. Rien n'est écrit avant votre confirmation, le fichier n'est
         pas conservé, et l'import peut être rejoué sans créer de doublon ni écraser vos modifications.
@@ -95,7 +95,7 @@ export function ImportPage() {
                 type="file"
                 accept=".csv,text/csv"
                 disabled={busy}
-                className="block w-full max-w-xl rounded border border-brand-100 bg-white px-2 py-2 text-sm"
+                className="block w-full max-w-xl rounded border border-ds-line bg-ds-surface px-2 py-2 text-sm"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
                   setFile(f);
@@ -118,9 +118,9 @@ export function ImportPage() {
                   disabled={busy}
                   onChange={(e) => setTz(e.target.value)}
                   onBlur={() => file && /^[+-]\d{2}:\d{2}$/.test(tz) && void analyse(file, tz)}
-                  className="w-28 rounded border border-brand-100 bg-white px-2 py-1 text-sm"
+                  className="w-28 rounded border border-ds-line bg-ds-surface px-2 py-1 text-sm"
                 />
-                <p className="mt-1 text-xs text-ink/70">
+                <p className="mt-1 text-xs text-ds-muted">
                   Les dates de l'export analysé portent le fuseau -04:00. Modifier cette valeur relance
                   l'analyse.
                 </p>
@@ -142,7 +142,7 @@ export function ImportPage() {
             </p>
 
             {phase !== "done" && nothingNew(report) && (
-              <p className="mb-4 rounded bg-brand-50 p-3 text-sm">
+              <p className="mb-4 rounded bg-ds-surface-2 p-3 text-sm">
                 Ce fichier a déjà été importé : tout ce qu'il contient est déjà en base. Rien de nouveau ne
                 serait créé.
               </p>
@@ -151,7 +151,7 @@ export function ImportPage() {
             <table className="mb-4 w-full max-w-2xl text-left text-sm">
               <caption className="sr-only">Effectifs créés et déjà présents, par type de donnée</caption>
               <thead>
-                <tr className="border-b border-brand-100">
+                <tr className="border-b border-ds-line">
                   <th scope="col" className="py-2 pr-4">
                     Donnée
                   </th>
@@ -165,7 +165,7 @@ export function ImportPage() {
               </thead>
               <tbody>
                 {reportRows(report).map((r) => (
-                  <tr key={r.label} className="border-b border-brand-50">
+                  <tr key={r.label} className="border-b border-ds-line">
                     <th scope="row" className="py-2 pr-4 font-normal">
                       {r.label}
                     </th>
@@ -207,7 +207,7 @@ export function ImportPage() {
                 role="alertdialog"
                 aria-labelledby="confirm-title"
                 aria-describedby="confirm-desc"
-                className="rounded-lg border border-brand-600 bg-brand-50 p-4"
+                className="rounded-lg border border-ds-accent bg-ds-surface-2 p-4"
               >
                 <h3 id="confirm-title" className="font-bold">
                   Confirmer l'import ?
@@ -234,7 +234,7 @@ export function ImportPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Link
                   to="/leads"
-                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+                  className="rounded-lg bg-ds-accent px-4 py-2 text-sm font-semibold text-ds-accent-ink hover:bg-ds-accent-hover"
                 >
                   Voir les leads
                 </Link>

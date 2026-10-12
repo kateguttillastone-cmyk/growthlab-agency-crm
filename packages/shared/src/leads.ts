@@ -53,6 +53,8 @@ export const leadListQuerySchema = z.object({
   city: z.string().trim().max(100).optional(),
   hasPhone: bool.optional(),
   hasEmail: bool.optional(),
+  /** Identifiant d'un responsable, ou « none » (sans responsable). */
+  owner: z.union([z.uuid(), z.literal(NONE)]).optional(),
 });
 export type LeadListQuery = z.infer<typeof leadListQuerySchema>;
 
@@ -99,6 +101,7 @@ export const leadSummarySchema = z.object({
   qualification: z.enum(QUALIFICATIONS).nullable(),
   service: z.enum(SERVICES).nullable(),
   source: z.string(),
+  ownerId: z.uuid().nullable(),
   stage: z.enum(PIPELINE_STAGES).nullable(),
   callStatus: z.enum(CALL_STATUSES).nullable(),
   callState: z.enum(CALL_STATES).nullable(),
@@ -216,3 +219,125 @@ export const leadFacetsSchema = z.object({
   callState: z.record(z.string(), z.number()),
 });
 export type LeadFacets = z.infer<typeof leadFacetsSchema>;
+
+/** Les mêmes critères que la liste, sans pagination ni tri : cible d'une action groupée, d'un export ou d'une vue. */
+export const leadFilterSchema = leadListQuerySchema
+  .omit({ limit: true, offset: true, sort: true, order: true })
+  .partial();
+export type LeadFilterInput = z.infer<typeof leadFilterSchema>;
+
+/** Actions groupées : on cible des lignes choisies (`ids`) ou tout ce que sélectionne un filtre. */
+export const BULK_LEADS_MAX = 5_000;
+export const BULK_IDS_MAX = 500;
+
+const bulkSet = z
+  .object({
+    qualification: nullable(z.enum(QUALIFICATIONS)),
+    service: nullable(z.enum(SERVICES)),
+    stage: nullable(z.enum(PIPELINE_STAGES)),
+    callState: nullable(z.enum(CALL_STATES)),
+    ownerId: nullable(z.uuid()),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "Au moins un champ à modifier");
+
+export const bulkLeadsSchema = z
+  .object({
+    ids: z.array(z.uuid()).min(1).max(BULK_IDS_MAX).optional(),
+    filter: leadFilterSchema.optional(),
+    set: bulkSet,
+    dryRun: z.boolean().default(false),
+    /** Effectif vu en simulation ; l'application réelle est refusée (409) s'il a changé. */
+    expectedCount: z.number().int().min(0).optional(),
+  })
+  .refine(
+    (v) => (v.ids ? !v.filter : !!v.filter),
+    "Indiquez soit des lignes (ids), soit un filtre, pas les deux",
+  );
+export type BulkLeadsInput = z.infer<typeof bulkLeadsSchema>;
+
+export const bulkLeadsResultSchema = z.object({
+  dryRun: z.boolean(),
+  /** Leads ciblés. */
+  matched: z.number(),
+  /** Leads qui changent (ou ont changé). */
+  changed: z.number(),
+  /** Leads déjà dans l'état demandé : rien à faire. */
+  unchanged: z.number(),
+});
+export type BulkLeadsResult = z.infer<typeof bulkLeadsResultSchema>;
+
+/** Création manuelle d'un lead (un prospect trouvé hors import). */
+export const createLeadSchema = z.object({
+  companyName: z.string().trim().min(1).max(200),
+  website: z.string().trim().max(300).optional(),
+  phone: z.string().trim().max(40).optional(),
+  city: z.string().trim().max(100).optional(),
+  sector: z.string().trim().max(100).optional(),
+  firstName: z.string().trim().max(100).optional(),
+  lastName: z.string().trim().max(100).optional(),
+  jobTitle: z.string().trim().max(150).optional(),
+  email: z.string().trim().max(254).optional(),
+  /** Réservé aux responsables, comme à la modification. */
+  qualification: z.enum(QUALIFICATIONS).optional(),
+  service: z.enum(SERVICES).optional(),
+  comment: z.string().trim().max(2000).optional(),
+});
+export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+
+export const pipelineQuerySchema = z.object({
+  qualification: withNone(QUALIFICATIONS).optional(),
+  owner: z.union([z.uuid(), z.literal(NONE)]).optional(),
+  q: z.string().trim().max(100).optional(),
+  /** Cartes par colonne au premier chargement. */
+  perStage: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const pipelineStageSchema = z.object({
+  stage: z.enum(PIPELINE_STAGES),
+  count: z.number(),
+  /** Somme des valeurs de deal de la colonne (0 si aucune n'est renseignée). */
+  value: z.number(),
+  items: z.array(leadSummarySchema),
+});
+
+export const pipelineBoardSchema = z.object({
+  stages: z.array(pipelineStageSchema),
+  /** Leads sans étape : hors du tableau, à classer depuis la liste. */
+  unstaged: z.number(),
+});
+export type PipelineBoard = z.infer<typeof pipelineBoardSchema>;
+
+export const pipelineMoreQuerySchema = pipelineQuerySchema.omit({ perStage: true }).extend({
+  offset: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+export const pipelineMoreSchema = z.object({
+  items: z.array(leadSummarySchema),
+  total: z.number(),
+});
+
+export const userOptionSchema = z.object({ id: z.uuid(), name: z.string() });
+export type UserOption = z.infer<typeof userOptionSchema>;
+
+export const SAVED_VIEW_PAGES = ["leads", "calls", "emails"] as const;
+export const SAVED_VIEWS_MAX = 30;
+
+export const savedViewSchema = z.object({
+  id: z.uuid(),
+  page: z.enum(SAVED_VIEW_PAGES),
+  name: z.string(),
+  filters: z.record(z.string(), z.string()),
+  createdAt: z.string(),
+});
+export type SavedView = z.infer<typeof savedViewSchema>;
+
+export const createSavedViewSchema = z.object({
+  page: z.enum(SAVED_VIEW_PAGES),
+  name: z.string().trim().min(1).max(60),
+  /** Les critères tels que l'interface les garde dans l'adresse (texte). */
+  filters: z
+    .record(z.string().max(40), z.string().max(200))
+    .refine((f) => Object.keys(f).length <= 20, "Trop de critères"),
+});

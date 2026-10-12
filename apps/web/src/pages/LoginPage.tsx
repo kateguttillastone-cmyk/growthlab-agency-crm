@@ -30,9 +30,9 @@ export function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl bg-ds-surface p-8 shadow-lg">
         <h1 className="text-2xl font-extrabold">GAC Pilot</h1>
-        <p className="mb-6 text-sm text-ink/70">Accès réservé à l'équipe</p>
+        <p className="mb-6 text-sm text-ds-muted">Accès réservé à l'équipe</p>
         <ErrorAlert message={error} />
         <Field
           label="Adresse e-mail"

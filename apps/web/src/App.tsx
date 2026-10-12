@@ -10,7 +10,11 @@ import { EmailsPage } from "./pages/EmailsPage";
 import { ImportPage } from "./pages/ImportPage";
 import { LeadsPage } from "./pages/LeadsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { NewLeadPage } from "./pages/NewLeadPage";
+import { PipelinePage } from "./pages/PipelinePage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { SuppressionsPage } from "./pages/SuppressionsPage";
 import { UsersPage } from "./pages/UsersPage";
 
 function RequireAuth() {
@@ -24,7 +28,7 @@ function RequireRole({ minimum, children }: { minimum: Role; children: React.Rea
   const { can } = useAuth();
   if (!can(minimum)) {
     return (
-      <div role="alert" className="rounded-2xl bg-white p-6">
+      <div role="alert" className="rounded-2xl bg-ds-surface p-6">
         <h1 className="text-xl font-bold">Accès refusé</h1>
         <p className="mt-2 text-sm">Votre rôle ne permet pas d'ouvrir cette page.</p>
       </div>
@@ -39,7 +43,16 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
         <Route index element={<DashboardPage />} />
+        <Route path="pipeline" element={<PipelinePage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route
+          path="leads/new"
+          element={
+            <RequireRole minimum="AGENT">
+              <NewLeadPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="calls"
           element={
@@ -77,6 +90,22 @@ export function App() {
           element={
             <RequireRole minimum="ADMIN">
               <AuditPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="suppressions"
+          element={
+            <RequireRole minimum="MANAGER">
+              <SuppressionsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <RequireRole minimum="MANAGER">
+              <SettingsPage />
             </RequireRole>
           }
         />

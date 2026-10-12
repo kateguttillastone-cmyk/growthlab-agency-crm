@@ -36,6 +36,20 @@
       "when": 1791560167166,
       "tag": "0004_sending",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791782140288,
+      "tag": "0005_bulk_batch",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791782458764,
+      "tag": "0006_saved_views",
+      "breakpoints": true
     }
   ]
 }
