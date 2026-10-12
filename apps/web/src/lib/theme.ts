@@ -44,7 +44,11 @@ export function setPreference(pref: ThemePreference): void {
     // stockage indisponible (navigation privée) : le choix vaut pour cette page seulement
   }
   applyTheme(pref);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(CHANGE_EVENT));
 }
+
+/** Annonce un changement de préférence aux contrôles affichés en même temps (menu d'en-tête, Mon profil). */
+export const CHANGE_EVENT = "gac-theme-change";
 
 /** Applique le thème au démarrage et suit le système tant que la préférence est « Système ». */
 export function initTheme(): void {

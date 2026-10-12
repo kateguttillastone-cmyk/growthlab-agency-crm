@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { Icon, type IconName } from "./Icon";
-import { ThemeSwitch } from "./ThemeSwitch";
+import { ThemeMenu } from "./ThemeSwitch";
 
 interface Destination {
   to: string;
@@ -96,12 +96,6 @@ function MoreSheet({
             {d.label}
           </NavLink>
         ))}
-        <div className="flex flex-col gap-2 px-3 pb-3 pt-2">
-          <span className="label" aria-hidden="true">
-            Thème
-          </span>
-          <ThemeSwitch />
-        </div>
         <button type="button" className="sheet-item w-full text-ds-critical-ink" onClick={onLogout}>
           <Icon name="logout" />
           Se déconnecter
@@ -163,12 +157,6 @@ export function Layout() {
               </div>
             ))}
           <div className="mt-auto flex flex-col gap-3">
-            <div className="flex flex-col gap-2 px-1">
-              <span className="nav-title !p-0" aria-hidden="true">
-                Thème
-              </span>
-              <ThemeSwitch />
-            </div>
             <NavLink to="/profile" className="nav-item">
               <Icon name="user" />
               Mon profil
@@ -193,6 +181,9 @@ export function Layout() {
       </div>
 
       <main id="contenu" className="min-w-0 flex-1 px-4 pb-28 pt-4 md:p-8">
+        <div className="mb-2 flex justify-end">
+          <ThemeMenu />
+        </div>
         <Outlet />
       </main>
 

@@ -1,5 +1,6 @@
 import { PASSWORD_MIN_LENGTH, ROLE_LABELS } from "@gac/shared";
 import { type FormEvent, useState } from "react";
+import { ThemeSwitch } from "../components/ThemeSwitch";
 import { Button, Card, ErrorAlert, Field } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -49,6 +50,10 @@ export function ProfilePage() {
         </dl>
       </Card>
       <Card title="Affichage">
+        <div className="mb-4 max-w-md">
+          <p className="label mb-2">Thème</p>
+          <ThemeSwitch />
+        </div>
         <label className="flex items-center gap-3 text-sm">
           <input
             type="checkbox"
