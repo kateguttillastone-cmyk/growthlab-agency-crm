@@ -222,6 +222,8 @@ describe("sourcing : simuler, lancer, suivre, ajouter sans doublon", () => {
     await tick();
     const [run] = await t.db.select().from(sourcingRuns);
     expect(run).toMatchObject({ state: "failed", error: "quota Apify atteint" });
+    // refusée avant de démarrer chez le fournisseur : rien n'a été dépensé
+    expect((await call("GET", "/sourcing/status", m)).json().spentToday).toBe(0);
   });
 
   it("abandonne une recherche qui dépasse le délai maximal", async () => {

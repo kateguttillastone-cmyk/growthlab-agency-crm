@@ -29,6 +29,8 @@ export async function spentToday(db: Db, now = new Date()): Promise<number> {
       and(
         sql`(${sourcingRuns.createdAt} at time zone 'Europe/Paris')::date = (${now.toISOString()}::timestamptz at time zone 'Europe/Paris')::date`,
         sql`${sourcingRuns.state} <> 'cancelled'`,
+        // une recherche refusée avant de démarrer chez le fournisseur n'a rien coûté
+        sql`not (${sourcingRuns.state} = 'failed' and ${sourcingRuns.providerRunId} is null)`,
       ),
     );
   return Math.round((row?.n ?? 0) * 100) / 100;
