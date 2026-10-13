@@ -342,6 +342,50 @@ function ReviewPanel({
     onError: (e) => setError(errorMessage(e)),
   });
 
+  const aiStatus = useQuery({
+    queryKey: ["ai", "status"],
+    queryFn: () => api<{ configured: boolean; usedToday: number; dailyLimit: number }>("/ai/status"),
+    staleTime: 30_000,
+  });
+  const aiReady = aiStatus.data?.configured === true;
+  const [instruction, setInstruction] = useState("");
+  const instructionId = useId();
+  const rewrite = useMutation({
+    mutationFn: () =>
+      api<{ subject: string; body: string }>(`/leads/${id}/email/rewrite`, {
+        method: "POST",
+        body: { instruction },
+      }),
+    onSuccess: (r) => {
+      setError(null);
+      setSubject(r.subject);
+      setBody(r.body);
+      setInfo(
+        "Réécriture proposée : relisez-la, puis enregistrez ou validez. Rien n'est enregistré tant que vous ne le faites pas.",
+      );
+      void qc.invalidateQueries({ queryKey: ["ai", "status"] });
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const score = useMutation({
+    mutationFn: () =>
+      api<{ noWebsite: boolean; emailWritten: boolean }>(`/leads/${id}/score`, { method: "POST" }),
+    onSuccess: async (r) => {
+      setError(null);
+      setInfo(
+        r.noWebsite
+          ? "Prospect sans site web : service « Création de site » enregistré (pas d'e-mail rédigé)."
+          : r.emailWritten
+            ? "Prospect qualifié et e-mail rédigé : relisez-le avant de valider."
+            : "Prospect qualifié (l'e-mail existant n'a pas été modifié).",
+      );
+      await qc.invalidateQueries({ queryKey: ["lead", id] });
+      await qc.invalidateQueries({ queryKey: ["ai", "status"] });
+      await onChanged();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+
   const testSend = useMutation({
     mutationFn: () => api<{ sentTo: string }>("/emails/test-send", { method: "POST", body: { leadId: id } }),
     onSuccess: (r) => {
@@ -376,7 +420,22 @@ function ReviewPanel({
   if (lead.isLoading) return <Spinner />;
   if (lead.error) return <ErrorAlert message={errorMessage(lead.error)} />;
   if (!lead.data || !message) {
-    return <p className="card text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
+    return (
+      <div className="card text-sm">
+        <p>Ce prospect n'a pas d'e-mail rédigé.</p>
+        <ErrorAlert message={error} />
+        {info && (
+          <p role="status" className="alert alert--good mt-3">
+            {info}
+          </p>
+        )}
+        {aiReady && lead.data?.contact?.email && (
+          <Button className="mt-3" disabled={score.isPending} onClick={() => score.mutate()}>
+            {score.isPending ? "Rédaction en cours…" : "Qualifier et rédiger l'e-mail (IA)"}
+          </Button>
+        )}
+      </div>
+    );
   }
 
   const dirty = subject !== (message.subject ?? "") || body !== (message.body ?? "");
@@ -529,6 +588,31 @@ function ReviewPanel({
           </div>
         </section>
       </div>
+
+      {!sent && aiReady && !message.sendReserved && (
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <div className="field min-w-64 flex-1">
+            <label htmlFor={instructionId} className="label">
+              Réécrire par IA <span className="opt">(consigne libre)</span>
+            </label>
+            <input
+              id={instructionId}
+              className="input"
+              maxLength={500}
+              placeholder="Ex. plus court, ton plus direct, mettre en avant les avis Google"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            disabled={rewrite.isPending || instruction.trim().length < 5}
+            onClick={() => rewrite.mutate()}
+          >
+            {rewrite.isPending ? "Réécriture…" : "Réécrire"}
+          </Button>
+        </div>
+      )}
 
       {!sent && (
         <div className="mt-4 flex flex-wrap items-center gap-2">

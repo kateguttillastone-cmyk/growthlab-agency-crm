@@ -29,6 +29,7 @@ const DESTINATIONS: Destination[] = [
   },
   { to: "/pipeline", label: "Pipeline", icon: "pipeline", minRole: "VIEWER", group: "Pilotage" },
   { to: "/leads", label: "Leads", icon: "leads", minRole: "VIEWER", group: "Prospection" },
+  { to: "/sourcing", label: "Sourcing", icon: "search", minRole: "MANAGER", group: "Prospection" },
   { to: "/calls", label: "Appels", icon: "phone", minRole: "AGENT", group: "Prospection" },
   { to: "/emails", label: "E-mails", icon: "mail", minRole: "MANAGER", group: "Prospection" },
   { to: "/users", label: "Utilisateurs", icon: "users", minRole: "ADMIN", group: "Administration" },

@@ -6,6 +6,8 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify, { type FastifyInstance } from "fastify";
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import { type AiClient, anthropicClient } from "./ai/anthropic";
+import { aiRoutes } from "./ai/routes";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
 import { type DnsResolver, systemResolver } from "./mail/address-check";
@@ -28,6 +30,9 @@ import { usersRoutes } from "./modules/users/routes";
 import { registerAuth } from "./plugins/auth";
 import { registerErrorHandling } from "./plugins/errors";
 import { registerOriginCheck } from "./plugins/origin-check";
+import { createSourcingProvider } from "./sourcing";
+import type { SourcingProvider } from "./sourcing/provider";
+import { sourcingRoutes } from "./sourcing/routes";
 
 /** Remplace les jetons secrets d'une adresse (webhook, désinscription) par « ... ». */
 export function maskSecretPaths(url: string | undefined): string | undefined {
@@ -39,9 +44,18 @@ export interface AppDeps {
   db: Db;
   dnsResolver?: DnsResolver;
   mailSender?: MailSender | null;
+  sourcingProvider?: SourcingProvider | null;
+  aiClient?: AiClient | null;
 }
 
-export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({
+  config,
+  db,
+  dnsResolver,
+  mailSender,
+  sourcingProvider,
+  aiClient,
+}: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
     logger: {
@@ -80,6 +94,20 @@ export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps)
   app.decorate(
     "mailSender",
     mailSender !== undefined ? mailSender : config.BREVO_API_KEY ? brevoSender(config.BREVO_API_KEY) : null,
+  );
+
+  app.decorate(
+    "sourcingProvider",
+    sourcingProvider !== undefined ? sourcingProvider : createSourcingProvider(config),
+  );
+
+  app.decorate(
+    "aiClient",
+    aiClient !== undefined
+      ? aiClient
+      : config.ANTHROPIC_API_KEY
+        ? anthropicClient({ apiKey: config.ANTHROPIC_API_KEY, model: config.ANTHROPIC_MODEL })
+        : null,
   );
 
   registerErrorHandling(app);
@@ -130,6 +158,8 @@ export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps)
   await app.register(settingsRoutes);
   await app.register(sendingPublicRoutes);
   await app.register(importsRoutes);
+  await app.register(sourcingRoutes);
+  await app.register(aiRoutes);
 
   return app;
 }

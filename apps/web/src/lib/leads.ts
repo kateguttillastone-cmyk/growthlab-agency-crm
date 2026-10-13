@@ -26,7 +26,7 @@ export type LeadFilters = Partial<
     | "sort"
     | "order"
   >
-> & { hasEmail?: "true" | "false"; owner?: string };
+> & { hasEmail?: "true" | "false"; owner?: string; source?: string };
 
 const KEYS = [
   "q",
@@ -41,6 +41,7 @@ const KEYS = [
   "order",
   "hasEmail",
   "owner",
+  "source",
 ] as const;
 
 const ALLOWED: Partial<Record<(typeof KEYS)[number], readonly string[]>> = {
@@ -192,9 +193,21 @@ export const FIELD_LABELS: Record<string, string> = {
 };
 
 /** Phrase lisible pour une ligne de l'historique. */
+const show0 = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
+
 export function describeEvent(e: { type: string; data: Record<string, unknown> | null }): string {
   if (e.type === "imported") return "Importé depuis l'ancienne base";
   const d = e.data ?? {};
+  if (e.type === "created") {
+    if (d.sourcingRunId) return "Trouvé par une recherche de sourcing";
+    return d.manual ? "Créé à la main" : "Créé";
+  }
+  if (e.type === "scored") {
+    return d.ai === false
+      ? "Service « Création de site » (prospect sans site web)"
+      : `Qualifié par l'IA : ${show0(d.qualification)}, ${show0(d.service)}${d.emailWritten ? ", e-mail rédigé" : ""}`;
+  }
+  if (e.type === "email_rewritten") return "E-mail réécrit par l'IA (à relire)";
   if (e.type === "email_edited") {
     const names = { subject: "l'objet", body: "le corps" };
     const fields = Array.isArray(d.fields) ? d.fields.map((f) => names[f as keyof typeof names] ?? f) : [];

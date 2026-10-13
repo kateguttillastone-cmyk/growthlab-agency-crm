@@ -90,6 +90,34 @@ const schema = z.object({
   /** Durée pendant laquelle un créneau reste ouvert. */
   SEND_WINDOW_MINUTES: z.coerce.number().int().min(5).max(720).default(120),
 
+  /** Sourcing (recherche de prospects). « off » : aucune recherche ne part ; « apify » : acteurs Apify. */
+  SOURCING_MODE: z.enum(["off", "apify"]).default("off"),
+  APIFY_TOKEN: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Coût estimé par résultat (en euros) : sert à la simulation et au plafond, pas à la facturation réelle. */
+  SOURCING_COST_PER_RESULT: z.coerce.number().min(0).max(10).default(0.02),
+  /** Acteurs Apify utilisés (modifiables sans toucher au code si un acteur est remplacé). */
+  APIFY_ACTOR_MAPS: z.string().default("compass~crawler-google-places"),
+  APIFY_ACTOR_LEADS: z.string().default("code_crafter~leads-finder"),
+  /** Apify facture en dollars : taux appliqué au coût réel affiché. */
+  SOURCING_USD_TO_EUR: z.coerce.number().positive().max(5).default(0.92),
+  SOURCING_MAX_PER_RUN: z.coerce.number().int().min(1).max(500).default(100),
+  /** Plafond de coût estimé par jour (en euros). */
+  SOURCING_DAILY_BUDGET: z.coerce.number().min(0).max(1000).default(5),
+
+  /** IA (qualification et rédaction des e-mails). Sans clé, les fonctions IA sont indisponibles. */
+  ANTHROPIC_API_KEY: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  ANTHROPIC_MODEL: z.string().default("claude-haiku-5-5"),
+  /** Plafond d'appels à l'IA par jour (qualifications et réécritures confondues). */
+  AI_DAILY_LIMIT: z.coerce.number().int().min(0).max(100000).default(300),
+  /** Qualifie et rédige automatiquement les prospects trouvés par une recherche de sourcing. */
+  SCORING_AUTO: bool.default(true),
+
   SWAGGER: bool.default(false),
 
   /** Premier administrateur, créé au démarrage s'il n'existe pas (jamais modifié ensuite). */
@@ -142,6 +170,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       );
     }
     parseSlots(c.SEND_SLOTS); // lève une erreur claire si un créneau est mal écrit
+  }
+  if (c.SOURCING_MODE === "apify" && !c.APIFY_TOKEN) {
+    throw new Error("Configuration invalide : SOURCING_MODE=apify exige APIFY_TOKEN");
   }
   return {
     ...c,
