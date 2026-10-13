@@ -5,7 +5,7 @@
 ## 1. Méthode et limites
 
 - **Parcours réel** de toutes les pages dans Chromium : ordinateur 1440 × 900, mobile 390 × 844 (écran tactile), tablette 820 × 1180 pour les mesures ; thèmes clair (référence) et sombre (3 pages).
-  36 captures dans [`captures/`](captures/) (préfixes `d-` ordinateur, `m-` mobile, `s-` sombre).
+  35 captures dans [`captures/`](captures/) (préfixes `d-` ordinateur, `m-` mobile, `s-` sombre).
 - **Mesures automatiques** sur les 13 pages et 3 largeurs : débordement horizontal de la page, zones tactiles < 40 px, textes < 12 px
   ([`metriques-brutes.txt`](metriques-brutes.txt)).
 - **Comparaison avec la maquette** (canevas « GAC Pilot — Système de design », version `1791782504-a075`, 50 fichiers) : lecture du texte de

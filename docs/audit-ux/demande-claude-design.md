@@ -1,6 +1,6 @@
 # Demande à Claude Design : étape 4, cohérence et ergonomie de GAC Pilot
 
-*À coller dans Claude Design, avec le dossier `captures/` joint (36 images) et le fichier `rapport-audit.md`.
+*À coller dans Claude Design, avec le dossier `captures/` joint (35 images) et le fichier `rapport-audit.md`.
 Le canevas à mettre à jour est « GAC Pilot — Système de design » (https://claude.ai/artifact/NMn7dj5CuTNAb613cKceJK).*
 
 ---
