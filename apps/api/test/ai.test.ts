@@ -243,7 +243,8 @@ describe("client Anthropic", () => {
     expect(await client.structured(opts)).toEqual({ a: 1 });
     const body = JSON.parse(String(seen[0]?.init.body));
     expect(body).toMatchObject({ model: "modele-test", tool_choice: { type: "tool", name: "outil" } });
-    expect((seen[0]?.init.headers as Record<string, string>)["x-api-key"]).toBe(KEY);
+    const headers = (seen[0]?.init.headers ?? {}) as Record<string, string>;
+    expect(headers["x-api-key"]).toBe(KEY);
     expect(seen[0]?.url).not.toContain(KEY);
   });
 
