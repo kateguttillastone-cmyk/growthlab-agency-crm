@@ -14,6 +14,7 @@ import { NewLeadPage } from "./pages/NewLeadPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SourcingPage } from "./pages/SourcingPage";
 import { SuppressionsPage } from "./pages/SuppressionsPage";
 import { UsersPage } from "./pages/UsersPage";
 
@@ -106,6 +107,14 @@ export function App() {
           element={
             <RequireRole minimum="MANAGER">
               <SettingsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="sourcing"
+          element={
+            <RequireRole minimum="MANAGER">
+              <SourcingPage />
             </RequireRole>
           }
         />
