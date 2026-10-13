@@ -16,7 +16,7 @@ export async function aiRoutes(app: FastifyInstance): Promise<void> {
   const { db, config } = app;
   const r = app.withTypeProvider<ZodTypeProvider>();
   const manager = app.requireRole("MANAGER");
-  const deps = () => ({ db, config, ai: app.aiClient });
+  const deps = () => ({ db, config, ai: app.aiClient, fetchSite: app.siteFetcher });
   const id = z.object({ id: z.uuid() });
 
   r.get(

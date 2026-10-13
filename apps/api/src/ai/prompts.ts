@@ -1,5 +1,5 @@
 /** Version du prompt, enregistrée avec chaque e-mail rédigé : permet de comparer deux versions sur les résultats. */
-export const PROMPT_VERSION = "v5-2026-10-13";
+export const PROMPT_VERSION = "v6-2026-10-13";
 
 export interface LeadContext {
   company: {
@@ -14,6 +14,8 @@ export interface LeadContext {
     cms: string | null;
     isEcommerce: boolean | null;
     hasSsl: boolean | null;
+    hasViewport: boolean | null;
+    siteStatus: string | null;
     hasGoogleAds: boolean | null;
     hasGa4: boolean | null;
     hasMetaPixel: boolean | null;
@@ -57,7 +59,9 @@ export function scoringUser(c: LeadContext): string {
     `- Trafic organique mensuel : ${known(k.organicTraffic)}`,
     `- CMS : ${known(k.cms)}`,
     `- E-commerce : ${yesNo(k.isEcommerce)}`,
+    `- Site accessible : ${k.siteStatus === "unreachable" ? "non (injoignable à l'analyse)" : k.siteStatus === "ok" ? "oui" : "non mesuré"}`,
     `- SSL : ${yesNo(k.hasSsl)}`,
+    `- Adapté au mobile (balise viewport) : ${yesNo(k.hasViewport)}`,
     `- Publicité Google Ads détectée : ${yesNo(k.hasGoogleAds)}`,
     `- Google Analytics 4 : ${yesNo(k.hasGa4)}`,
     `- Pixel Meta : ${yesNo(k.hasMetaPixel)}`,

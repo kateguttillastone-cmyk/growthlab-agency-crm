@@ -147,6 +147,11 @@ export const companies = pgTable(
     hasMetaPixel: boolean("has_meta_pixel"),
     hasGoogleAds: boolean("has_google_ads"),
     hasSsl: boolean("has_ssl"),
+    /** Balise « viewport » trouvée à l'analyse du site (adapté au mobile). */
+    hasViewport: boolean("has_viewport"),
+    /** Résultat de la dernière analyse du site : ok | unreachable. Null = jamais analysé. */
+    siteStatus: text("site_status"),
+    siteCheckedAt: timestamp("site_checked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

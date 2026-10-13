@@ -2,6 +2,7 @@ import type { Role } from "@gac/shared";
 import type { AiClient } from "./ai/anthropic";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
+import type { SiteFetcher } from "./enrich/safe-fetch";
 import type { DnsResolver } from "./mail/address-check";
 import type { MailSender } from "./mail/brevo";
 import type { SourcingProvider } from "./sourcing/provider";
@@ -26,6 +27,8 @@ declare module "fastify" {
     sourcingProvider: SourcingProvider | null;
     /** Client IA (Anthropic) ; null tant que la clé n'est pas fournie. */
     aiClient: AiClient | null;
+    /** Analyse de la page d'accueil des prospects (protégée contre les accès au réseau interne). */
+    siteFetcher: SiteFetcher | null;
     /** preHandler : exige une session valide. */
     authenticate: (req: FastifyRequest) => Promise<void>;
     /** preHandler : exige une session valide ET au moins le rôle indiqué. */

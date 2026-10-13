@@ -214,3 +214,5 @@ erDiagram
 - Un lead peut être créé à la main (`source = « Saisie manuelle »`) avec les mêmes clés de déduplication que l'import.
 
 > Migration 0007 : `users.preferences` (jsonb, défaut `{}`) : thème et réduction des animations du compte. Ajout seul, compatible avec la version précédente.
+
+> Migration 0008 : `sourcing_runs`. Migration 0009 : `companies.has_viewport`, `site_status`, `site_checked_at` (analyse du site). Ajouts seuls.
