@@ -19,6 +19,7 @@ Schémas exacts : `packages/shared/src` (utilisés par l'API et l'interface).
 | Leads : vues enregistrées | 30 par page et par personne | `GET/POST /views`, `DELETE /views/:id` | L |
 | Leads : choisir un responsable | comptes actifs | `GET /users/options` | R |
 | Pipeline (Kanban) | 9 colonnes, effectifs, valeur, cartes, « voir plus » | `GET /pipeline`, `GET /pipeline/:étape` | L |
+| Mon profil : préférences | thème, réduire les animations, enregistrés sur le compte | `GET/PUT /auth/preferences` | L |
 | Pipeline : déplacer | une étape ne recule jamais par un statut d'appel ; le déplacement manuel est libre | `PATCH /leads/:id` `{ stage }` | A |
 | Appels | issue d'appel en un clic | `POST /leads/:id/call` | A |
 | E-mails : relecture | aperçu, modification, validation, rejet | `POST /emails/preview`, `PATCH /leads/:id/email` | R |

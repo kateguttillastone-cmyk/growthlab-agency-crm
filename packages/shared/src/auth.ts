@@ -31,3 +31,10 @@ export const sessionUserSchema = z.object({
   role: roleSchema,
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
+
+/** Préférences d'affichage d'un compte : suivent la personne d'un appareil à l'autre. */
+export const preferencesSchema = z.object({
+  theme: z.enum(["system", "light", "dark"]).optional(),
+  reducedMotion: z.boolean().optional(),
+});
+export type Preferences = z.infer<typeof preferencesSchema>;

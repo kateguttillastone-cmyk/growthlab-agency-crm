@@ -2,6 +2,7 @@ import { ROLE_LABELS, type Role } from "@gac/shared";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { usePreferencesSync } from "../lib/usePreferencesSync";
 import { Icon, type IconName } from "./Icon";
 import { ThemeMenu } from "./ThemeSwitch";
 
@@ -109,6 +110,7 @@ export function Layout() {
   const { user, logout, can } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  usePreferencesSync(!!user);
   const [moreOpen, setMoreOpen] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: le menu « Plus » se referme à chaque changement de page
   useEffect(() => setMoreOpen(false), [location.pathname]);
