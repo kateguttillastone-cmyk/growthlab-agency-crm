@@ -1,6 +1,7 @@
 import type { Role } from "@gac/shared";
 import { sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import type { AiClient } from "../src/ai/anthropic";
 import { buildApp } from "../src/app";
 import { type Config, loadConfig } from "../src/config";
 import { createDb } from "../src/db/client";
@@ -40,6 +41,7 @@ export async function createTestApp(
   dnsResolver?: DnsResolver,
   mailSender?: MailSender | null,
   sourcingProvider?: SourcingProvider | null,
+  aiClient?: AiClient | null,
 ): Promise<TestApp> {
   const config = loadConfig(testEnv(overrides));
   APP_ORIGIN = config.APP_ORIGIN; // les en-têtes Origin des tests suivent la configuration
@@ -50,6 +52,7 @@ export async function createTestApp(
     dnsResolver,
     mailSender: mailSender === undefined ? null : mailSender,
     sourcingProvider: sourcingProvider === undefined ? null : sourcingProvider,
+    aiClient: aiClient === undefined ? null : aiClient,
   });
   await app.ready();
   return {

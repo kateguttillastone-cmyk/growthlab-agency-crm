@@ -17,7 +17,12 @@ export function startSourcingScheduler(app: FastifyInstance): () => void {
     if (running) return;
     running = true;
     try {
-      await sourcingTick({ db: app.db, config: app.config, provider: app.sourcingProvider });
+      await sourcingTick({
+        db: app.db,
+        config: app.config,
+        provider: app.sourcingProvider,
+        ai: app.aiClient,
+      });
     } catch (err) {
       app.log.error({ err }, "erreur du cycle de sourcing");
     } finally {

@@ -107,6 +107,17 @@ const schema = z.object({
   /** Plafond de coût estimé par jour (en euros). */
   SOURCING_DAILY_BUDGET: z.coerce.number().min(0).max(1000).default(5),
 
+  /** IA (qualification et rédaction des e-mails). Sans clé, les fonctions IA sont indisponibles. */
+  ANTHROPIC_API_KEY: z
+    .string()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  ANTHROPIC_MODEL: z.string().default("claude-haiku-5-5"),
+  /** Plafond d'appels à l'IA par jour (qualifications et réécritures confondues). */
+  AI_DAILY_LIMIT: z.coerce.number().int().min(0).max(100000).default(300),
+  /** Qualifie et rédige automatiquement les prospects trouvés par une recherche de sourcing. */
+  SCORING_AUTO: bool.default(true),
+
   SWAGGER: bool.default(false),
 
   /** Premier administrateur, créé au démarrage s'il n'existe pas (jamais modifié ensuite). */

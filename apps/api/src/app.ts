@@ -6,6 +6,8 @@ import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import Fastify, { type FastifyInstance } from "fastify";
 import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import { type AiClient, anthropicClient } from "./ai/anthropic";
+import { aiRoutes } from "./ai/routes";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
 import { type DnsResolver, systemResolver } from "./mail/address-check";
@@ -43,6 +45,7 @@ export interface AppDeps {
   dnsResolver?: DnsResolver;
   mailSender?: MailSender | null;
   sourcingProvider?: SourcingProvider | null;
+  aiClient?: AiClient | null;
 }
 
 export async function buildApp({
@@ -51,6 +54,7 @@ export async function buildApp({
   dnsResolver,
   mailSender,
   sourcingProvider,
+  aiClient,
 }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
@@ -95,6 +99,15 @@ export async function buildApp({
   app.decorate(
     "sourcingProvider",
     sourcingProvider !== undefined ? sourcingProvider : createSourcingProvider(config),
+  );
+
+  app.decorate(
+    "aiClient",
+    aiClient !== undefined
+      ? aiClient
+      : config.ANTHROPIC_API_KEY
+        ? anthropicClient({ apiKey: config.ANTHROPIC_API_KEY, model: config.ANTHROPIC_MODEL })
+        : null,
   );
 
   registerErrorHandling(app);
@@ -146,6 +159,7 @@ export async function buildApp({
   await app.register(sendingPublicRoutes);
   await app.register(importsRoutes);
   await app.register(sourcingRoutes);
+  await app.register(aiRoutes);
 
   return app;
 }

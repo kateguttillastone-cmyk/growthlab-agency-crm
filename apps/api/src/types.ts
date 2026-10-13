@@ -1,4 +1,5 @@
 import type { Role } from "@gac/shared";
+import type { AiClient } from "./ai/anthropic";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
 import type { DnsResolver } from "./mail/address-check";
@@ -23,6 +24,8 @@ declare module "fastify" {
     mailSender: MailSender | null;
     /** Fournisseur de prospects (sourcing) ; null tant que le sourcing est désactivé ou sans jeton. */
     sourcingProvider: SourcingProvider | null;
+    /** Client IA (Anthropic) ; null tant que la clé n'est pas fournie. */
+    aiClient: AiClient | null;
     /** preHandler : exige une session valide. */
     authenticate: (req: FastifyRequest) => Promise<void>;
     /** preHandler : exige une session valide ET au moins le rôle indiqué. */

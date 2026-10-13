@@ -1,5 +1,7 @@
 import type { SourcingCriteria, SourcingEstimate } from "@gac/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { AiClient } from "../ai/anthropic";
+import { type AiDeps, scoreLead } from "../ai/service";
 import type { Config } from "../config";
 import type { Db } from "../db/client";
 import { companies, sourcingRuns } from "../db/schema";
@@ -67,7 +69,8 @@ export async function ingest(
   criteria: SourcingCriteria,
   items: FoundProspect[],
   actorId: string | null,
-): Promise<{ created: number; duplicates: number; rejected: number }> {
+): Promise<{ created: number; duplicates: number; rejected: number; createdIds: string[] }> {
+  const createdIds: string[] = [];
   let created = 0;
   let duplicates = 0;
   let rejected = 0;
@@ -83,7 +86,7 @@ export async function ingest(
       continue;
     }
     try {
-      await createLead(
+      const leadId = await createLead(
         db,
         {
           companyName: it.companyName,
@@ -111,19 +114,22 @@ export async function ingest(
         },
       );
       created++;
+      createdIds.push(leadId);
     } catch (e) {
       if (e instanceof AppError && e.statusCode === 409) duplicates++;
       else if (e instanceof AppError && e.statusCode === 400) rejected++;
       else throw e;
     }
   }
-  return { created, duplicates, rejected };
+  return { created, duplicates, rejected, createdIds };
 }
 
 export interface SourcingDeps {
   db: Db;
   config: Config;
   provider: SourcingProvider | null;
+  /** Si présent (et `SCORING_AUTO`), les prospects trouvés sont qualifiés et leur e-mail rédigé aussitôt. */
+  ai?: AiClient | null;
   now?: () => Date;
 }
 
@@ -133,7 +139,9 @@ export interface SourcingDeps {
  */
 export async function sourcingTick({
   db,
+  config,
   provider,
+  ai = null,
   now = () => new Date(),
 }: SourcingDeps): Promise<{ changed: number }> {
   if (!provider) return { changed: 0 };
@@ -188,7 +196,7 @@ export async function sourcingTick({
         await finish(db, run.id, "failed", { error: res.error.slice(0, 300) }, now());
         changed++;
       } else {
-        const counts = await ingest(
+        const { createdIds, ...counts } = await ingest(
           db,
           run.id,
           run.criteria as unknown as SourcingCriteria,
@@ -208,6 +216,7 @@ export async function sourcingTick({
           now(),
         );
         changed++;
+        if (ai && config.SCORING_AUTO) await scoreMany({ db, config, ai }, createdIds, run.createdBy);
       }
     } catch (e) {
       // erreur de lecture passagère : on réessaie au prochain cycle ; le délai maximal borne l'attente
@@ -235,4 +244,27 @@ export { finish as finishRun };
 
 function describeError(e: unknown): string {
   return (e instanceof Error ? e.message : "Erreur inconnue").slice(0, 300);
+}
+
+/** Qualifie les nouveaux prospects, trois à la fois. Une erreur sur un lead (quota, réponse invalide) n'arrête pas les autres. */
+export async function scoreMany(
+  deps: AiDeps,
+  ids: string[],
+  actorId: string | null,
+): Promise<{ scored: number; failed: number }> {
+  let scored = 0;
+  let failed = 0;
+  const queue = [...ids];
+  const worker = async () => {
+    for (let id = queue.shift(); id; id = queue.shift()) {
+      try {
+        await scoreLead(deps, id, actorId);
+        scored++;
+      } catch {
+        failed++;
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  return { scored, failed };
 }
