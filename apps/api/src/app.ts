@@ -28,6 +28,9 @@ import { usersRoutes } from "./modules/users/routes";
 import { registerAuth } from "./plugins/auth";
 import { registerErrorHandling } from "./plugins/errors";
 import { registerOriginCheck } from "./plugins/origin-check";
+import { createSourcingProvider } from "./sourcing";
+import type { SourcingProvider } from "./sourcing/provider";
+import { sourcingRoutes } from "./sourcing/routes";
 
 /** Remplace les jetons secrets d'une adresse (webhook, désinscription) par « ... ». */
 export function maskSecretPaths(url: string | undefined): string | undefined {
@@ -39,9 +42,16 @@ export interface AppDeps {
   db: Db;
   dnsResolver?: DnsResolver;
   mailSender?: MailSender | null;
+  sourcingProvider?: SourcingProvider | null;
 }
 
-export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({
+  config,
+  db,
+  dnsResolver,
+  mailSender,
+  sourcingProvider,
+}: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
     logger: {
@@ -80,6 +90,11 @@ export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps)
   app.decorate(
     "mailSender",
     mailSender !== undefined ? mailSender : config.BREVO_API_KEY ? brevoSender(config.BREVO_API_KEY) : null,
+  );
+
+  app.decorate(
+    "sourcingProvider",
+    sourcingProvider !== undefined ? sourcingProvider : createSourcingProvider(config),
   );
 
   registerErrorHandling(app);
@@ -130,6 +145,7 @@ export async function buildApp({ config, db, dnsResolver, mailSender }: AppDeps)
   await app.register(settingsRoutes);
   await app.register(sendingPublicRoutes);
   await app.register(importsRoutes);
+  await app.register(sourcingRoutes);
 
   return app;
 }
