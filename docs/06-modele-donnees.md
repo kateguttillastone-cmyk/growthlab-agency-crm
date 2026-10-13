@@ -212,3 +212,5 @@ erDiagram
 - `saved_views` : vues enregistrées (utilisateur, page, nom unique par utilisateur et page, critères en JSON).
 - `settings` : clé `mail_overrides` (réglages de l'e-mail et de l'envoi modifiés dans l'interface) et `sending_paused`.
 - Un lead peut être créé à la main (`source = « Saisie manuelle »`) avec les mêmes clés de déduplication que l'import.
+
+> Migration 0007 : `users.preferences` (jsonb, défaut `{}`) : thème et réduction des animations du compte. Ajout seul, compatible avec la version précédente.

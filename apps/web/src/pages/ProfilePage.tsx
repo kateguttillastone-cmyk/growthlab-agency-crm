@@ -4,6 +4,7 @@ import { ThemeSwitch } from "../components/ThemeSwitch";
 import { Button, Card, ErrorAlert, Field } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { savePreferences } from "../lib/preferences";
 import { readReducedMotion, setReducedMotion } from "../lib/theme";
 
 export function ProfilePage() {
@@ -61,6 +62,7 @@ export function ProfilePage() {
             onChange={(e) => {
               setReduced(e.target.checked);
               setReducedMotion(e.target.checked);
+              savePreferences({ reducedMotion: e.target.checked });
             }}
           />
           Réduire les animations (les déplacements deviennent de simples fondus)

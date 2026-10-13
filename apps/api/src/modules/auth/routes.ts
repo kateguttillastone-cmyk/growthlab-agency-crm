@@ -1,4 +1,4 @@
-import { changePasswordSchema, loginSchema, sessionUserSchema } from "@gac/shared";
+import { changePasswordSchema, loginSchema, preferencesSchema, sessionUserSchema } from "@gac/shared";
 import { and, eq, ne, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -154,6 +154,39 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         ip: req.ip,
       });
       return reply.status(204).send();
+    },
+  );
+
+  // Préférences d'affichage du compte (thème, animations) : lues au chargement, modifiées une clé à la fois.
+  r.get(
+    "/auth/preferences",
+    { preHandler: app.authenticate, schema: { response: { 200: preferencesSchema } } },
+    async (req) => {
+      const [row] = await db
+        .select({ preferences: users.preferences })
+        .from(users)
+        .where(eq(users.id, authOf(req).user.id))
+        .limit(1);
+      return preferencesSchema.parse(row?.preferences ?? {});
+    },
+  );
+
+  r.put(
+    "/auth/preferences",
+    {
+      preHandler: app.authenticate,
+      schema: { body: preferencesSchema, response: { 200: preferencesSchema } },
+    },
+    async (req) => {
+      const id = authOf(req).user.id;
+      const [row] = await db
+        .select({ preferences: users.preferences })
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
+      const next = { ...preferencesSchema.parse(row?.preferences ?? {}), ...req.body };
+      await db.update(users).set({ preferences: next }).where(eq(users.id, id));
+      return next;
     },
   );
 }

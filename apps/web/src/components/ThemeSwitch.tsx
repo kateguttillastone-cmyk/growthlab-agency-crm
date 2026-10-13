@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { savePreferences } from "../lib/preferences";
 import {
   CHANGE_EVENT,
   readPreference,
@@ -37,7 +38,10 @@ export function ThemeSwitch() {
           type="button"
           aria-pressed={pref === o.value}
           className="segment justify-center"
-          onClick={() => setPreference(o.value)}
+          onClick={() => {
+            setPreference(o.value);
+            savePreferences({ theme: o.value });
+          }}
         >
           <Icon name={o.icon} size={16} />
           {THEME_LABELS[o.value]}
@@ -98,6 +102,7 @@ export function ThemeMenu() {
               className="menu-item w-full border-0 bg-transparent text-left"
               onClick={() => {
                 setPreference(o.value);
+                savePreferences({ theme: o.value });
                 setOpen(false);
                 trigger.current?.focus();
               }}

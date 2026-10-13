@@ -41,6 +41,8 @@ export const users = pgTable(
     failedLoginCount: integer("failed_login_count").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Préférences d'affichage (thème, animations) : voir `preferencesSchema`. */
+    preferences: jsonb("preferences").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
