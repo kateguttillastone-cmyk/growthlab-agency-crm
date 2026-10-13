@@ -1,0 +1,42 @@
+=== mobile 390
+/              {"overflowPx":0,"smallTargets":12,"textUnder12px":16,"height":2594}
+/pipeline      {"overflowPx":0,"smallTargets":15,"textUnder12px":17,"height":3185}
+/leads         {"overflowPx":0,"smallTargets":5,"textUnder12px":86,"height":3957}
+/leads/new     {"overflowPx":0,"smallTargets":0,"textUnder12px":0,"height":1390}
+/sourcing      {"overflowPx":0,"smallTargets":1,"textUnder12px":7,"height":1429}
+/calls         {"overflowPx":0,"smallTargets":4,"textUnder12px":2,"height":1068}
+/emails        {"overflowPx":155,"smallTargets":3,"textUnder12px":20,"height":3124}
+/suppressions  {"overflowPx":0,"smallTargets":0,"textUnder12px":4,"height":1177}
+/settings      {"overflowPx":0,"smallTargets":0,"textUnder12px":0,"height":1386}
+/users         {"overflowPx":0,"smallTargets":4,"textUnder12px":0,"height":1270}
+/import        {"overflowPx":0,"smallTargets":3,"textUnder12px":1,"height":844}
+/audit         {"overflowPx":0,"smallTargets":0,"textUnder12px":35,"height":2279}
+/profile       {"overflowPx":0,"smallTargets":3,"textUnder12px":0,"height":898}
+=== tablette 820
+/              {"overflowPx":0,"smallTargets":13,"textUnder12px":20,"height":2328}
+/pipeline      {"overflowPx":1881,"smallTargets":26,"textUnder12px":41,"height":3043}
+/leads         {"overflowPx":0,"smallTargets":53,"textUnder12px":69,"height":2842}
+/leads/new     {"overflowPx":0,"smallTargets":1,"textUnder12px":4,"height":1180}
+/sourcing      {"overflowPx":0,"smallTargets":2,"textUnder12px":11,"height":1181}
+/calls         {"overflowPx":0,"smallTargets":5,"textUnder12px":6,"height":1180}
+/emails        {"overflowPx":43,"smallTargets":4,"textUnder12px":24,"height":2646}
+/suppressions  {"overflowPx":0,"smallTargets":1,"textUnder12px":8,"height":1180}
+/settings      {"overflowPx":0,"smallTargets":1,"textUnder12px":4,"height":1286}
+/users         {"overflowPx":0,"smallTargets":5,"textUnder12px":4,"height":1180}
+/import        {"overflowPx":0,"smallTargets":4,"textUnder12px":5,"height":1180}
+/audit         {"overflowPx":0,"smallTargets":1,"textUnder12px":40,"height":1587}
+/profile       {"overflowPx":0,"smallTargets":4,"textUnder12px":4,"height":1180}
+=== bureau 1440
+/              {"overflowPx":0,"smallTargets":13,"textUnder12px":20,"height":1296}
+/pipeline      {"overflowPx":1261,"smallTargets":26,"textUnder12px":41,"height":2967}
+/leads         {"overflowPx":0,"smallTargets":62,"textUnder12px":69,"height":2144}
+/leads/new     {"overflowPx":0,"smallTargets":1,"textUnder12px":4,"height":900}
+/sourcing      {"overflowPx":0,"smallTargets":2,"textUnder12px":11,"height":953}
+/calls         {"overflowPx":0,"smallTargets":5,"textUnder12px":6,"height":900}
+/emails        {"overflowPx":0,"smallTargets":4,"textUnder12px":24,"height":2130}
+/suppressions  {"overflowPx":0,"smallTargets":1,"textUnder12px":8,"height":900}
+/settings      {"overflowPx":0,"smallTargets":1,"textUnder12px":4,"height":1250}
+/users         {"overflowPx":0,"smallTargets":5,"textUnder12px":4,"height":977}
+/import        {"overflowPx":0,"smallTargets":4,"textUnder12px":5,"height":900}
+/audit         {"overflowPx":0,"smallTargets":1,"textUnder12px":41,"height":1622}
+/profile       {"overflowPx":0,"smallTargets":4,"textUnder12px":4,"height":900}
