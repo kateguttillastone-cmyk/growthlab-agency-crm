@@ -5,6 +5,7 @@ import { type AiDeps, scoreLead } from "../ai/service";
 import type { Config } from "../config";
 import type { Db } from "../db/client";
 import { companies, sourcingRuns } from "../db/schema";
+import type { SiteFetcher } from "../enrich/safe-fetch";
 import { normalizePhone } from "../import/normalize";
 import { createLead } from "../lib/create-lead";
 import { AppError } from "../lib/errors";
@@ -130,6 +131,7 @@ export interface SourcingDeps {
   provider: SourcingProvider | null;
   /** Si présent (et `SCORING_AUTO`), les prospects trouvés sont qualifiés et leur e-mail rédigé aussitôt. */
   ai?: AiClient | null;
+  fetchSite?: SiteFetcher | null;
   now?: () => Date;
 }
 
@@ -142,6 +144,7 @@ export async function sourcingTick({
   config,
   provider,
   ai = null,
+  fetchSite = null,
   now = () => new Date(),
 }: SourcingDeps): Promise<{ changed: number }> {
   if (!provider) return { changed: 0 };
@@ -216,7 +219,8 @@ export async function sourcingTick({
           now(),
         );
         changed++;
-        if (ai && config.SCORING_AUTO) await scoreMany({ db, config, ai }, createdIds, run.createdBy);
+        if (ai && config.SCORING_AUTO)
+          await scoreMany({ db, config, ai, fetchSite }, createdIds, run.createdBy);
       }
     } catch (e) {
       // erreur de lecture passagère : on réessaie au prochain cycle ; le délai maximal borne l'attente

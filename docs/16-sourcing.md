@@ -64,7 +64,21 @@ service, raison, objet, corps) : aucun texte libre à analyser, une réponse inv
 
 > Comme pour Apify, le format de l'API a été écrit d'après la documentation et testé avec un faux serveur ; **faire un premier essai sur 1 lead**.
 
-## À venir
+## Enrichissement du site (lot 5c)
 
-Enrichissement du site (technologies, SEO : acteurs Apify BuiltWith et Semrush de l'ancienne chaîne) : les champs existent déjà en base, ils
-sont aujourd'hui « non mesurés » pour les nouveaux prospects et l'IA en tient compte (en cas de doute : Google Ads).
+Avant de qualifier un prospect qui a un site, le CRM **analyse lui-même la page d'accueil** (aucun acteur payant) et enregistre : CMS
+(WordPress, Shopify, Wix, PrestaShop, WooCommerce…), e-commerce, certificat SSL (https valable ou non), balise mobile (*viewport*), Google
+Tag Manager, Google Analytics 4, pixel Meta, Google Ads. Un site injoignable est noté `unreachable` (information pour la qualification : le
+site est à refaire) ; une analyse de moins de 30 jours n'est pas refaite ; **une valeur déjà connue (import, saisie) n'est jamais écrasée**.
+Désactivable avec `ENRICH_SITES=false`.
+
+**Protection du serveur (SSRF)** : le CRM ne doit jamais pouvoir être poussé à interroger son propre réseau. L'adresse IP est contrôlée **au
+moment de la connexion** (donc à chaque redirection et contre le « DNS rebinding ») : boucle locale, réseaux privés, lien local (dont les
+métadonnées cloud 169.254.169.254) refusés ; http/https seulement ; pas d'identifiants dans l'adresse ; 3 redirections, 400 Ko, 6 secondes.
+
+> **Ce qui remplace BuiltWith et Semrush, et ce qui reste** : les signaux techniques ci-dessus remplacent BuiltWith sans abonnement ni
+> acteur à surveiller. Les **métriques SEO** (trafic organique, autorité de domaine, backlinks) venaient de Semrush : elles restent
+> « non mesurées » pour les nouveaux prospects, ce qui est sans conséquence (l'e-mail ne cite le trafic que s'il est non nul, et jamais
+> l'autorité ni les backlinks). Si le trafic organique redevient utile, il se rajoutera comme une troisième source.
+
+La qualification reçoit ces signaux (version de prompt `v6`).

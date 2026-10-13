@@ -6,6 +6,7 @@ import { buildApp } from "../src/app";
 import { type Config, loadConfig } from "../src/config";
 import { createDb } from "../src/db/client";
 import { users } from "../src/db/schema";
+import type { SiteFetcher } from "../src/enrich/safe-fetch";
 import { one } from "../src/lib/assert";
 import { hashPassword } from "../src/lib/password";
 import type { DnsResolver } from "../src/mail/address-check";
@@ -42,6 +43,7 @@ export async function createTestApp(
   mailSender?: MailSender | null,
   sourcingProvider?: SourcingProvider | null,
   aiClient?: AiClient | null,
+  siteFetcher?: SiteFetcher | null,
 ): Promise<TestApp> {
   const config = loadConfig(testEnv(overrides));
   APP_ORIGIN = config.APP_ORIGIN; // les en-têtes Origin des tests suivent la configuration
@@ -53,6 +55,7 @@ export async function createTestApp(
     mailSender: mailSender === undefined ? null : mailSender,
     sourcingProvider: sourcingProvider === undefined ? null : sourcingProvider,
     aiClient: aiClient === undefined ? null : aiClient,
+    siteFetcher: siteFetcher === undefined ? null : siteFetcher,
   });
   await app.ready();
   return {

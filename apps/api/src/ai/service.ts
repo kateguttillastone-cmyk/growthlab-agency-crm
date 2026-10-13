@@ -2,6 +2,8 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Config } from "../config";
 import type { Db } from "../db/client";
 import { companies, contacts, emailMessages, leadEvents, leads } from "../db/schema";
+import type { SiteFetcher } from "../enrich/safe-fetch";
+import { enrichCompany } from "../enrich/service";
 import { AppError, conflict } from "../lib/errors";
 import type { AiClient } from "./anthropic";
 import {
@@ -18,6 +20,8 @@ export interface AiDeps {
   db: Db;
   config: Config;
   ai: AiClient | null;
+  /** Analyse des sites avant la qualification (absent : pas d'analyse). */
+  fetchSite?: SiteFetcher | null;
 }
 
 /** Appels à l'IA comptés aujourd'hui (jour de Paris) : qualifications et réécritures, pour le plafond quotidien. */
@@ -82,6 +86,15 @@ export async function scoreLead(deps: AiDeps, leadId: string, actorId: string | 
   }
 
   const ai = await requireBudget(deps);
+  if (deps.fetchSite && deps.config.ENRICH_SITES) {
+    try {
+      await enrichCompany(db, deps.fetchSite, row.company.id);
+    } catch {
+      // l'analyse du site est un plus : sa panne ne bloque jamais la qualification
+    }
+  }
+  const [fresh] = await db.select().from(companies).where(eq(companies.id, row.company.id)).limit(1);
+  row.company = fresh ?? row.company;
   const ctx: LeadContext = {
     company: {
       name: row.company.name,
@@ -95,6 +108,8 @@ export async function scoreLead(deps: AiDeps, leadId: string, actorId: string | 
       cms: row.company.cms,
       isEcommerce: row.company.isEcommerce,
       hasSsl: row.company.hasSsl,
+      hasViewport: row.company.hasViewport,
+      siteStatus: row.company.siteStatus,
       hasGoogleAds: row.company.hasGoogleAds,
       hasGa4: row.company.hasGa4,
       hasMetaPixel: row.company.hasMetaPixel,

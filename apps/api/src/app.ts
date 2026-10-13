@@ -10,6 +10,7 @@ import { type AiClient, anthropicClient } from "./ai/anthropic";
 import { aiRoutes } from "./ai/routes";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
+import { type SiteFetcher, safeFetcher } from "./enrich/safe-fetch";
 import { type DnsResolver, systemResolver } from "./mail/address-check";
 import { brevoSender, type MailSender } from "./mail/brevo";
 import { auditRoutes } from "./modules/audit/routes";
@@ -46,6 +47,7 @@ export interface AppDeps {
   mailSender?: MailSender | null;
   sourcingProvider?: SourcingProvider | null;
   aiClient?: AiClient | null;
+  siteFetcher?: SiteFetcher | null;
 }
 
 export async function buildApp({
@@ -55,6 +57,7 @@ export async function buildApp({
   mailSender,
   sourcingProvider,
   aiClient,
+  siteFetcher,
 }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: config.TRUST_PROXY,
@@ -109,6 +112,8 @@ export async function buildApp({
         ? anthropicClient({ apiKey: config.ANTHROPIC_API_KEY, model: config.ANTHROPIC_MODEL })
         : null,
   );
+
+  app.decorate("siteFetcher", siteFetcher !== undefined ? siteFetcher : safeFetcher());
 
   registerErrorHandling(app);
 

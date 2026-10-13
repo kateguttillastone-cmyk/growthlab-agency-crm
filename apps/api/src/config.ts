@@ -117,6 +117,8 @@ const schema = z.object({
   AI_DAILY_LIMIT: z.coerce.number().int().min(0).max(100000).default(300),
   /** Qualifie et rédige automatiquement les prospects trouvés par une recherche de sourcing. */
   SCORING_AUTO: bool.default(true),
+  /** Analyse la page d'accueil des prospects avant de les qualifier (CMS, SSL, mobile, suivi publicitaire). */
+  ENRICH_SITES: bool.default(true),
 
   SWAGGER: bool.default(false),
 
