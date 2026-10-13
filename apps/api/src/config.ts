@@ -98,6 +98,11 @@ const schema = z.object({
     .or(z.literal("").transform(() => undefined)),
   /** Coût estimé par résultat (en euros) : sert à la simulation et au plafond, pas à la facturation réelle. */
   SOURCING_COST_PER_RESULT: z.coerce.number().min(0).max(10).default(0.02),
+  /** Acteurs Apify utilisés (modifiables sans toucher au code si un acteur est remplacé). */
+  APIFY_ACTOR_MAPS: z.string().default("compass~crawler-google-places"),
+  APIFY_ACTOR_LEADS: z.string().default("code_crafter~leads-finder"),
+  /** Apify facture en dollars : taux appliqué au coût réel affiché. */
+  SOURCING_USD_TO_EUR: z.coerce.number().positive().max(5).default(0.92),
   SOURCING_MAX_PER_RUN: z.coerce.number().int().min(1).max(500).default(100),
   /** Plafond de coût estimé par jour (en euros). */
   SOURCING_DAILY_BUDGET: z.coerce.number().min(0).max(1000).default(5),
