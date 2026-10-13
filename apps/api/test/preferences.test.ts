@@ -10,7 +10,12 @@ describe("préférences d'affichage du compte", () => {
   beforeEach(() => resetDb(t));
 
   const call = (method: "GET" | "PUT", cookie: string | undefined, payload?: object) =>
-    t.app.inject({ method, url: "/auth/preferences", headers: withOrigin(cookie), ...(payload ? { payload } : {}) });
+    t.app.inject({
+      method,
+      url: "/auth/preferences",
+      headers: withOrigin(cookie),
+      ...(payload ? { payload } : {}),
+    });
 
   it("exige d'être connecté", async () => {
     expect((await call("GET", undefined)).statusCode).toBe(401);
@@ -23,7 +28,10 @@ describe("préférences d'affichage du compte", () => {
     const cb = await login(t, b.email);
     expect((await call("GET", ca)).json()).toEqual({});
     expect((await call("PUT", ca, { theme: "dark" })).json()).toEqual({ theme: "dark" });
-    expect((await call("PUT", ca, { reducedMotion: true })).json()).toEqual({ theme: "dark", reducedMotion: true });
+    expect((await call("PUT", ca, { reducedMotion: true })).json()).toEqual({
+      theme: "dark",
+      reducedMotion: true,
+    });
     expect((await call("GET", ca)).json()).toEqual({ theme: "dark", reducedMotion: true });
     expect((await call("GET", cb)).json()).toEqual({});
   });
