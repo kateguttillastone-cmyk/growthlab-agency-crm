@@ -15,6 +15,7 @@ import {
 } from "@gac/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
+import { Icon } from "../components/Icon";
 import { Pager } from "../components/Pager";
 import { Button, Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
@@ -44,6 +45,7 @@ export function EmailsPage() {
   });
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [followOpen, setFollowOpen] = useState(false);
   const q = useDebounced(filters.q);
   const effective = { ...filters, q };
 
@@ -68,77 +70,82 @@ export function EmailsPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">E-mails à relire</h1>
-      <p className="mb-6 max-w-3xl text-sm text-ds-muted">
-        Relisez l'e-mail tel qu'il partira, corrigez-le si besoin, puis validez-le. Rien n'est envoyé depuis
-        cet écran. Une adresse exclue (rebond, désinscription) ne peut pas être validée.
-      </p>
-
-      <StatsCards stats={stats.data} />
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div role="tablist" aria-label="Etat des e-mails" className="flex gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={filters.tab === t.id}
-              onClick={() => change({ tab: t.id })}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                filters.tab === t.id
-                  ? "bg-ds-accent text-ds-accent-ink"
-                  : "border border-ds-line bg-ds-surface"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+      <header className="pagebar mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">E-mails à relire</h1>
+          <span className="pagebar-count" aria-live="polite">
+            {stats.data ? `${formatNumber(stats.data.toReview)} à relire` : "Chargement…"}
+          </span>
         </div>
-        <Filter label="Recherche">
-          {(id) => (
+        <div className="pagebar-state">
+          <SendStatusLine onDetail={() => setFollowOpen((o) => !o)} open={followOpen} />
+        </div>
+        <div className="pagebar-actions">
+          <Button
+            variant="secondary"
+            aria-expanded={followOpen}
+            aria-controls="emails-follow"
+            onClick={() => setFollowOpen((o) => !o)}
+          >
+            Suivi de l'envoi
+          </Button>
+        </div>
+        <div className="pagebar-filters">
+          <div className="tabs" role="tablist" aria-label="État des e-mails">
+            {TABS.map((t) => {
+              const n = tabCount(t.id, stats.data);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  className="tab"
+                  aria-selected={filters.tab === t.id}
+                  onClick={() => change({ tab: t.id })}
+                >
+                  {t.label}
+                  {n !== undefined && <span className="count">{formatNumber(n)}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="input-wrap u-w-240">
+            <Icon name="search" />
             <input
-              id={id}
               type="search"
+              className="input"
+              aria-label="Recherche"
+              placeholder="Entreprise, contact, objet…"
               value={filters.q}
               onChange={(e) => change({ q: e.target.value })}
-              className="select"
             />
-          )}
-        </Filter>
-        <Filter label="Qualification">
-          {(id) => (
-            <select
-              id={id}
-              value={filters.qualification}
-              onChange={(e) => change({ qualification: e.target.value })}
-              className="select"
-            >
-              <option value="">Toutes</option>
-              {QUALIFICATIONS.map((v) => (
-                <option key={v}>{v}</option>
+          </div>
+          <select
+            aria-label="Qualification"
+            value={filters.qualification}
+            onChange={(e) => change({ qualification: e.target.value })}
+            className={`select u-w-auto ${filters.qualification ? "is-set" : ""}`}
+          >
+            <option value="">Qualification</option>
+            {QUALIFICATIONS.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Version du prompt"
+            value={filters.promptVersion}
+            onChange={(e) => change({ promptVersion: e.target.value })}
+            className={`select u-w-auto ${filters.promptVersion ? "is-set" : ""}`}
+          >
+            <option value="">Version du prompt</option>
+            {(stats.data?.byPrompt ?? [])
+              .filter((p) => p.version !== "(inconnue)")
+              .map((p) => (
+                <option key={p.version}>{p.version}</option>
               ))}
-            </select>
-          )}
-        </Filter>
-        <Filter label="Version du prompt">
-          {(id) => (
-            <select
-              id={id}
-              value={filters.promptVersion}
-              onChange={(e) => change({ promptVersion: e.target.value })}
-              className="select"
-            >
-              <option value="">Toutes</option>
-              {(stats.data?.byPrompt ?? [])
-                .filter((p) => p.version !== "(inconnue)")
-                .map((p) => (
-                  <option key={p.version}>{p.version}</option>
-                ))}
-            </select>
-          )}
-        </Filter>
-      </div>
+          </select>
+        </div>
+      </header>
 
       <ErrorAlert message={queue.error ? errorMessage(queue.error) : null} />
 
@@ -204,48 +211,73 @@ export function EmailsPage() {
         </section>
       </div>
 
-      <SendPanel />
-
-      <AddressCheckPanel stats={stats.data} onDone={refresh} />
-
       {filters.tab === "review" && <BulkPanel filters={effective} onDone={refresh} />}
 
-      {stats.data && stats.data.byPrompt.length > 0 && <PromptTable stats={stats.data} />}
+      {followOpen && (
+        <div id="emails-follow" className="mt-4 flex flex-col gap-4">
+          <SendPanel />
+          <AddressCheckPanel stats={stats.data} onDone={refresh} />
+          {stats.data && stats.data.byPrompt.length > 0 && <PromptTable stats={stats.data} />}
+        </div>
+      )}
     </>
   );
 }
 
-function Filter({ label, children }: { label: string; children: (id: string) => React.ReactNode }) {
-  const id = useId();
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium">
-        {label}
-      </label>
-      {children(id)}
-    </div>
-  );
+function tabCount(tab: string, stats: EmailStats | undefined): number | undefined {
+  if (!stats) return undefined;
+  if (tab === "review") return stats.toReview;
+  if (tab === "validated") return stats.validatedNotSent;
+  if (tab === "rejected") return stats.rejected;
+  return undefined;
 }
 
-function StatsCards({ stats }: { stats: EmailStats | undefined }) {
-  const cards = [
-    ["À relire", stats?.toReview],
-    ["Sans adresse valable", stats?.toReviewNoRecipient],
-    ["Adresses à contrôler", stats?.addressUnchecked],
-    ["Adresses inutilisables", stats?.addressInvalid],
-    ["Validés, non envoyés", stats?.validatedNotSent],
-    ["Rejetés", stats?.rejected],
-    ["Envoyés", stats?.sent],
-  ] as const;
+/** Ligne d'état de l'envoi dans la barre de page : état, volume du jour, prochain créneau. */
+function SendStatusLine({ onDetail, open }: { onDetail: () => void; open: boolean }) {
+  const status = useQuery({
+    queryKey: ["emails", "send-status"],
+    queryFn: () => api<SendStatus>("/emails/send-status"),
+    refetchInterval: 60_000,
+  });
+  const s = status.data;
+  if (!s) return null;
+  const off = s.mode === "off";
+  const label = off ? "Envoi désactivé" : s.paused ? "Envoi en pause" : "Envoi actif";
+  const tone = off ? "statusline--off" : s.paused ? "statusline--paused" : "";
   return (
-    <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-      {cards.map(([label, n]) => (
-        <div key={label} className="card">
-          <dt className="text-xs text-ds-muted">{label}</dt>
-          <dd className="text-2xl font-extrabold">{formatNumber(n)}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className={`statusline ${tone}`} role="status" aria-label="État d'envoi">
+      <span className="statusline-dot" aria-hidden="true" />
+      {label}
+      {!off && (
+        <>
+          <span className="statusline-sep" aria-hidden="true">
+            ·
+          </span>
+          <span>
+            <b className="num">{s.sentToday}</b> / {s.dailyCap} aujourd'hui
+          </span>
+          {s.nextSlot && (
+            <>
+              <span className="statusline-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                prochain créneau{" "}
+                {new Date(s.nextSlot).toLocaleString("fr-FR", {
+                  weekday: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "Europe/Paris",
+                })}
+              </span>
+            </>
+          )}
+        </>
+      )}
+      <button type="button" className="btn btn--ghost btn--sm" aria-expanded={open} onClick={onDetail}>
+        Détail
+      </button>
+    </div>
   );
 }
 
