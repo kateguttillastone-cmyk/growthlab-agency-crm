@@ -154,7 +154,7 @@ export function PipelinePage() {
       {board.isPending && <Spinner />}
 
       {board.data && (
-        <div className="flex gap-3 md:overflow-x-auto md:pb-4">
+        <div className="relative flex gap-3 md:overflow-x-auto md:pb-4">
           {board.data.stages.map((col) => (
             <Column
               key={`${col.stage}:${fs}`}
