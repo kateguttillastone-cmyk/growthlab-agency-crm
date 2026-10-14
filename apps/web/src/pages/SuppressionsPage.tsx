@@ -62,7 +62,12 @@ export function SuppressionsPage() {
   const d = list.data;
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Adresses exclues</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Adresses exclues</h1>
+          {d && <span className="pagebar-count">{d.total.toLocaleString("fr-FR")} adresses</span>}
+        </div>
+      </header>
       <p className="mb-4 max-w-3xl text-sm text-ds-muted">
         Ces adresses ne reçoivent plus aucun e-mail : désinscriptions, rebonds, plaintes et exclusions
         manuelles. Une adresse exclue ne peut pas être retirée depuis l'application.

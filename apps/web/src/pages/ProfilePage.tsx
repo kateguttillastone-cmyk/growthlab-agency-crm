@@ -39,7 +39,11 @@ export function ProfilePage() {
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-extrabold">Mon profil</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Mon profil</h1>
+        </div>
+      </header>
       <Card>
         <dl className="grid max-w-md grid-cols-[8rem_1fr] gap-2 text-sm">
           <dt className="font-semibold">Nom</dt>
