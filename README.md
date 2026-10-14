@@ -107,7 +107,7 @@ MAIL_FROM_ADDRESS=kate@growthlab-agencycom.com
 
 Puis `docker compose up -d --force-recreate api`. Dans la page **E-mails**, ouvrir un e-mail validé (compte administrateur) et
 cliquer **« M'envoyer un test »** : un seul message part, vers votre adresse de test, objet préfixé `[TEST]`. `SEND_MODE` reste `off` :
-aucun envoi automatique en local. Procédure complète de mise en service : `docs/12-envoi-brevo.md`.
+aucun envoi automatique en local. Procédure complète de mise en service : `docs/12-envoi-brevo.md`. Formulaire « demande d'audit » du site : `docs/18-demandes-audit.md`.
 
 ## Importer l'ancienne base (une fois)
 

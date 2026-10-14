@@ -1,6 +1,8 @@
 import { ROLE_LABELS, type Role } from "@gac/shared";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { usePreferencesSync } from "../lib/usePreferencesSync";
 import { Icon, type IconName } from "./Icon";
@@ -32,6 +34,14 @@ const DESTINATIONS: Destination[] = [
   { to: "/sourcing", label: "Sourcing", icon: "sourcing", minRole: "MANAGER", group: "Prospection" },
   { to: "/calls", label: "Appels", icon: "phone", minRole: "AGENT", group: "Prospection" },
   { to: "/emails", label: "E-mails", icon: "mail", minRole: "MANAGER", group: "Prospection" },
+  {
+    to: "/audit-requests",
+    label: "Demandes d'audit",
+    short: "Audits",
+    icon: "inbox",
+    minRole: "AGENT",
+    group: "Prospection",
+  },
   { to: "/users", label: "Utilisateurs", icon: "users", minRole: "ADMIN", group: "Administration" },
   {
     to: "/suppressions",
@@ -75,10 +85,12 @@ function MoreSheet({
   items,
   onClose,
   onLogout,
+  pending,
 }: {
   items: Destination[];
   onClose: () => void;
   onLogout: () => void;
+  pending?: number | undefined;
 }) {
   const first = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
@@ -103,6 +115,7 @@ function MoreSheet({
           >
             <Icon name={d.icon} />
             {d.label}
+            {d.to === "/audit-requests" && !!pending && <span className="nav-badge">{pending}</span>}
           </NavLink>
         ))}
         <div className="sheet-item justify-between">
@@ -123,6 +136,13 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   usePreferencesSync(!!user);
+  // demandes d'audit à traiter : badge du menu
+  const pending = useQuery({
+    queryKey: ["audit-requests", "summary"],
+    queryFn: () => api<{ pending: number }>("/audit-requests/summary"),
+    enabled: !!user && can("AGENT"),
+    refetchInterval: 60_000,
+  }).data?.pending;
   const [moreOpen, setMoreOpen] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: le menu « Plus » se referme à chaque changement de page
   useEffect(() => setMoreOpen(false), [location.pathname]);
@@ -132,7 +152,7 @@ export function Layout() {
   const bottom = BOTTOM_BAR[user.role]
     .map((to) => visible.find((d) => d.to === to))
     .filter((d): d is Destination => !!d);
-  const adminPage = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
+  const adminPage = ADMIN_PATHS.some((p) => location.pathname === p || location.pathname.startsWith(`${p}/`));
   const more = visible.filter((d) => !bottom.includes(d));
   const doLogout = async () => {
     await logout();
@@ -168,6 +188,11 @@ export function Layout() {
                     <NavLink key={d.to} to={d.to} end={d.end} className="nav-item">
                       <Icon name={d.icon} />
                       {d.label}
+                      {d.to === "/audit-requests" && !!pending && (
+                        <span className="nav-badge" role="status" aria-label={`${pending} à traiter`}>
+                          {pending}
+                        </span>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -239,7 +264,9 @@ export function Layout() {
           </button>
         </nav>
       </div>
-      {moreOpen && <MoreSheet items={more} onClose={() => setMoreOpen(false)} onLogout={doLogout} />}
+      {moreOpen && (
+        <MoreSheet items={more} onClose={() => setMoreOpen(false)} onLogout={doLogout} pending={pending} />
+      )}
     </div>
   );
 }

@@ -23,6 +23,16 @@ const LABELS: Record<MailSettingKey, { label: string; hint?: string; kind: "text
     kind: "text",
   },
   windowMinutes: { label: "Durée d'un créneau (minutes)", kind: "number" },
+  auditAckSubject: {
+    label: "Accusé de réception d'une demande d'audit : objet",
+    hint: "{entreprise} et {site} sont remplacés par les réponses du visiteur.",
+    kind: "text",
+  },
+  auditAckBody: {
+    label: "Accusé de réception d'une demande d'audit : texte",
+    hint: "Paragraphes séparés par une ligne vide. Votre lien de rendez-vous et votre signature sont ajoutés automatiquement.",
+    kind: "area",
+  },
 };
 
 /** Réglages d'envoi modifiables sans redéploiement. La clé Brevo, l'adresse expéditrice et le mode restent sur le serveur. */

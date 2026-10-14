@@ -44,6 +44,7 @@ const PAGES = [
   "/settings",
   "/import",
   "/audit",
+  "/audit-requests",
   "/profile",
   "/leads/new",
 ];
