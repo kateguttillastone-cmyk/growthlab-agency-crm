@@ -122,3 +122,37 @@ progress::-moz-progress-bar {
     flex-wrap: wrap;
   }
 }
+
+/* Barres de défilement fines et discrètes (Windows affiche sinon de larges barres classiques) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gac-line-strong) transparent;
+}
+.sidebar * {
+  scrollbar-color: rgba(239, 235, 255, 0.25) transparent;
+}
+/* Les onglets défilent horizontalement sans afficher de barre verticale parasite */
+.tabs {
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Écrans peu hauts : barre latérale resserrée pour tenir sans défilement */
+@media (min-width: 768px) and (max-height: 900px) {
+  .sidebar {
+    gap: 10px;
+    padding-block: 12px;
+  }
+  .sidebar .nav-item {
+    height: 34px;
+  }
+  .sidebar .nav-title {
+    padding-top: 4px;
+  }
+  .sidebar .user-chip {
+    padding: 6px 10px;
+  }
+}

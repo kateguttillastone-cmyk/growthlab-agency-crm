@@ -150,28 +150,30 @@ export function Layout() {
       </a>
 
       <div className="hidden md:block md:w-(--gac-size-sidebar) md:shrink-0">
-        <nav className="sidebar sticky top-0 h-screen overflow-y-auto" aria-label="Navigation principale">
-          <div className="brand">
-            <span className="brand-mark">GAC</span>
-            <span className="flex flex-col">
-              <span className="brand-name">GAC Pilot</span>
-              <span className="brand-sub">GrowthLab Agency</span>
-            </span>
+        <nav className="sidebar sticky top-0 h-screen overflow-hidden" aria-label="Navigation principale">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
+            <div className="brand">
+              <span className="brand-mark">GAC</span>
+              <span className="flex flex-col">
+                <span className="brand-name">GAC Pilot</span>
+                <span className="brand-sub">GrowthLab Agency</span>
+              </span>
+            </div>
+            {groups
+              .filter((g) => g.items.length > 0)
+              .map((g) => (
+                <div key={g.title} className="nav-group">
+                  <span className="nav-title">{g.title}</span>
+                  {g.items.map((d) => (
+                    <NavLink key={d.to} to={d.to} end={d.end} className="nav-item">
+                      <Icon name={d.icon} />
+                      {d.label}
+                    </NavLink>
+                  ))}
+                </div>
+              ))}
           </div>
-          {groups
-            .filter((g) => g.items.length > 0)
-            .map((g) => (
-              <div key={g.title} className="nav-group">
-                <span className="nav-title">{g.title}</span>
-                {g.items.map((d) => (
-                  <NavLink key={d.to} to={d.to} end={d.end} className="nav-item">
-                    <Icon name={d.icon} />
-                    {d.label}
-                  </NavLink>
-                ))}
-              </div>
-            ))}
-          <div className="sidebar-foot">
+          <div className="sidebar-foot mt-0">
             <div className="sidebar-tools">
               <ThemeRadio />
               <button
