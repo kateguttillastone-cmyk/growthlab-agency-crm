@@ -12,6 +12,8 @@ export function registerOriginCheck(app: FastifyInstance): void {
   const allowed = new URL(app.config.APP_ORIGIN).origin;
   app.addHook("onRequest", async (req) => {
     if (SAFE_METHODS.has(req.method)) return;
+    // Formulaire du site : appelé depuis un autre domaine, sans cookie ; il a son propre contrôle d'origine.
+    if (req.url.startsWith("/public/")) return;
     const origin = req.headers.origin;
     if (origin && origin !== allowed) throw forbidden("Origine non autorisée");
     if (req.headers["sec-fetch-site"] === "cross-site") throw forbidden("Requête inter-sites refusée");

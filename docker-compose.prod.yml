@@ -74,6 +74,9 @@ services:
       BREVO_WEBHOOK_SECRET: ${BREVO_WEBHOOK_SECRET:-}
       UNSUBSCRIBE_SECRET: ${UNSUBSCRIBE_SECRET:-}
       SEND_TEST_RECIPIENT: ${SEND_TEST_RECIPIENT:-}
+      # Formulaire « demande d'audit » du site : origines autorisées (séparées par des virgules) et alerte interne
+      AUDIT_FORM_ORIGINS: ${AUDIT_FORM_ORIGINS:-}
+      AUDIT_NOTIFY_EMAIL: ${AUDIT_NOTIFY_EMAIL:-}
       SEND_DAILY_CAP: ${SEND_DAILY_CAP:-50}
       SOURCING_MODE: ${SOURCING_MODE:-off}
       APIFY_TOKEN: ${APIFY_TOKEN:-}

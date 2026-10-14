@@ -71,6 +71,13 @@
       "when": 1791897266528,
       "tag": "0009_site_analysis",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791996184829,
+      "tag": "0010_panoramic_mandroid",
+      "breakpoints": true
     }
   ]
 }

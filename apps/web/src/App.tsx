@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
 import { AuditPage } from "./pages/AuditPage";
+import { AuditRequestsPage } from "./pages/AuditRequestsPage";
 import { CallsPage } from "./pages/CallsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EmailsPage } from "./pages/EmailsPage";
@@ -62,6 +63,14 @@ export function App() {
           element={
             <RequireRole minimum="AGENT">
               <CallsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="audit-requests"
+          element={
+            <RequireRole minimum="AGENT">
+              <AuditRequestsPage />
             </RequireRole>
           }
         />

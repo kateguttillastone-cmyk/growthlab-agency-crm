@@ -17,6 +17,8 @@ const CONFIG_KEY: Record<MailSettingKey, keyof Config> = {
   intervalSeconds: "SEND_INTERVAL_SECONDS",
   slots: "SEND_SLOTS",
   windowMinutes: "SEND_WINDOW_MINUTES",
+  auditAckSubject: "MAIL_AUDIT_ACK_SUBJECT",
+  auditAckBody: "MAIL_AUDIT_ACK_BODY",
 };
 
 export async function readOverrides(db: Db): Promise<MailOverrides> {
@@ -66,6 +68,8 @@ export function describeSettings(config: Config, overrides: MailOverrides): Mail
     intervalSeconds: c.SEND_INTERVAL_SECONDS,
     slots: c.SEND_SLOTS,
     windowMinutes: c.SEND_WINDOW_MINUTES,
+    auditAckSubject: c.MAIL_AUDIT_ACK_SUBJECT,
+    auditAckBody: c.MAIL_AUDIT_ACK_BODY,
   });
   return {
     values: pick(effective),
