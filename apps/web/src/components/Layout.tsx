@@ -88,7 +88,7 @@ function MoreSheet({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="anim-scrim-in fixed inset-0 z-40 flex flex-col justify-end bg-ds-overlay md:hidden">
+    <div className="anim-scrim-in fixed inset-0 z-40 flex flex-col justify-end bg-ds-overlay lg:hidden">
       <button type="button" className="flex-1 cursor-default" aria-label="Fermer le menu" onClick={onClose} />
       <div className="sheet anim-sheet-in" role="dialog" aria-modal="true" aria-label="Plus">
         <div className="sheet-handle" />
@@ -144,12 +144,12 @@ export function Layout() {
   }));
 
   return (
-    <div className="min-h-screen md:flex">
+    <div className="min-h-screen lg:flex">
       <a href="#contenu" className="skip-link">
         Aller au contenu
       </a>
 
-      <div className="hidden md:block md:w-(--gac-size-sidebar) md:shrink-0">
+      <div className="hidden lg:block lg:w-(--gac-size-sidebar) lg:shrink-0">
         <nav className="sidebar sticky top-0 h-screen overflow-hidden" aria-label="Navigation principale">
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
             <div className="brand">
@@ -202,7 +202,7 @@ export function Layout() {
 
       <main
         id="contenu"
-        className={`min-w-0 flex-1 px-4 pb-28 pt-4 md:px-(--page-pad-x) md:py-(--page-pad-y) md:pb-(--page-pad-y) ${
+        className={`min-w-0 flex-1 px-4 pb-28 pt-4 lg:px-(--page-pad-x) lg:py-(--page-pad-y) lg:pb-(--page-pad-y) ${
           adminPage ? "density-admin" : "density-work"
         }`}
       >
@@ -211,7 +211,7 @@ export function Layout() {
         </div>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 lg:hidden">
         <nav
           className="bottombar"
           aria-label="Navigation principale"

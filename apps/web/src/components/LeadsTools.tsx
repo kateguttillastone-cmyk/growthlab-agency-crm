@@ -202,7 +202,7 @@ export function BulkBar({
   };
 
   return (
-    <section aria-label="Actions groupées" className="card sticky bottom-20 z-20 mb-4 shadow-lg md:bottom-4">
+    <section aria-label="Actions groupées" className="card sticky bottom-20 z-20 mb-4 shadow-lg lg:bottom-4">
       <h2 className="t-card mb-2">Actions groupées</h2>
       <fieldset className="mb-3 flex flex-wrap gap-4 border-0 p-0">
         <legend className="label mb-1">Appliquer à</legend>

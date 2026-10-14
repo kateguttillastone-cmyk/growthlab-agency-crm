@@ -183,7 +183,7 @@ export function EmailsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_1fr]">
         <section
-          className={`min-w-0 lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto ${selected ? "hidden lg:block" : ""}`}
+          className={`min-w-0 ${followOpen || bulkOpen ? "" : "lg:max-h-[calc(100dvh-17rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-13rem)]"} ${selected ? "hidden lg:block" : ""}`}
           aria-label="File de relecture"
         >
           {queue.isLoading ? (
