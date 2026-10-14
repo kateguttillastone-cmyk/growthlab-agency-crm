@@ -142,8 +142,8 @@ export function EmailsPage() {
 
       <ErrorAlert message={queue.error ? errorMessage(queue.error) : null} />
 
-      <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
-        <section aria-label="File de relecture">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_1fr]">
+        <section className="min-w-0" aria-label="File de relecture">
           {queue.isLoading ? (
             <Spinner />
           ) : items.length === 0 ? (
@@ -183,7 +183,7 @@ export function EmailsPage() {
           <Pager total={queue.data?.total ?? 0} offset={offset} pageSize={PAGE_SIZE} onChange={setOffset} />
         </section>
 
-        <section aria-label="Relecture">
+        <section className="min-w-0" aria-label="Relecture">
           {selected ? (
             <ReviewPanel
               key={selected}
