@@ -29,7 +29,7 @@ const DESTINATIONS: Destination[] = [
   },
   { to: "/pipeline", label: "Pipeline", icon: "pipeline", minRole: "VIEWER", group: "Pilotage" },
   { to: "/leads", label: "Leads", icon: "leads", minRole: "VIEWER", group: "Prospection" },
-  { to: "/sourcing", label: "Sourcing", icon: "search", minRole: "MANAGER", group: "Prospection" },
+  { to: "/sourcing", label: "Sourcing", icon: "sourcing", minRole: "MANAGER", group: "Prospection" },
   { to: "/calls", label: "Appels", icon: "phone", minRole: "AGENT", group: "Prospection" },
   { to: "/emails", label: "E-mails", icon: "mail", minRole: "MANAGER", group: "Prospection" },
   { to: "/users", label: "Utilisateurs", icon: "users", minRole: "ADMIN", group: "Administration" },
@@ -37,17 +37,17 @@ const DESTINATIONS: Destination[] = [
     to: "/suppressions",
     label: "Adresses exclues",
     short: "Exclues",
-    icon: "x-circle",
+    icon: "ban",
     minRole: "MANAGER",
     group: "Administration",
   },
-  { to: "/settings", label: "Réglages", icon: "list", minRole: "MANAGER", group: "Administration" },
+  { to: "/settings", label: "Réglages", icon: "settings", minRole: "MANAGER", group: "Administration" },
   { to: "/import", label: "Import", icon: "upload", minRole: "ADMIN", group: "Administration" },
   {
     to: "/audit",
     label: "Journal d'audit",
     short: "Audit",
-    icon: "list",
+    icon: "audit",
     minRole: "ADMIN",
     group: "Administration",
   },
@@ -137,7 +137,7 @@ export function Layout() {
         Aller au contenu
       </a>
 
-      <div className="hidden md:block md:w-(--size-sidebar) md:shrink-0">
+      <div className="hidden md:block md:w-(--gac-size-sidebar) md:shrink-0">
         <nav className="sidebar sticky top-0 h-screen overflow-y-auto" aria-label="Navigation principale">
           <div className="brand">
             <span className="brand-mark">GAC</span>
@@ -168,7 +168,7 @@ export function Layout() {
               <span className="avatar">{initials(user.name)}</span>
               <span className="flex min-w-0 flex-1 flex-col">
                 <b className="truncate text-sm">{user.name}</b>
-                <span className="text-xs text-(--color-sidebar-muted)">{ROLE_LABELS[user.role]}</span>
+                <span className="text-xs text-sidebar-muted">{ROLE_LABELS[user.role]}</span>
               </span>
               <button
                 type="button"

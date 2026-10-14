@@ -66,7 +66,7 @@ export function ErrorAlert({ message }: { message: string | null | undefined }) 
   if (!message) return null;
   return (
     <div role="alert" className="alert alert--critical mb-4">
-      <Icon name="x-circle" />
+      <Icon name="error" />
       <div>{message}</div>
     </div>
   );
