@@ -36,7 +36,14 @@ export function UsersPage() {
   const total = list.data?.total ?? 0;
   return (
     <>
-      <h1 className="mb-6 text-2xl font-extrabold">Utilisateurs</h1>
+      <header className="pagebar pagebar--compact mb-6">
+        <div className="pagebar-title">
+          <h1 className="t-page">Utilisateurs</h1>
+          <span className="pagebar-count">
+            {total} {total > 1 ? "comptes" : "compte"}
+          </span>
+        </div>
+      </header>
       <ErrorAlert message={error} />
       <CreateUserForm onCreated={refresh} />
       <Card title="Comptes">
@@ -84,9 +91,9 @@ export function UsersPage() {
                       <tr key={u.id} className="border-b border-ds-line align-middle">
                         <th scope="row" className="py-2 pr-4 font-semibold">
                           {u.name}{" "}
-                          {!u.active && (
-                            <span className="ml-1 text-xs text-ds-critical-ink">(désactivé)</span>
-                          )}
+                          <span className={`pill ml-1 ${u.active ? "pill--good" : "pill--neutral"}`}>
+                            {u.active ? "Actif" : "Désactivé"}
+                          </span>
                         </th>
                         <td className="py-2 pr-4">{u.email}</td>
                         <td className="py-2 pr-4">

@@ -9,6 +9,7 @@ import {
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Icon } from "../components/Icon";
 import { LeadDrawer } from "../components/LeadDrawer";
 import { useOwnerOptions } from "../components/LeadsTools";
 import { Button, ErrorAlert, Spinner } from "../components/ui";
@@ -31,10 +32,6 @@ export function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [movedId, setMovedId] = useState<string | null>(null);
-  const qualId = useId();
-  const ownerId = useId();
-  const searchId = useId();
-  const stageId = useId();
 
   const filter = new URLSearchParams();
   if (qualification) filter.set("qualification", qualification);
@@ -70,52 +67,54 @@ export function PipelinePage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Pipeline</h1>
-      <p className="mb-4 max-w-3xl text-sm text-ds-muted">
-        Les prospects par étape, du plus récemment modifié au plus ancien.
-        {board.data && board.data.unstaged > 0
-          ? ` ${board.data.unstaged.toLocaleString("fr-FR")} lead(s) sans étape ne sont pas affichés : classez-les depuis la liste.`
-          : ""}
-      </p>
-
-      <form className="mb-4 flex flex-wrap items-end gap-3" onSubmit={(e) => e.preventDefault()}>
-        <div className="field">
-          <label htmlFor={searchId} className="label">
-            Rechercher
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            className="input"
-            placeholder="Entreprise, site, e-mail…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      <header className="pagebar mb-3">
+        <div className="pagebar-title">
+          <h1 className="t-page">Pipeline</h1>
+          <span className="pagebar-count">
+            {board.data
+              ? `${board.data.stages.reduce((n, c) => n + c.count, 0).toLocaleString("fr-FR")} leads`
+              : "Chargement…"}
+          </span>
         </div>
-        <div className="field">
-          <label htmlFor={qualId} className="label">
-            Qualification
-          </label>
+        <div className="pagebar-state">
+          {board.data && board.data.unstaged > 0 && (
+            <span className="t-small text-ds-muted">
+              {board.data.unstaged.toLocaleString("fr-FR")} sans étape (à classer depuis Leads)
+            </span>
+          )}
+        </div>
+        <form className="pagebar-filters" onSubmit={(e) => e.preventDefault()}>
+          <div className="input-wrap u-w-240">
+            <Icon name="search" />
+            <input
+              type="search"
+              className="input"
+              aria-label="Rechercher"
+              placeholder="Entreprise, site, e-mail…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
           <select
-            id={qualId}
-            className="select"
+            aria-label="Qualification"
+            className={`select u-w-auto ${qualification ? "is-set" : ""}`}
             value={qualification}
             onChange={(e) => setQualification(e.target.value)}
           >
-            <option value="">Toutes</option>
+            <option value="">Qualification</option>
             {QUALIFICATIONS.map((v) => (
               <option key={v}>{v}</option>
             ))}
             <option value={NONE}>Non qualifié</option>
           </select>
-        </div>
-        {can("MANAGER") && (
-          <div className="field">
-            <label htmlFor={ownerId} className="label">
-              Responsable
-            </label>
-            <select id={ownerId} className="select" value={owner} onChange={(e) => setOwner(e.target.value)}>
-              <option value="">Tous</option>
+          {can("MANAGER") && (
+            <select
+              aria-label="Responsable"
+              className={`select u-w-auto ${owner ? "is-set" : ""}`}
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+            >
+              <option value="">Responsable</option>
               <option value={NONE}>Sans responsable</option>
               {(owners.data ?? []).map((o) => (
                 <option key={o.id} value={o.id}>
@@ -123,29 +122,22 @@ export function PipelinePage() {
                 </option>
               ))}
             </select>
-          </div>
-        )}
-        <div className="md:hidden">
-          <div className="field">
-            <label htmlFor={stageId} className="label">
-              Étape affichée
-            </label>
-            <select
-              id={stageId}
-              className="select"
-              value={active}
-              onChange={(e) => setActive(e.target.value as PipelineStage)}
-            >
-              {PIPELINE_STAGES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                  {board.data ? ` (${board.data.stages.find((x) => x.stage === s)?.count ?? 0})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </form>
+          )}
+          <select
+            aria-label="Étape affichée"
+            className="select u-w-auto md:hidden"
+            value={active}
+            onChange={(e) => setActive(e.target.value as PipelineStage)}
+          >
+            {PIPELINE_STAGES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+                {board.data ? ` (${board.data.stages.find((x) => x.stage === s)?.count ?? 0})` : ""}
+              </option>
+            ))}
+          </select>
+        </form>
+      </header>
 
       <p role="status" aria-live="polite" className="sr-only">
         {announce}
@@ -154,7 +146,7 @@ export function PipelinePage() {
       {board.isPending && <Spinner />}
 
       {board.data && (
-        <div className="relative flex gap-3 md:overflow-x-auto md:pb-4">
+        <div className="relative flex gap-3 md:h-[calc(100dvh-10.5rem)] md:overflow-x-auto md:pb-2">
           {board.data.stages.map((col) => (
             <Column
               key={`${col.stage}:${fs}`}
@@ -224,44 +216,49 @@ function Column({
   return (
     <section
       aria-label={`Étape ${col.stage}`}
-      className={`${visibleOnMobile ? "flex" : "hidden"} min-w-0 flex-1 flex-col gap-2 md:flex md:w-72 md:min-w-72 md:flex-none`}
+      className={`kcol kcol--scroll ${visibleOnMobile ? "flex" : "hidden"} min-w-0 flex-1 md:flex md:w-72 md:min-w-72 md:flex-none`}
     >
-      <header className="flex items-baseline justify-between gap-2 px-1">
+      <header className="kcol-head">
         <h2 className="t-card">{col.stage}</h2>
         <span className="t-small num text-ds-muted">
           {col.count.toLocaleString("fr-FR")}
           {col.value > 0 ? ` · ${euros(col.value)}` : ""}
         </span>
       </header>
-      {items.length === 0 && <p className="card t-small text-ds-muted">Aucun lead à cette étape.</p>}
-      <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {items.map((l) => (
-          <li key={l.id} className={`card flex flex-col gap-1 p-3 ${l.id === movedId ? "anim-settle" : ""}`}>
-            <button
-              type="button"
-              className="text-left font-semibold hover:underline"
-              onClick={() => onOpen(l.id)}
+      <div className="kcol-list">
+        {items.length === 0 && <p className="t-small text-ds-muted">Aucun lead à cette étape.</p>}
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {items.map((l) => (
+            <li
+              key={l.id}
+              className={`card flex flex-col gap-1 p-3 ${l.id === movedId ? "anim-settle" : ""}`}
             >
-              {l.company.name}
-            </button>
-            <span className="t-small text-ds-muted">
-              {[l.company.city, contactName(l.contact)].filter(Boolean).join(" · ") || "—"}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {l.qualification && <span className="pill pill--outline">{l.qualification}</span>}
-              {ownerName(l.ownerId) && <span className="pill pill--neutral">{ownerName(l.ownerId)}</span>}
-            </div>
-            {l.company.phone && <span className="t-small num">{displayPhone(l.company.phone)}</span>}
-            {canMove && <MoveSelect lead={l} current={col.stage} disabled={busy} onMove={onMove} />}
-          </li>
-        ))}
-      </ul>
-      <ErrorAlert message={error} />
-      {col.count > items.length && (
-        <Button variant="secondary" disabled={loading} onClick={more}>
-          Voir plus ({(col.count - items.length).toLocaleString("fr-FR")})
-        </Button>
-      )}
+              <button
+                type="button"
+                className="text-left font-semibold hover:underline"
+                onClick={() => onOpen(l.id)}
+              >
+                {l.company.name}
+              </button>
+              <span className="t-small text-ds-muted">
+                {[l.company.city, contactName(l.contact)].filter(Boolean).join(" · ") || "—"}
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {l.qualification && <span className="pill pill--outline">{l.qualification}</span>}
+                {ownerName(l.ownerId) && <span className="pill pill--neutral">{ownerName(l.ownerId)}</span>}
+              </div>
+              {l.company.phone && <span className="t-small num">{displayPhone(l.company.phone)}</span>}
+              {canMove && <MoveSelect lead={l} current={col.stage} disabled={busy} onMove={onMove} />}
+            </li>
+          ))}
+        </ul>
+        <ErrorAlert message={error} />
+        {col.count > items.length && (
+          <Button variant="secondary" disabled={loading} onClick={more}>
+            Voir plus ({(col.count - items.length).toLocaleString("fr-FR")})
+          </Button>
+        )}
+      </div>
     </section>
   );
 }
