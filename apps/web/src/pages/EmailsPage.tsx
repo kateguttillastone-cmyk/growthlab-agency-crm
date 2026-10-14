@@ -46,6 +46,7 @@ export function EmailsPage() {
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [followOpen, setFollowOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const q = useDebounced(filters.q);
   const effective = { ...filters, q };
 
@@ -96,6 +97,16 @@ export function EmailsPage() {
           <SendStatusLine onDetail={() => setFollowOpen((o) => !o)} open={followOpen} />
         </div>
         <div className="pagebar-actions">
+          {filters.tab === "review" && (
+            <Button
+              variant="secondary"
+              aria-expanded={bulkOpen}
+              aria-controls="emails-bulk"
+              onClick={() => setBulkOpen((o) => !o)}
+            >
+              Validation groupée
+            </Button>
+          )}
           <Button
             variant="secondary"
             aria-expanded={followOpen}
@@ -164,9 +175,15 @@ export function EmailsPage() {
 
       <ErrorAlert message={queue.error ? errorMessage(queue.error) : null} />
 
+      {bulkOpen && filters.tab === "review" && (
+        <div id="emails-bulk" className="mb-4">
+          <BulkPanel filters={effective} onDone={refresh} />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_1fr]">
         <section
-          className={`min-w-0 lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto ${selected ? "hidden lg:block" : ""}`}
+          className={`min-w-0 ${followOpen || bulkOpen ? "" : "lg:max-h-[calc(100dvh-17rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-13rem)]"} ${selected ? "hidden lg:block" : ""}`}
           aria-label="File de relecture"
         >
           {queue.isLoading ? (
@@ -238,8 +255,6 @@ export function EmailsPage() {
           )}
         </section>
       </div>
-
-      {filters.tab === "review" && <BulkPanel filters={effective} onDone={refresh} />}
 
       {followOpen && (
         <div id="emails-follow" className="mt-4 flex flex-col gap-4">
