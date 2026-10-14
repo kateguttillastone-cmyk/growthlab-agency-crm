@@ -14,7 +14,7 @@ import {
   type SendStatus,
 } from "@gac/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { Pager } from "../components/Pager";
 import { Button, Card, ErrorAlert, Spinner } from "../components/ui";
@@ -61,6 +61,21 @@ export function EmailsPage() {
     setOffset(0);
   };
   const items = queue.data?.items ?? [];
+  // Raccourcis J / K : e-mail suivant / précédent (hors champs de saisie).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      const k = e.key.toLowerCase();
+      if (k !== "j" && k !== "k") return;
+      const ids = items.map((i) => i.id);
+      if (ids.length === 0) return;
+      const at = selected ? ids.indexOf(selected) : -1;
+      const next = k === "j" ? Math.min(ids.length - 1, at + 1) : Math.max(0, at - 1);
+      setSelected(ids[next] ?? null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [items, selected]);
   const refresh = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["leads"] }),
@@ -149,8 +164,11 @@ export function EmailsPage() {
 
       <ErrorAlert message={queue.error ? errorMessage(queue.error) : null} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[22rem_1fr]">
-        <section className="min-w-0" aria-label="File de relecture">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_1fr]">
+        <section
+          className={`min-w-0 lg:max-h-[calc(100dvh-13rem)] lg:overflow-y-auto ${selected ? "hidden lg:block" : ""}`}
+          aria-label="File de relecture"
+        >
           {queue.isLoading ? (
             <Spinner />
           ) : items.length === 0 ? (
@@ -190,7 +208,17 @@ export function EmailsPage() {
           <Pager total={queue.data?.total ?? 0} offset={offset} pageSize={PAGE_SIZE} onChange={setOffset} />
         </section>
 
-        <section className="min-w-0" aria-label="Relecture">
+        <section className={`min-w-0 ${selected ? "" : "hidden lg:block"}`} aria-label="Relecture">
+          {selected && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm mb-2 lg:hidden"
+              onClick={() => setSelected(null)}
+            >
+              <Icon name="arrow-left" size={16} />
+              Retour à la liste
+            </button>
+          )}
           {selected ? (
             <ReviewPanel
               key={selected}
@@ -222,6 +250,37 @@ export function EmailsPage() {
       )}
     </>
   );
+}
+
+/** Vrai si la touche part d'un champ de saisie : les raccourcis ne doivent alors rien faire. */
+function isTyping(t: EventTarget | null): boolean {
+  const el = t as HTMLElement | null;
+  return (
+    !!el &&
+    (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)
+  );
+}
+
+/** Brouillon gardé sur cet appareil pour ne rien perdre si la page se recharge (effacé à l'enregistrement). */
+const draftKey = (id: string) => `gac-email-draft:${id}`;
+function readDraft(id: string, base: string | undefined): { subject: string; body: string } | null {
+  try {
+    const raw = localStorage.getItem(draftKey(id));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as { subject?: string; body?: string; base?: string };
+    if (d.base !== base || typeof d.subject !== "string" || typeof d.body !== "string") return null;
+    return { subject: d.subject, body: d.body };
+  } catch {
+    return null;
+  }
+}
+function writeDraft(id: string, base: string | undefined, subject: string, body: string | null) {
+  try {
+    if (body === null) localStorage.removeItem(draftKey(id));
+    else localStorage.setItem(draftKey(id), JSON.stringify({ subject, body, base }));
+  } catch {
+    // stockage indisponible : le brouillon n'est simplement pas gardé
+  }
 }
 
 function tabCount(tab: string, stats: EmailStats | undefined): number | undefined {
@@ -335,14 +394,27 @@ function ReviewPanel({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
 
   // Le brouillon repart de la version enregistrée chaque fois que le serveur en renvoie une nouvelle.
   const version = message?.updatedAt;
   // biome-ignore lint/correctness/useExhaustiveDependencies: seule une nouvelle version du serveur réinitialise le brouillon
   useEffect(() => {
-    setSubject(message?.subject ?? "");
-    setBody(message?.body ?? "");
+    const draft = readDraft(id, version);
+    setSubject(draft?.subject ?? message?.subject ?? "");
+    setBody(draft?.body ?? message?.body ?? "");
+    setRestored(!!draft);
   }, [version]);
+
+  // Brouillon : enregistré sur l'appareil dès qu'on modifie, retiré quand il rejoint la version du serveur.
+  const dSubjectDraft = useDebounced(subject, 600);
+  const dBodyDraft = useDebounced(body, 600);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par les seules saisies temporisées
+  useEffect(() => {
+    if (!message) return;
+    const changed = dSubjectDraft !== (message.subject ?? "") || dBodyDraft !== (message.body ?? "");
+    writeDraft(id, version, dSubjectDraft, changed ? dBodyDraft : null);
+  }, [dSubjectDraft, dBodyDraft]);
 
   const dSubject = useDebounced(subject);
   const dBody = useDebounced(body);
@@ -367,12 +439,35 @@ function ReviewPanel({
       }),
     onSuccess: async (data, input) => {
       setError(null);
+      writeDraft(id, version, "", null);
+      setRestored(false);
       qc.setQueryData(["lead", id], data);
       await onChanged();
       if (input.advance) onAdvance();
     },
     onError: (e) => setError(errorMessage(e)),
   });
+
+  // Raccourcis V valider · R rejeter · E modifier (hors champs de saisie) : les actions sont posées plus bas.
+  const shortcuts = useRef<{ validate: (() => void) | null; reject: (() => void) | null }>({
+    validate: null,
+    reject: null,
+  });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: les actions passent par la référence
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      const k = e.key.toLowerCase();
+      if (k === "v") shortcuts.current.validate?.();
+      else if (k === "r") shortcuts.current.reject?.();
+      else if (k === "e") {
+        e.preventDefault();
+        document.getElementById(subjectId)?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const aiStatus = useQuery({
     queryKey: ["ai", "status"],
@@ -488,6 +583,13 @@ function ReviewPanel({
             : null;
   const warnings = emailWarnings({ subject, body });
   const validation = lead.data.email?.validation;
+  shortcuts.current = {
+    validate:
+      sent || cannotValidate || save.isPending
+        ? null
+        : () => save.mutate({ validation: "Validé", advance: true }),
+    reject: sent || save.isPending ? null : () => save.mutate({ validation: "Rejeté", advance: true }),
+  };
 
   return (
     <div className="card">
@@ -501,6 +603,11 @@ function ReviewPanel({
       {info && (
         <p role="status" className="alert alert--good mb-4">
           {info}
+        </p>
+      )}
+      {restored && dirty && (
+        <p role="status" className="alert alert--info mb-4">
+          Brouillon retrouvé sur cet appareil : vos modifications n'étaient pas encore enregistrées.
         </p>
       )}
       {message.sendReserved && (
@@ -549,6 +656,11 @@ function ReviewPanel({
           validée.
         </p>
       )}
+      <p className="t-small mb-3 text-ds-muted">
+        Raccourcis : <kbd className="kbd">V</kbd> valider · <kbd className="kbd">R</kbd> rejeter ·{" "}
+        <kbd className="kbd">E</kbd> modifier · <kbd className="kbd">J</kbd> / <kbd className="kbd">K</kbd>{" "}
+        suivant / précédent
+      </p>
       <p className="mb-4 text-sm">
         État : <strong>{validation}</strong>
         {message.validatedAt && message.validatedBy

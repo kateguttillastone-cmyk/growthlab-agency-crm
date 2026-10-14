@@ -11,7 +11,7 @@ import { formatDate, formatNumber, QUALIFICATION_STYLE } from "../lib/leads";
 const ORDER = ["Chaud", "Tiède", "Froid", "Non qualifié"];
 
 export function DashboardPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const periodId = useId();
   const fromId = useId();
   const toId = useId();
@@ -98,28 +98,33 @@ export function DashboardPage() {
       {d && (
         <>
           <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <Kpi label="Leads" value={formatNumber(d.kpis.leads)} />
+            <Kpi to="/leads" label="Leads" value={formatNumber(d.kpis.leads)} />
             <Kpi
+              to="/leads"
               label="Qualifiés (chaud + tiède)"
               value={formatNumber(d.kpis.qualified)}
               hint={`${percent(d.kpis.qualified, d.kpis.leads)} des leads`}
             />
             <Kpi
+              to={can("MANAGER") ? "/emails" : undefined}
               label="E-mails validés"
               value={formatNumber(d.kpis.emailsValidated)}
               hint={`${formatNumber(d.kpis.emailsSent)} envoyés`}
             />
             <Kpi
+              to={can("AGENT") ? "/calls" : undefined}
               label="À appeler"
               value={formatNumber(d.kpis.toCall)}
               hint={`${formatNumber(d.kpis.appointments)} RDV programmés`}
             />
             <Kpi
+              to="/pipeline"
               label="Deals gagnés"
               value={formatNumber(d.kpis.won)}
               hint={d.kpis.wonValue ? euros(d.kpis.wonValue) : "aucune valeur saisie"}
             />
             <Kpi
+              to="/pipeline"
               label="En pipeline actif"
               value={formatNumber(d.kpis.activePipeline)}
               hint={`${percent(d.kpis.activePipeline, d.kpis.leads)} des leads · ${
@@ -169,13 +174,21 @@ export function DashboardPage() {
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-2xl bg-ds-surface p-4 shadow-sm">
+function Kpi({ label, value, hint, to }: { label: string; value: string; hint?: string; to?: string }) {
+  const body = (
+    <>
       <dt className="text-xs text-ds-muted">{label}</dt>
       <dd className="text-2xl font-extrabold">{value}</dd>
       {hint && <dd className="text-xs text-ds-muted">{hint}</dd>}
-    </div>
+    </>
+  );
+  // chiffre cliquable : ouvre l'écran qui le détaille
+  return to ? (
+    <Link to={to} className="block rounded-2xl bg-ds-surface p-4 shadow-sm hover:bg-ds-surface-2">
+      {body}
+    </Link>
+  ) : (
+    <div className="rounded-2xl bg-ds-surface p-4 shadow-sm">{body}</div>
   );
 }
 

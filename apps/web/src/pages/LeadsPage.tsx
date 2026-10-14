@@ -319,6 +319,7 @@ export function LeadsPage() {
 
       {bulkOpen && list.data && (
         <BulkBar
+          names={list.data.items.filter((l) => selected.includes(l.id)).map((l) => l.company.name)}
           ids={selected}
           filters={filters}
           total={list.data.total}
@@ -337,10 +338,25 @@ export function LeadsPage() {
           <>
             <ul aria-label="Prospects" className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
               {list.data.items.map((l) => (
-                <li key={`m-${l.id}`}>
+                <li key={`m-${l.id}`} className="flex items-stretch gap-2">
+                  {bulkOpen && (
+                    <label className="flex items-center px-1">
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5"
+                        aria-label={`Sélectionner ${l.company.name}`}
+                        checked={selected.includes(l.id)}
+                        onChange={(e) =>
+                          setSelected((cur) =>
+                            e.target.checked ? [...cur, l.id].slice(0, 500) : cur.filter((x) => x !== l.id),
+                          )
+                        }
+                      />
+                    </label>
+                  )}
                   <button
                     type="button"
-                    className="flex w-full flex-col gap-1 rounded-xl border border-ds-line p-3 text-left"
+                    className="flex min-w-0 flex-1 flex-col gap-1 rounded-xl border border-ds-line p-3 text-left"
                     onClick={() => openLead(l.id)}
                   >
                     <span className="font-semibold">{l.company.name}</span>

@@ -34,6 +34,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const detail = useQuery({
     queryKey: ["leads", "detail", id],
@@ -44,6 +45,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
     mutationFn: (patch: UpdateLeadInput) => api<LeadDetail>(`/leads/${id}`, { method: "PATCH", body: patch }),
     onSuccess: (updated) => {
       setError(null);
+      setSavedAt(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
       qc.setQueryData(["leads", "detail", id], updated);
       void qc.invalidateQueries({ queryKey: ["leads", "list"] });
       void qc.invalidateQueries({ queryKey: ["leads", "facets"] });
@@ -131,6 +133,13 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
         {detail.isPending && <Spinner />}
         {detail.isError && <ErrorAlert message={errorMessage(detail.error)} />}
         <ErrorAlert message={error} />
+        <p role="status" aria-live="polite" className="t-small text-ds-muted">
+          {save.isPending
+            ? "Enregistrement…"
+            : savedAt
+              ? `Enregistré à ${savedAt} (chaque champ s'enregistre seul)`
+              : ""}
+        </p>
         {scoreInfo && (
           <p role="status" className="alert alert--good mb-4">
             {scoreInfo}
