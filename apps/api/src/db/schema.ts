@@ -1,5 +1,7 @@
 import {
   ADDRESS_CHECKS,
+  AUDIT_ACK_STATUSES,
+  AUDIT_REQUEST_STATUSES,
   CALL_STATES,
   CALL_STATUSES,
   EMAIL_STATUSES,
@@ -103,6 +105,8 @@ export const validationStatus = pgEnum("validation_status", VALIDATION_STATUSES)
 export const emailStatus = pgEnum("email_status", EMAIL_STATUSES);
 export const addressCheck = pgEnum("address_check", ADDRESS_CHECKS);
 export const suppressionReason = pgEnum("suppression_reason", SUPPRESSION_REASONS);
+export const auditRequestStatus = pgEnum("audit_request_status", AUDIT_REQUEST_STATUSES);
+export const auditAckStatus = pgEnum("audit_ack_status", AUDIT_ACK_STATUSES);
 
 /**
  * Entreprise. Clé naturelle : le domaine du site ; à défaut (prospects sans site, issus de Google Maps), le nom
@@ -363,5 +367,43 @@ export const sourcingRuns = pgTable(
   (t) => [
     index("sourcing_runs_state_idx").on(t.state),
     index("sourcing_runs_created_idx").on(t.createdAt.desc()),
+  ],
+);
+
+/**
+ * Demandes d'audit gratuit reçues par le formulaire du site : des personnes qui ont demandé à être contactées. Elles
+ * restent séparées des leads de prospection (autre origine, autre base légale, autre délai de réponse) ; « Convertir »
+ * crée ou retrouve le lead correspondant.
+ */
+export const auditRequests = pgTable(
+  "audit_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    companyName: text("company_name").notNull(),
+    website: text("website").notNull(),
+    /** Adresse en minuscules : sert aussi à repérer les envois en double et les adresses exclues. */
+    email: text("email").notNull(),
+    phone: text("phone"),
+    subject: text("subject"),
+    message: text("message"),
+    /** Preuve du consentement : texte accepté et date. */
+    consentText: text("consent_text").notNull(),
+    consentAt: timestamp("consent_at", { withTimezone: true }).notNull().defaultNow(),
+    status: auditRequestStatus("status").notNull().default("Nouvelle"),
+    note: text("note"),
+    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
+    leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
+    ackStatus: auditAckStatus("ack_status").notNull().default("pending"),
+    ackSentAt: timestamp("ack_sent_at", { withTimezone: true }),
+    ackMessageId: text("ack_message_id"),
+    ackError: text("ack_error"),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("audit_requests_created_idx").on(t.createdAt.desc()),
+    index("audit_requests_status_idx").on(t.status),
+    index("audit_requests_email_idx").on(t.email),
   ],
 );

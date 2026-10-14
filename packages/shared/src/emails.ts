@@ -263,6 +263,9 @@ const mailSettingsFields = {
     .trim()
     .regex(SLOT_LIST, "Créneaux : jour@HH:MM séparés par des virgules (ex. mon@14:00,tue@09:00)"),
   windowMinutes: z.number().int().min(5).max(720),
+  /** Accusé de réception d'une demande d'audit du site : {entreprise} et {site} sont remplacés. */
+  auditAckSubject: z.string().trim().min(5).max(200),
+  auditAckBody: z.string().trim().min(40).max(3000),
 };
 
 export const MAIL_SETTING_KEYS = Object.keys(mailSettingsFields) as Array<keyof typeof mailSettingsFields>;
@@ -287,6 +290,8 @@ const mailValues = z.object({
   intervalSeconds: z.number(),
   slots: z.string(),
   windowMinutes: z.number(),
+  auditAckSubject: z.string(),
+  auditAckBody: z.string(),
 });
 
 export const mailSettingsSchema = z.object({

@@ -72,7 +72,7 @@ export async function createTestApp(
 /** Vide toutes les tables (la base de test est jetable). */
 export async function resetDb(t: TestApp): Promise<void> {
   await t.db.execute(
-    sql`truncate table sourcing_runs, settings, lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
+    sql`truncate table audit_requests, sourcing_runs, settings, lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
   );
 }
 

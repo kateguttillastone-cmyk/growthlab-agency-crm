@@ -43,6 +43,9 @@ services:
       APIFY_TOKEN: ${APIFY_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SEND_TEST_RECIPIENT: ${SEND_TEST_RECIPIENT:-}
+      # Formulaire « demande d'audit » du site : origines autorisées (séparées par des virgules) et alerte interne
+      AUDIT_FORM_ORIGINS: ${AUDIT_FORM_ORIGINS:-}
+      AUDIT_NOTIFY_EMAIL: ${AUDIT_NOTIFY_EMAIL:-}
       SWAGGER: "true"
       COOKIE_SECURE: "false"
       PORT: 3001

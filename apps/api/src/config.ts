@@ -56,6 +56,38 @@ const schema = z.object({
     "Si vous ne souhaitez plus recevoir de messages de ma part, répondez simplement « stop » : votre adresse sera retirée de nos listes.",
   ),
 
+  /** Accusé de réception d'une demande d'audit du site ({entreprise}, {site} remplacés ; vide = texte par défaut). */
+  MAIL_AUDIT_ACK_SUBJECT: optionalText("Votre demande d'audit gratuit est bien reçue : {entreprise}"),
+  MAIL_AUDIT_ACK_BODY: optionalText(
+    [
+      "Bonjour,",
+      "Merci d'avoir demandé un audit gratuit : nous avons bien reçu votre demande pour {entreprise} ({site}).",
+      "Voici la suite :\n1. nous analysons votre présence en ligne ;\n2. nous vous envoyons les résultats par e-mail, avec nos premières recommandations ;\n3. si vous le souhaitez, nous en parlons lors d'un court échange.",
+      "Une question d'ici là ? Répondez simplement à cet e-mail.",
+      "Cordialement,",
+    ].join("\n\n"),
+  ),
+
+  /** Sites autorisés à envoyer le formulaire d'audit (origines complètes, séparées par des virgules). Vide = formulaire fermé. */
+  AUDIT_FORM_ORIGINS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      (v ?? "")
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
+        .map((o) => new URL(o).origin),
+    ),
+  /** Adresse de l'équipe prévenue à chaque nouvelle demande d'audit (vide = pas d'alerte). */
+  AUDIT_NOTIFY_EMAIL: z
+    .string()
+    .email()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  /** Demandes d'audit acceptées par minute et par adresse IP. */
+  AUDIT_FORM_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(5),
+
   /** `off` : aucun envoi automatique (défaut). `prod` : envoi planifié aux prospects validés. */
   SEND_MODE: z.enum(["off", "prod"]).default("off"),
   /** Clé API Brevo (jamais journalisée ; à fournir par l'environnement du serveur uniquement). */

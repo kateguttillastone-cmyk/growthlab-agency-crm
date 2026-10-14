@@ -14,6 +14,7 @@ import { type SiteFetcher, safeFetcher } from "./enrich/safe-fetch";
 import { type DnsResolver, systemResolver } from "./mail/address-check";
 import { brevoSender, type MailSender } from "./mail/brevo";
 import { auditRoutes } from "./modules/audit/routes";
+import { auditRequestsRoutes } from "./modules/audit-requests/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { callsRoutes } from "./modules/calls/routes";
 import { dashboardRoutes } from "./modules/dashboard/routes";
@@ -152,6 +153,7 @@ export async function buildApp({
   await app.register(authRoutes);
   await app.register(usersRoutes);
   await app.register(auditRoutes);
+  await app.register(auditRequestsRoutes);
   await app.register(leadsRoutes);
   await app.register(leadsBulkRoutes);
   await app.register(pipelineRoutes);
