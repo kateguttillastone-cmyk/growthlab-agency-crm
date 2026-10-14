@@ -4,7 +4,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { usePreferencesSync } from "../lib/usePreferencesSync";
 import { Icon, type IconName } from "./Icon";
-import { ThemeMenu } from "./ThemeSwitch";
+import { ThemeRadio } from "./ThemeSwitch";
 
 interface Destination {
   to: string;
@@ -54,8 +54,15 @@ const DESTINATIONS: Destination[] = [
   { to: "/profile", label: "Mon profil", icon: "user", minRole: "VIEWER", group: "Compte" },
 ];
 
-/** Destinations de la barre inférieure (mobile) : les plus utiles du rôle, le reste passe par « Plus ». */
-const BOTTOM_BAR = ["/calls", "/leads", "/emails", "/"];
+/** Barre inférieure (mobile) selon le rôle : les 3-4 destinations du quotidien, le reste passe par « Plus ». */
+const BOTTOM_BAR: Record<Role, string[]> = {
+  ADMIN: ["/emails", "/leads", "/sourcing", "/"],
+  MANAGER: ["/emails", "/leads", "/sourcing", "/"],
+  AGENT: ["/calls", "/leads", "/pipeline", "/"],
+  VIEWER: ["/", "/leads", "/pipeline"],
+};
+/** Pages d'administration : densité aérée, largeur de lecture limitée. */
+const ADMIN_PATHS = ["/users", "/settings", "/audit", "/import", "/suppressions", "/profile"];
 const initials = (name: string) =>
   name
     .split(/\s+/)
@@ -98,6 +105,10 @@ function MoreSheet({
             {d.label}
           </NavLink>
         ))}
+        <div className="sheet-item justify-between">
+          <span className="sidebar-label text-ds-muted">Thème</span>
+          <ThemeRadio />
+        </div>
         <button type="button" className="sheet-item w-full text-ds-critical-ink" onClick={onLogout}>
           <Icon name="logout" />
           Se déconnecter
@@ -118,9 +129,10 @@ export function Layout() {
   if (!user) return null;
 
   const visible = DESTINATIONS.filter((d) => can(d.minRole));
-  const bottom = BOTTOM_BAR.map((to) => visible.find((d) => d.to === to)).filter(
-    (d): d is Destination => !!d,
-  );
+  const bottom = BOTTOM_BAR[user.role]
+    .map((to) => visible.find((d) => d.to === to))
+    .filter((d): d is Destination => !!d);
+  const adminPage = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
   const more = visible.filter((d) => !bottom.includes(d));
   const doLogout = async () => {
     await logout();
@@ -159,35 +171,42 @@ export function Layout() {
                 ))}
               </div>
             ))}
-          <div className="mt-auto flex flex-col gap-3">
-            <NavLink to="/profile" className="nav-item">
-              <Icon name="user" />
-              Mon profil
-            </NavLink>
-            <div className="user-chip">
+          <div className="sidebar-foot">
+            <div className="sidebar-tools">
+              <ThemeRadio />
+              <button
+                type="button"
+                className="bell"
+                aria-label="Notifications : aucune"
+                title="Notifications : aucune"
+              >
+                <Icon name="bell" />
+              </button>
+            </div>
+            <NavLink to="/profile" className="user-chip" title="Mon profil">
               <span className="avatar">{initials(user.name)}</span>
               <span className="flex min-w-0 flex-1 flex-col">
                 <b className="truncate text-sm">{user.name}</b>
                 <span className="text-xs text-sidebar-muted">{ROLE_LABELS[user.role]}</span>
               </span>
-              <button
-                type="button"
-                className="btn btn--ghost btn--icon btn--sm text-inherit"
-                onClick={doLogout}
-              >
-                <Icon name="logout" size={16} />
-                <span className="sr-only">Se déconnecter</span>
-              </button>
-            </div>
+            </NavLink>
+            <button type="button" className="nav-item border-0 bg-transparent" onClick={doLogout}>
+              <Icon name="logout" />
+              Se déconnecter
+            </button>
           </div>
         </nav>
       </div>
 
-      <main id="contenu" className="min-w-0 flex-1 px-4 pb-28 pt-4 md:p-8">
-        <div className="mb-2 flex justify-end">
-          <ThemeMenu />
+      <main
+        id="contenu"
+        className={`min-w-0 flex-1 px-4 pb-28 pt-4 md:px-(--page-pad-x) md:py-(--page-pad-y) md:pb-(--page-pad-y) ${
+          adminPage ? "density-admin" : "density-work"
+        }`}
+      >
+        <div className="mx-auto w-full max-w-(--content-max)">
+          <Outlet />
         </div>
-        <Outlet />
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-30 md:hidden">
