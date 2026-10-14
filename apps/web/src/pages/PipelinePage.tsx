@@ -32,6 +32,8 @@ export function PipelinePage() {
   const [error, setError] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [movedId, setMovedId] = useState<string | null>(null);
+  // Déplacement au clavier : carte « saisie » et colonne visée
+  const [grab, setGrab] = useState<{ id: string; from: PipelineStage; target: PipelineStage } | null>(null);
 
   const filter = new URLSearchParams();
   if (qualification) filter.set("qualification", qualification);
@@ -57,6 +59,34 @@ export function PipelinePage() {
     },
     onError: (e) => setError(errorMessage(e)),
   });
+
+  const grabKey = (lead: LeadSummary, from: PipelineStage, e: React.KeyboardEvent) => {
+    const stages = PIPELINE_STAGES as readonly PipelineStage[];
+    const cur = grab?.id === lead.id ? grab : null;
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      if (!cur) {
+        setGrab({ id: lead.id, from, target: from });
+        setAnnounce(
+          `${lead.company.name} saisi à l'étape « ${from} ». Flèches gauche et droite pour choisir l'étape, Entrée pour déposer, Échap pour annuler.`,
+        );
+      } else {
+        setGrab(null);
+        if (cur.target !== cur.from) move.mutate({ lead, stage: cur.target });
+        else setAnnounce("Déplacement annulé : même étape.");
+      }
+    } else if (cur && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      e.preventDefault();
+      const i = stages.indexOf(cur.target) + (e.key === "ArrowRight" ? 1 : -1);
+      const target = stages[Math.max(0, Math.min(stages.length - 1, i))] ?? cur.target;
+      setGrab({ ...cur, target });
+      setAnnounce(`Étape visée : « ${target} ».`);
+    } else if (cur && e.key === "Escape") {
+      e.preventDefault();
+      setGrab(null);
+      setAnnounce("Déplacement annulé.");
+    }
+  };
 
   const openLead = (id: string | null) => {
     const p = new URLSearchParams(params);
@@ -139,6 +169,11 @@ export function PipelinePage() {
         </form>
       </header>
 
+      <p className="t-small mb-2 hidden text-ds-muted md:block">
+        Au clavier : <kbd className="kbd">Espace</kbd> saisir une carte (poignée) ·{" "}
+        <kbd className="kbd">←</kbd> <kbd className="kbd">→</kbd> choisir l'étape ·{" "}
+        <kbd className="kbd">Entrée</kbd> déposer · <kbd className="kbd">Échap</kbd> annuler
+      </p>
       <p role="status" aria-live="polite" className="sr-only">
         {announce}
       </p>
@@ -146,7 +181,7 @@ export function PipelinePage() {
       {board.isPending && <Spinner />}
 
       {board.data && (
-        <div className="relative flex gap-3 md:h-[calc(100dvh-10.5rem)] md:overflow-x-auto md:pb-2">
+        <div className="relative flex gap-3 md:h-[calc(100dvh-12rem)] md:overflow-x-auto md:pb-2">
           {board.data.stages.map((col) => (
             <Column
               key={`${col.stage}:${fs}`}
@@ -156,6 +191,8 @@ export function PipelinePage() {
               canMove={can("AGENT")}
               busy={move.isPending}
               movedId={movedId}
+              grab={grab}
+              onGrabKey={grabKey}
               ownerName={(id) => (id ? (owners.data?.find((o) => o.id === id)?.name ?? null) : null)}
               onMove={(lead, stage) => move.mutate({ lead, stage })}
               onOpen={openLead}
@@ -176,6 +213,8 @@ function Column({
   canMove,
   busy,
   movedId,
+  grab,
+  onGrabKey,
   ownerName,
   onMove,
   onOpen,
@@ -186,6 +225,8 @@ function Column({
   canMove: boolean;
   busy: boolean;
   movedId: string | null;
+  grab: { id: string; from: PipelineStage; target: PipelineStage } | null;
+  onGrabKey: (lead: LeadSummary, from: PipelineStage, e: React.KeyboardEvent) => void;
   ownerName: (id: string | null) => string | null;
   onMove: (lead: LeadSummary, stage: PipelineStage) => void;
   onOpen: (id: string) => void;
@@ -216,7 +257,7 @@ function Column({
   return (
     <section
       aria-label={`Étape ${col.stage}`}
-      className={`kcol kcol--scroll ${visibleOnMobile ? "flex" : "hidden"} min-w-0 flex-1 md:flex md:w-72 md:min-w-72 md:flex-none`}
+      className={`kcol kcol--scroll ${grab?.target === col.stage && grab.from !== col.stage ? "is-target" : ""} ${visibleOnMobile ? "flex" : "hidden"} min-w-0 flex-1 md:flex md:w-72 md:min-w-72 md:flex-none`}
     >
       <header className="kcol-head">
         <h2 className="t-card">{col.stage}</h2>
@@ -233,13 +274,27 @@ function Column({
               key={l.id}
               className={`card flex flex-col gap-1 p-3 ${l.id === movedId ? "anim-settle" : ""}`}
             >
-              <button
-                type="button"
-                className="text-left font-semibold hover:underline"
-                onClick={() => onOpen(l.id)}
-              >
-                {l.company.name}
-              </button>
+              <div className="flex items-start justify-between gap-2">
+                <button
+                  type="button"
+                  className="text-left font-semibold hover:underline"
+                  onClick={() => onOpen(l.id)}
+                >
+                  {l.company.name}
+                </button>
+                {canMove && (
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--icon btn--sm hidden md:inline-flex"
+                    aria-pressed={grab?.id === l.id}
+                    aria-label={`Déplacer ${l.company.name} au clavier`}
+                    title="Espace pour saisir, flèches pour choisir l'étape, Entrée pour déposer"
+                    onKeyDown={(e) => onGrabKey(l, col.stage, e)}
+                  >
+                    <Icon name="grip" size={16} />
+                  </button>
+                )}
+              </div>
               <span className="t-small text-ds-muted">
                 {[l.company.city, contactName(l.contact)].filter(Boolean).join(" · ") || "—"}
               </span>

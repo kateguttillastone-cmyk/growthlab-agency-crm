@@ -128,12 +128,15 @@ const FIELD_LABEL: Record<SetField, string> = {
 
 /** Actions groupées sur les lignes cochées ou sur tout ce que sélectionne le filtre : simuler, puis confirmer. */
 export function BulkBar({
+  names = [],
   ids,
   filters,
   total,
   onDone,
   onClear,
 }: {
+  /** Entreprises cochées visibles sur la page (pour nommer les leads concernés). */
+  names?: string[];
   ids: string[];
   filters: LeadFilters;
   total: number;
@@ -199,7 +202,7 @@ export function BulkBar({
   };
 
   return (
-    <section aria-label="Actions groupées" className="card mb-4">
+    <section aria-label="Actions groupées" className="card sticky bottom-20 z-20 mb-4 shadow-lg md:bottom-4">
       <h2 className="t-card mb-2">Actions groupées</h2>
       <fieldset className="mb-3 flex flex-wrap gap-4 border-0 p-0">
         <legend className="label mb-1">Appliquer à</legend>
@@ -215,6 +218,13 @@ export function BulkBar({
             }}
           />
           Les {ids.length} ligne(s) cochée(s)
+          {names.length > 0 && (
+            <span className="t-small text-ds-muted">
+              {" "}
+              ({names.slice(0, 3).join(", ")}
+              {ids.length > 3 ? "…" : ""})
+            </span>
+          )}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -289,6 +299,12 @@ export function BulkBar({
           <p className="font-semibold">
             {sim.changed} lead(s) seraient modifiés, {sim.unchanged} déjà dans cet état (sur {sim.matched}).
           </p>
+          {scope === "ids" && names.length > 0 && (
+            <p className="t-small">
+              Concerne : {names.slice(0, 5).join(", ")}
+              {ids.length > 5 ? ` et ${ids.length - 5} autre(s)` : ""}.
+            </p>
+          )}
           {sim.changed > 0 && (
             <div>
               <Button disabled={busy} onClick={() => run(false)}>

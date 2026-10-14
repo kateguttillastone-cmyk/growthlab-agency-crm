@@ -62,7 +62,52 @@ export function UsersPage() {
         {list.isError && <ErrorAlert message={errorMessage(list.error)} />}
         {list.data && (
           <>
-            <div className="overflow-x-auto">
+            <ul aria-label="Comptes" className="m-0 flex list-none flex-col gap-3 p-0 md:hidden">
+              {list.data.items.map((u) => {
+                const self = u.id === me?.id;
+                return (
+                  <li key={`m-${u.id}`} className="flex flex-col gap-2 rounded-xl border border-ds-line p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <b>{u.name}</b>
+                      <span className={`pill ${u.active ? "pill--good" : "pill--neutral"}`}>
+                        {u.active ? "Actif" : "Désactivé"}
+                      </span>
+                    </div>
+                    <span className="t-small break-all text-ds-muted">{u.email}</span>
+                    <span className="t-small text-ds-muted">
+                      Dernière connexion :{" "}
+                      {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString("fr-FR") : "jamais"}
+                    </span>
+                    <select
+                      aria-label={`Rôle de ${u.name}`}
+                      className="select"
+                      value={u.role}
+                      disabled={self || patch.isPending}
+                      onChange={(e) => patch.mutate({ id: u.id, body: { role: e.target.value as Role } })}
+                    >
+                      {ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABELS[r]}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => setResetting(u)}>
+                        Réinitialiser le mot de passe
+                      </Button>
+                      <Button
+                        variant={u.active ? "danger" : "ghost"}
+                        disabled={self || patch.isPending}
+                        onClick={() => patch.mutate({ id: u.id, body: { active: !u.active } })}
+                      >
+                        {u.active ? "Désactiver" : "Réactiver"}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">Liste des comptes utilisateurs</caption>
                 <thead>
