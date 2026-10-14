@@ -1,42 +1,44 @@
 @import "tailwindcss";
-@import "./styles/gac-ds.css";
+@import "./gac-theme.css";
+@import "./gac-components.css" layer(components);
 
 /*
- * Couleurs, polices, espacements et ombres viennent du système de design (styles/gac-ds.css) : thème clair par défaut,
- * thème sombre par l'attribut data-theme="dark" sur <html> (voir lib/theme.ts). Les noms « ds-* » ci-dessous exposent
- * ces variables aux classes utilitaires (bg-ds-surface, text-ds-muted…) sans en dupliquer les valeurs.
+ * Couleurs, polices, espacements et ombres viennent du système de design livré à l'étape 3-4 (gac-theme.css : variables
+ * --gac-* clair/sombre et utilitaires Tailwind ; gac-components.css : classes btn, pill, card… dans la couche « components »,
+ * donc surchargeables par les utilitaires). Thème sombre par l'attribut data-theme="dark" sur <html> (voir lib/theme.ts et
+ * public/theme-init.js). Les noms « ds-* » ci-dessous sont des alias historiques des utilitaires du système (bg-ds-surface = bg-surface).
  */
 @theme inline {
-  --color-ds-bg: var(--color-bg);
-  --color-ds-surface: var(--color-surface);
-  --color-ds-surface-2: var(--color-surface-2);
-  --color-ds-overlay: var(--color-overlay);
-  --color-ds-ink: var(--color-ink);
-  --color-ds-muted: var(--color-muted);
-  --color-ds-line: var(--color-line);
-  --color-ds-line-strong: var(--color-line-strong);
-  --color-ds-accent: var(--color-accent);
-  --color-ds-accent-hover: var(--color-accent-hover);
-  --color-ds-accent-ink: var(--color-accent-ink);
-  --color-ds-accent-bg: var(--color-accent-bg);
-  --color-ds-good-ink: var(--color-good-ink);
-  --color-ds-good-bg: var(--color-good-bg);
-  --color-ds-critical: var(--color-critical);
-  --color-ds-critical-ink: var(--color-critical-ink);
-  --color-ds-critical-bg: var(--color-critical-bg);
-  --color-ds-warning-ink: var(--color-warning-ink);
-  --color-ds-warning-bg: var(--color-warning-bg);
-  --color-ds-info-ink: var(--color-info-ink);
-  --color-ds-info-bg: var(--color-info-bg);
-  --color-ds-slate-ink: var(--color-slate-ink);
-  --color-ds-slate-bg: var(--color-slate-bg);
+  --color-ds-bg: var(--gac-bg);
+  --color-ds-surface: var(--gac-surface);
+  --color-ds-surface-2: var(--gac-surface-2);
+  --color-ds-overlay: var(--gac-overlay);
+  --color-ds-ink: var(--gac-ink);
+  --color-ds-muted: var(--gac-muted);
+  --color-ds-line: var(--gac-line);
+  --color-ds-line-strong: var(--gac-line-strong);
+  --color-ds-accent: var(--gac-accent);
+  --color-ds-accent-hover: var(--gac-accent-hover);
+  --color-ds-accent-ink: var(--gac-accent-ink);
+  --color-ds-accent-bg: var(--gac-accent-bg);
+  --color-ds-good-ink: var(--gac-good-ink);
+  --color-ds-good-bg: var(--gac-good-bg);
+  --color-ds-critical: var(--gac-critical);
+  --color-ds-critical-ink: var(--gac-critical-ink);
+  --color-ds-critical-bg: var(--gac-critical-bg);
+  --color-ds-warning-ink: var(--gac-warning-ink);
+  --color-ds-warning-bg: var(--gac-warning-bg);
+  --color-ds-info-ink: var(--gac-info-ink);
+  --color-ds-info-bg: var(--gac-info-bg);
+  --color-ds-slate-ink: var(--gac-slate-ink);
+  --color-ds-slate-bg: var(--gac-slate-bg);
 }
 
 body {
   margin: 0;
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
+  background: var(--gac-bg);
+  color: var(--gac-ink);
+  font-family: var(--gac-font-sans);
 }
 
 /* Lien d'évitement : visible seulement au focus */
@@ -46,11 +48,11 @@ body {
   top: -64px;
   z-index: 60;
   padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-ink);
+  border-radius: var(--gac-radius-md);
+  background: var(--gac-surface);
+  color: var(--gac-ink);
   font-weight: 700;
-  box-shadow: var(--shadow-overlay);
+  box-shadow: var(--gac-shadow-overlay);
 }
 .skip-link:focus {
   top: 8px;
@@ -61,21 +63,21 @@ progress {
   appearance: none;
   display: block;
   height: 8px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-full);
-  background: var(--color-surface-2);
+  border: 1px solid var(--gac-line);
+  border-radius: var(--gac-radius-full);
+  background: var(--gac-surface-2);
   overflow: hidden;
 }
 progress::-webkit-progress-bar {
   background: transparent;
 }
 progress::-webkit-progress-value {
-  border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-soft));
+  border-radius: var(--gac-radius-full);
+  background: linear-gradient(90deg, var(--gac-accent), var(--gac-accent-soft));
 }
 progress::-moz-progress-bar {
-  border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-soft));
+  border-radius: var(--gac-radius-full);
+  background: linear-gradient(90deg, var(--gac-accent), var(--gac-accent-soft));
 }
 
 /* Sélecteur de thème dans la barre latérale (248 px) : libellés seuls, plus serrés */
@@ -86,4 +88,11 @@ progress::-moz-progress-bar {
 }
 .sidebar .segment svg.i {
   display: none;
+}
+
+/* Sélecteur de thème : boutons à bascule (aria-pressed) au même rendu que la maquette (aria-checked) */
+.theme-switch button[aria-pressed="true"] {
+  background: var(--gac-sidebar-active);
+  color: var(--gac-sun);
+  box-shadow: inset 0 0 0 1px rgba(239, 235, 255, 0.18);
 }
