@@ -43,6 +43,7 @@ export function SourcingPage() {
   const [estimate, setEstimate] = useState<SourcingEstimate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
 
   const status = useQuery({
     queryKey: ["sourcing", "status"],
@@ -109,15 +110,49 @@ export function SourcingPage() {
   const s = status.data;
   const off = s?.mode === "off";
   const notConfigured = s !== undefined && s.mode !== "off" && !s.configured;
+  const running = runs.data?.items.filter((r) => r.state === "queued" || r.state === "running").length ?? 0;
   const remaining = s ? Math.max(0, s.dailyBudget - s.spentToday) : null;
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Sourcing</h1>
-      <p className="mb-4 max-w-3xl text-sm text-ds-muted">
-        Trouver de nouveaux prospects à partir de critères. Les leads trouvés arrivent à l'étape « Nouveau »,
-        sans doublon, avec un numéro français. Une recherche coûte : on simule d'abord, puis on confirme.
-      </p>
+      <header className="pagebar mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Sourcing</h1>
+          <span className="pagebar-count">
+            {runs.data
+              ? `${runs.data.items.length} ${runs.data.items.length > 1 ? "recherches" : "recherche"}`
+              : "Chargement…"}
+          </span>
+        </div>
+        <div className="pagebar-state">
+          {s && !off && (
+            <div className="statusline" role="status" aria-label="Budget">
+              <span className="statusline-dot" aria-hidden="true" />
+              Budget du jour <b className="num">{euros(s.spentToday)}</b> / {euros(s.dailyBudget)}
+              {running > 0 && (
+                <>
+                  <span className="statusline-sep" aria-hidden="true">
+                    ·
+                  </span>
+                  <b className="num">{running}</b>{" "}
+                  {running > 1 ? "recherches en cours" : "recherche en cours"}
+                </>
+              )}
+              <span className="sr-only"> (reste {euros(remaining ?? 0)})</span>
+            </div>
+          )}
+        </div>
+        <div className="pagebar-actions">
+          <Button
+            aria-expanded={formOpen}
+            aria-controls="sourcing-form"
+            onClick={() => setFormOpen((o) => !o)}
+            variant={formOpen ? "secondary" : "primary"}
+          >
+            {formOpen ? "Masquer le formulaire" : "Nouvelle recherche"}
+          </Button>
+        </div>
+      </header>
 
       {off && (
         <p role="note" className="alert alert--info mb-4 max-w-3xl">
@@ -129,14 +164,9 @@ export function SourcingPage() {
           Le fournisseur de prospects n'est pas configuré (jeton manquant) : aucune recherche ne peut partir.
         </p>
       )}
-      {s && !off && (
-        <p className="mb-4 text-sm text-ds-muted">
-          Aujourd'hui : <strong className="num text-ds-ink">{euros(s.spentToday)}</strong> engagés sur{" "}
-          {euros(s.dailyBudget)} (reste {euros(remaining ?? 0)}).
-        </p>
-      )}
-
       <form
+        id="sourcing-form"
+        hidden={!formOpen}
         className="card mb-6 max-w-3xl"
         aria-label="Nouvelle recherche"
         onSubmit={(e) => {
@@ -145,7 +175,11 @@ export function SourcingPage() {
           simulate.mutate();
         }}
       >
-        <h2 className="t-card mb-3">Nouvelle recherche</h2>
+        <h2 className="t-card mb-1">Nouvelle recherche</h2>
+        <p className="mb-3 text-sm text-ds-muted">
+          Les leads trouvés arrivent à l'étape « Nouveau », sans doublon. Une recherche coûte : on simule
+          d'abord, puis on confirme.
+        </p>
         <ErrorAlert message={error} />
         {info && (
           <p role="status" className="alert alert--good mb-4">
