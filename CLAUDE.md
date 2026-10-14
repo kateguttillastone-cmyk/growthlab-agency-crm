@@ -7,6 +7,7 @@ référence fonctionnelle uniquement, ne pas la modifier. Vue d'ensemble : `READ
 ## Commandes
 
 - `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (depuis la racine).
+- Avant de fusionner un changement d'interface : `node scripts/audit-ui.mjs` (débordements, barres de défilement ; voir `docs/17-audit-interface.md`). `pnpm typecheck` ne couvre pas le front : lancer aussi `pnpm --filter @gac/web build`.
 - Tests de l'API : `DATABASE_URL=postgresql://gac:gac@localhost:5432/gac_test pnpm test` (base JETABLE dont le nom contient « test »).
 - Après un changement de `apps/api/src/db/schema.ts` : `pnpm db:generate` et commiter le SQL généré (la CI échoue sinon).
 - Ne jamais éditer une migration déjà fusionnée ; en ajouter une nouvelle.

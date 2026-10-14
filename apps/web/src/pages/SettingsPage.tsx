@@ -1,6 +1,7 @@
 import { MAIL_SETTING_KEYS, type MailSettingKey, type MailSettings } from "@gac/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { Icon } from "../components/Icon";
 import { Button, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -76,11 +77,17 @@ export function SettingsPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Réglages</h1>
-      <p className="mb-4 max-w-3xl text-sm text-ds-muted">
-        Texte des e-mails et cadence d'envoi.{" "}
-        {admin ? "Seuls les administrateurs modifient ces réglages." : "Vous les consultez en lecture seule."}
-      </p>
+      <header className="pagebar pagebar--compact mb-6">
+        <div className="pagebar-title">
+          <h1 className="t-page">Réglages</h1>
+        </div>
+        <div className="pagebar-state">
+          <span className="t-small text-ds-muted">
+            Texte des e-mails et cadence d'envoi.{" "}
+            {admin ? "Seuls les administrateurs les modifient." : "Lecture seule."}
+          </span>
+        </div>
+      </header>
 
       <section className="card mb-4 max-w-3xl" aria-label="Réglages gérés par le serveur">
         <h2 className="t-card mb-2">Gérés sur le serveur</h2>
@@ -160,10 +167,28 @@ export function SettingsPage() {
             </div>
           );
         })}
-        {admin && (
-          <Button type="submit" disabled={!dirty || save.isPending}>
-            Enregistrer
-          </Button>
+        {admin && dirty && (
+          <section className="savebar sticky bottom-4" aria-label="Modifications non enregistrées">
+            <Icon name="edit" />
+            <span className="savebar-count flex-1">
+              {Object.keys(body).length}{" "}
+              {Object.keys(body).length > 1
+                ? "modifications non enregistrées"
+                : "modification non enregistrée"}
+            </span>
+            <Button
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() =>
+                setForm(Object.fromEntries(MAIL_SETTING_KEYS.map((k) => [k, String(s.values[k])])))
+              }
+            >
+              Annuler les modifications
+            </Button>
+            <Button type="submit" disabled={save.isPending}>
+              Enregistrer
+            </Button>
+          </section>
         )}
       </form>
     </>

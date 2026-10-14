@@ -3,6 +3,7 @@ import { loadConfig } from "./config";
 import { createDb } from "./db/client";
 import { startSendScheduler } from "./modules/sending/scheduler";
 import { ensureSeedAdmin } from "./seed";
+import { startSourcingScheduler } from "./sourcing/scheduler";
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -11,7 +12,12 @@ async function main(): Promise<void> {
 
   await ensureSeedAdmin(db, config, app.log);
 
-  const stopScheduler = startSendScheduler(app);
+  const stopSendScheduler = startSendScheduler(app);
+  const stopSourcing = startSourcingScheduler(app);
+  const stopScheduler = () => {
+    stopSendScheduler();
+    stopSourcing();
+  };
 
   const stop = async (signal: string) => {
     app.log.info(`${signal} reçu, arrêt en cours`);

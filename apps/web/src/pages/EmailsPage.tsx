@@ -14,7 +14,8 @@ import {
   type SendStatus,
 } from "@gac/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Icon } from "../components/Icon";
 import { Pager } from "../components/Pager";
 import { Button, Card, ErrorAlert, Spinner } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
@@ -44,6 +45,8 @@ export function EmailsPage() {
   });
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [followOpen, setFollowOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const q = useDebounced(filters.q);
   const effective = { ...filters, q };
 
@@ -59,6 +62,21 @@ export function EmailsPage() {
     setOffset(0);
   };
   const items = queue.data?.items ?? [];
+  // Raccourcis J / K : e-mail suivant / précédent (hors champs de saisie).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      const k = e.key.toLowerCase();
+      if (k !== "j" && k !== "k") return;
+      const ids = items.map((i) => i.id);
+      if (ids.length === 0) return;
+      const at = selected ? ids.indexOf(selected) : -1;
+      const next = k === "j" ? Math.min(ids.length - 1, at + 1) : Math.max(0, at - 1);
+      setSelected(ids[next] ?? null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [items, selected]);
   const refresh = async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["leads"] }),
@@ -68,82 +86,106 @@ export function EmailsPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">E-mails à relire</h1>
-      <p className="mb-6 max-w-3xl text-sm text-ds-muted">
-        Relisez l'e-mail tel qu'il partira, corrigez-le si besoin, puis validez-le. Rien n'est envoyé depuis
-        cet écran. Une adresse exclue (rebond, désinscription) ne peut pas être validée.
-      </p>
-
-      <StatsCards stats={stats.data} />
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div role="tablist" aria-label="Etat des e-mails" className="flex gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={filters.tab === t.id}
-              onClick={() => change({ tab: t.id })}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold ${
-                filters.tab === t.id
-                  ? "bg-ds-accent text-ds-accent-ink"
-                  : "border border-ds-line bg-ds-surface"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+      <header className="pagebar mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">E-mails à relire</h1>
+          <span className="pagebar-count" aria-live="polite">
+            {stats.data ? `${formatNumber(stats.data.toReview)} à relire` : "Chargement…"}
+          </span>
         </div>
-        <Filter label="Recherche">
-          {(id) => (
+        <div className="pagebar-state">
+          <SendStatusLine onDetail={() => setFollowOpen((o) => !o)} open={followOpen} />
+        </div>
+        <div className="pagebar-actions">
+          {filters.tab === "review" && (
+            <Button
+              variant="secondary"
+              aria-expanded={bulkOpen}
+              aria-controls="emails-bulk"
+              onClick={() => setBulkOpen((o) => !o)}
+            >
+              Validation groupée
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            aria-expanded={followOpen}
+            aria-controls="emails-follow"
+            onClick={() => setFollowOpen((o) => !o)}
+          >
+            Suivi de l'envoi
+          </Button>
+        </div>
+        <div className="pagebar-filters">
+          <div className="tabs" role="tablist" aria-label="État des e-mails">
+            {TABS.map((t) => {
+              const n = tabCount(t.id, stats.data);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  className="tab"
+                  aria-selected={filters.tab === t.id}
+                  onClick={() => change({ tab: t.id })}
+                >
+                  {t.label}
+                  {n !== undefined && <span className="count">{formatNumber(n)}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="input-wrap u-w-240">
+            <Icon name="search" />
             <input
-              id={id}
               type="search"
+              className="input"
+              aria-label="Recherche"
+              placeholder="Entreprise, contact, objet…"
               value={filters.q}
               onChange={(e) => change({ q: e.target.value })}
-              className="select"
             />
-          )}
-        </Filter>
-        <Filter label="Qualification">
-          {(id) => (
-            <select
-              id={id}
-              value={filters.qualification}
-              onChange={(e) => change({ qualification: e.target.value })}
-              className="select"
-            >
-              <option value="">Toutes</option>
-              {QUALIFICATIONS.map((v) => (
-                <option key={v}>{v}</option>
+          </div>
+          <select
+            aria-label="Qualification"
+            value={filters.qualification}
+            onChange={(e) => change({ qualification: e.target.value })}
+            className={`select u-w-auto ${filters.qualification ? "is-set" : ""}`}
+          >
+            <option value="">Qualification</option>
+            {QUALIFICATIONS.map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Version du prompt"
+            value={filters.promptVersion}
+            onChange={(e) => change({ promptVersion: e.target.value })}
+            className={`select u-w-auto ${filters.promptVersion ? "is-set" : ""}`}
+          >
+            <option value="">Version du prompt</option>
+            {(stats.data?.byPrompt ?? [])
+              .filter((p) => p.version !== "(inconnue)")
+              .map((p) => (
+                <option key={p.version}>{p.version}</option>
               ))}
-            </select>
-          )}
-        </Filter>
-        <Filter label="Version du prompt">
-          {(id) => (
-            <select
-              id={id}
-              value={filters.promptVersion}
-              onChange={(e) => change({ promptVersion: e.target.value })}
-              className="select"
-            >
-              <option value="">Toutes</option>
-              {(stats.data?.byPrompt ?? [])
-                .filter((p) => p.version !== "(inconnue)")
-                .map((p) => (
-                  <option key={p.version}>{p.version}</option>
-                ))}
-            </select>
-          )}
-        </Filter>
-      </div>
+          </select>
+        </div>
+      </header>
 
       <ErrorAlert message={queue.error ? errorMessage(queue.error) : null} />
 
-      <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
-        <section aria-label="File de relecture">
+      {bulkOpen && filters.tab === "review" && (
+        <div id="emails-bulk" className="mb-4">
+          <BulkPanel filters={effective} onDone={refresh} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_1fr]">
+        <section
+          className={`min-w-0 ${followOpen || bulkOpen ? "" : "lg:max-h-[calc(100dvh-17rem)] lg:overflow-y-auto xl:max-h-[calc(100dvh-13rem)]"} ${selected ? "hidden lg:block" : ""}`}
+          aria-label="File de relecture"
+        >
           {queue.isLoading ? (
             <Spinner />
           ) : items.length === 0 ? (
@@ -183,7 +225,17 @@ export function EmailsPage() {
           <Pager total={queue.data?.total ?? 0} offset={offset} pageSize={PAGE_SIZE} onChange={setOffset} />
         </section>
 
-        <section aria-label="Relecture">
+        <section className={`min-w-0 ${selected ? "" : "hidden lg:block"}`} aria-label="Relecture">
+          {selected && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm mb-2 lg:hidden"
+              onClick={() => setSelected(null)}
+            >
+              <Icon name="arrow-left" size={16} />
+              Retour à la liste
+            </button>
+          )}
           {selected ? (
             <ReviewPanel
               key={selected}
@@ -204,48 +256,102 @@ export function EmailsPage() {
         </section>
       </div>
 
-      <SendPanel />
-
-      <AddressCheckPanel stats={stats.data} onDone={refresh} />
-
-      {filters.tab === "review" && <BulkPanel filters={effective} onDone={refresh} />}
-
-      {stats.data && stats.data.byPrompt.length > 0 && <PromptTable stats={stats.data} />}
+      {followOpen && (
+        <div id="emails-follow" className="mt-4 flex flex-col gap-4">
+          <SendPanel />
+          <AddressCheckPanel stats={stats.data} onDone={refresh} />
+          {stats.data && stats.data.byPrompt.length > 0 && <PromptTable stats={stats.data} />}
+        </div>
+      )}
     </>
   );
 }
 
-function Filter({ label, children }: { label: string; children: (id: string) => React.ReactNode }) {
-  const id = useId();
+/** Vrai si la touche part d'un champ de saisie : les raccourcis ne doivent alors rien faire. */
+function isTyping(t: EventTarget | null): boolean {
+  const el = t as HTMLElement | null;
   return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium">
-        {label}
-      </label>
-      {children(id)}
-    </div>
+    !!el &&
+    (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)
   );
 }
 
-function StatsCards({ stats }: { stats: EmailStats | undefined }) {
-  const cards = [
-    ["À relire", stats?.toReview],
-    ["Sans adresse valable", stats?.toReviewNoRecipient],
-    ["Adresses à contrôler", stats?.addressUnchecked],
-    ["Adresses inutilisables", stats?.addressInvalid],
-    ["Validés, non envoyés", stats?.validatedNotSent],
-    ["Rejetés", stats?.rejected],
-    ["Envoyés", stats?.sent],
-  ] as const;
+/** Brouillon gardé sur cet appareil pour ne rien perdre si la page se recharge (effacé à l'enregistrement). */
+const draftKey = (id: string) => `gac-email-draft:${id}`;
+function readDraft(id: string, base: string | undefined): { subject: string; body: string } | null {
+  try {
+    const raw = localStorage.getItem(draftKey(id));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as { subject?: string; body?: string; base?: string };
+    if (d.base !== base || typeof d.subject !== "string" || typeof d.body !== "string") return null;
+    return { subject: d.subject, body: d.body };
+  } catch {
+    return null;
+  }
+}
+function writeDraft(id: string, base: string | undefined, subject: string, body: string | null) {
+  try {
+    if (body === null) localStorage.removeItem(draftKey(id));
+    else localStorage.setItem(draftKey(id), JSON.stringify({ subject, body, base }));
+  } catch {
+    // stockage indisponible : le brouillon n'est simplement pas gardé
+  }
+}
+
+function tabCount(tab: string, stats: EmailStats | undefined): number | undefined {
+  if (!stats) return undefined;
+  if (tab === "review") return stats.toReview;
+  if (tab === "validated") return stats.validatedNotSent;
+  if (tab === "rejected") return stats.rejected;
+  return undefined;
+}
+
+/** Ligne d'état de l'envoi dans la barre de page : état, volume du jour, prochain créneau. */
+function SendStatusLine({ onDetail, open }: { onDetail: () => void; open: boolean }) {
+  const status = useQuery({
+    queryKey: ["emails", "send-status"],
+    queryFn: () => api<SendStatus>("/emails/send-status"),
+    refetchInterval: 60_000,
+  });
+  const s = status.data;
+  if (!s) return null;
+  const off = s.mode === "off";
+  const label = off ? "Envoi désactivé" : s.paused ? "Envoi en pause" : "Envoi actif";
+  const tone = off ? "statusline--off" : s.paused ? "statusline--paused" : "";
   return (
-    <dl className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-      {cards.map(([label, n]) => (
-        <div key={label} className="card">
-          <dt className="text-xs text-ds-muted">{label}</dt>
-          <dd className="text-2xl font-extrabold">{formatNumber(n)}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className={`statusline ${tone}`} role="status" aria-label="État d'envoi">
+      <span className="statusline-dot" aria-hidden="true" />
+      {label}
+      {!off && (
+        <>
+          <span className="statusline-sep" aria-hidden="true">
+            ·
+          </span>
+          <span>
+            <b className="num">{s.sentToday}</b> / {s.dailyCap} aujourd'hui
+          </span>
+          {s.nextSlot && (
+            <>
+              <span className="statusline-sep" aria-hidden="true">
+                ·
+              </span>
+              <span>
+                prochain créneau{" "}
+                {new Date(s.nextSlot).toLocaleString("fr-FR", {
+                  weekday: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: "Europe/Paris",
+                })}
+              </span>
+            </>
+          )}
+        </>
+      )}
+      <button type="button" className="btn btn--ghost btn--sm" aria-expanded={open} onClick={onDetail}>
+        Détail
+      </button>
+    </div>
   );
 }
 
@@ -303,14 +409,27 @@ function ReviewPanel({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
 
   // Le brouillon repart de la version enregistrée chaque fois que le serveur en renvoie une nouvelle.
   const version = message?.updatedAt;
   // biome-ignore lint/correctness/useExhaustiveDependencies: seule une nouvelle version du serveur réinitialise le brouillon
   useEffect(() => {
-    setSubject(message?.subject ?? "");
-    setBody(message?.body ?? "");
+    const draft = readDraft(id, version);
+    setSubject(draft?.subject ?? message?.subject ?? "");
+    setBody(draft?.body ?? message?.body ?? "");
+    setRestored(!!draft);
   }, [version]);
+
+  // Brouillon : enregistré sur l'appareil dès qu'on modifie, retiré quand il rejoint la version du serveur.
+  const dSubjectDraft = useDebounced(subject, 600);
+  const dBodyDraft = useDebounced(body, 600);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: déclenché par les seules saisies temporisées
+  useEffect(() => {
+    if (!message) return;
+    const changed = dSubjectDraft !== (message.subject ?? "") || dBodyDraft !== (message.body ?? "");
+    writeDraft(id, version, dSubjectDraft, changed ? dBodyDraft : null);
+  }, [dSubjectDraft, dBodyDraft]);
 
   const dSubject = useDebounced(subject);
   const dBody = useDebounced(body);
@@ -335,9 +454,76 @@ function ReviewPanel({
       }),
     onSuccess: async (data, input) => {
       setError(null);
+      writeDraft(id, version, "", null);
+      setRestored(false);
       qc.setQueryData(["lead", id], data);
       await onChanged();
       if (input.advance) onAdvance();
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+
+  // Raccourcis V valider · R rejeter · E modifier (hors champs de saisie) : les actions sont posées plus bas.
+  const shortcuts = useRef<{ validate: (() => void) | null; reject: (() => void) | null }>({
+    validate: null,
+    reject: null,
+  });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: les actions passent par la référence
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
+      const k = e.key.toLowerCase();
+      if (k === "v") shortcuts.current.validate?.();
+      else if (k === "r") shortcuts.current.reject?.();
+      else if (k === "e") {
+        e.preventDefault();
+        document.getElementById(subjectId)?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  const aiStatus = useQuery({
+    queryKey: ["ai", "status"],
+    queryFn: () => api<{ configured: boolean; usedToday: number; dailyLimit: number }>("/ai/status"),
+    staleTime: 30_000,
+  });
+  const aiReady = aiStatus.data?.configured === true;
+  const [instruction, setInstruction] = useState("");
+  const instructionId = useId();
+  const rewrite = useMutation({
+    mutationFn: () =>
+      api<{ subject: string; body: string }>(`/leads/${id}/email/rewrite`, {
+        method: "POST",
+        body: { instruction },
+      }),
+    onSuccess: (r) => {
+      setError(null);
+      setSubject(r.subject);
+      setBody(r.body);
+      setInfo(
+        "Réécriture proposée : relisez-la, puis enregistrez ou validez. Rien n'est enregistré tant que vous ne le faites pas.",
+      );
+      void qc.invalidateQueries({ queryKey: ["ai", "status"] });
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+  const score = useMutation({
+    mutationFn: () =>
+      api<{ noWebsite: boolean; emailWritten: boolean }>(`/leads/${id}/score`, { method: "POST" }),
+    onSuccess: async (r) => {
+      setError(null);
+      setInfo(
+        r.noWebsite
+          ? "Prospect sans site web : service « Création de site » enregistré (pas d'e-mail rédigé)."
+          : r.emailWritten
+            ? "Prospect qualifié et e-mail rédigé : relisez-le avant de valider."
+            : "Prospect qualifié (l'e-mail existant n'a pas été modifié).",
+      );
+      await qc.invalidateQueries({ queryKey: ["lead", id] });
+      await qc.invalidateQueries({ queryKey: ["ai", "status"] });
+      await onChanged();
     },
     onError: (e) => setError(errorMessage(e)),
   });
@@ -376,7 +562,22 @@ function ReviewPanel({
   if (lead.isLoading) return <Spinner />;
   if (lead.error) return <ErrorAlert message={errorMessage(lead.error)} />;
   if (!lead.data || !message) {
-    return <p className="card text-sm">Ce prospect n'a pas d'e-mail rédigé.</p>;
+    return (
+      <div className="card text-sm">
+        <p>Ce prospect n'a pas d'e-mail rédigé.</p>
+        <ErrorAlert message={error} />
+        {info && (
+          <p role="status" className="alert alert--good mt-3">
+            {info}
+          </p>
+        )}
+        {aiReady && lead.data?.contact?.email && (
+          <Button className="mt-3" disabled={score.isPending} onClick={() => score.mutate()}>
+            {score.isPending ? "Rédaction en cours…" : "Qualifier et rédiger l'e-mail (IA)"}
+          </Button>
+        )}
+      </div>
+    );
   }
 
   const dirty = subject !== (message.subject ?? "") || body !== (message.body ?? "");
@@ -397,6 +598,13 @@ function ReviewPanel({
             : null;
   const warnings = emailWarnings({ subject, body });
   const validation = lead.data.email?.validation;
+  shortcuts.current = {
+    validate:
+      sent || cannotValidate || save.isPending
+        ? null
+        : () => save.mutate({ validation: "Validé", advance: true }),
+    reject: sent || save.isPending ? null : () => save.mutate({ validation: "Rejeté", advance: true }),
+  };
 
   return (
     <div className="card">
@@ -410,6 +618,11 @@ function ReviewPanel({
       {info && (
         <p role="status" className="alert alert--good mb-4">
           {info}
+        </p>
+      )}
+      {restored && dirty && (
+        <p role="status" className="alert alert--info mb-4">
+          Brouillon retrouvé sur cet appareil : vos modifications n'étaient pas encore enregistrées.
         </p>
       )}
       {message.sendReserved && (
@@ -458,6 +671,11 @@ function ReviewPanel({
           validée.
         </p>
       )}
+      <p className="t-small mb-3 text-ds-muted">
+        Raccourcis : <kbd className="kbd">V</kbd> valider · <kbd className="kbd">R</kbd> rejeter ·{" "}
+        <kbd className="kbd">E</kbd> modifier · <kbd className="kbd">J</kbd> / <kbd className="kbd">K</kbd>{" "}
+        suivant / précédent
+      </p>
       <p className="mb-4 text-sm">
         État : <strong>{validation}</strong>
         {message.validatedAt && message.validatedBy
@@ -529,6 +747,31 @@ function ReviewPanel({
           </div>
         </section>
       </div>
+
+      {!sent && aiReady && !message.sendReserved && (
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <div className="field min-w-64 flex-1">
+            <label htmlFor={instructionId} className="label">
+              Réécrire par IA <span className="opt">(consigne libre)</span>
+            </label>
+            <input
+              id={instructionId}
+              className="input"
+              maxLength={500}
+              placeholder="Ex. plus court, ton plus direct, mettre en avant les avis Google"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            disabled={rewrite.isPending || instruction.trim().length < 5}
+            onClick={() => rewrite.mutate()}
+          >
+            {rewrite.isPending ? "Réécriture…" : "Réécrire"}
+          </Button>
+        </div>
+      )}
 
       {!sent && (
         <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -3,6 +3,7 @@ import { NONE } from "@gac/shared";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Icon } from "../components/Icon";
 import { LeadDrawer } from "../components/LeadDrawer";
 import { BulkBar, SavedViews, useOwnerOptions } from "../components/LeadsTools";
 import { Pager } from "../components/Pager";
@@ -45,7 +46,8 @@ export function LeadsPage() {
   const owners = useOwnerOptions();
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [viewsOpen, setViewsOpen] = useState(false);
   const [params, setParams] = useSearchParams();
   const filters = filtersFromParams(params);
   const page = Math.max(1, Number(params.get("page")) || 1);
@@ -103,14 +105,27 @@ export function LeadsPage() {
   };
 
   const f = facets.data;
+  const extraCount = [filters.segment, filters.service, filters.validation, filters.emailStatus].filter(
+    Boolean,
+  ).length;
+  const anyFilter = Object.entries(filters).some(([k, v]) => v && k !== "sort" && k !== "order");
   const opt = (counts: Record<string, number> | undefined, value: string, label = value) =>
     counts ? `${label} (${(counts[value] ?? 0).toLocaleString("fr-FR")})` : label;
 
   return (
     <>
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold">Leads</h1>
-        <div className="flex flex-wrap gap-2">
+      <header className="pagebar mb-3">
+        <div className="pagebar-title">
+          <h1 className="t-page">Leads</h1>
+          <span className="pagebar-count" aria-live="polite">
+            {list.data
+              ? `${list.data.total.toLocaleString("fr-FR")} ${list.data.total > 1 ? "leads" : "lead"}${
+                  f && list.data.total !== f.total ? ` sur ${f.total.toLocaleString("fr-FR")}` : ""
+                }`
+              : "Chargement…"}
+          </span>
+        </div>
+        <div className="pagebar-actions">
           {can("MANAGER") && (
             <a className="btn btn--secondary" href={`/api/leads/export?${toQueryString(filters)}`} download>
               Exporter en CSV
@@ -127,11 +142,145 @@ export function LeadsPage() {
             </Link>
           )}
         </div>
+        <form aria-label="Filtres des leads" className="pagebar-filters" onSubmit={(e) => e.preventDefault()}>
+          <div className="input-wrap u-w-240">
+            <Icon name="search" />
+            <input
+              type="search"
+              className="input"
+              aria-label="Rechercher"
+              placeholder="Entreprise, nom, e-mail, téléphone…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Select
+            label="Qualification"
+            value={filters.qualification}
+            onChange={(v) => update({ ...filters, qualification: v as never })}
+          >
+            {["Chaud", "Tiède", "Froid"].map((v) => (
+              <option key={v} value={v}>
+                {opt(f?.qualification, v)}
+              </option>
+            ))}
+            <option value={NONE}>{opt(f?.qualification, "none", "Non qualifié")}</option>
+          </Select>
+          <Select
+            label="Étape"
+            value={filters.stage}
+            onChange={(v) => update({ ...filters, stage: v as never })}
+          >
+            <option value={NONE}>{opt(f?.stage, "none", "Aucune")}</option>
+            {Object.keys(f?.stage ?? {})
+              .filter((k) => k !== "none")
+              .map((v) => (
+                <option key={v} value={v}>
+                  {opt(f?.stage, v)}
+                </option>
+              ))}
+          </Select>
+          {can("MANAGER") && (
+            <Select
+              label="Responsable"
+              value={filters.owner}
+              onChange={(v) => update({ ...filters, owner: v })}
+            >
+              <option value={NONE}>Sans responsable</option>
+              {(owners.data ?? []).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          <button
+            type="button"
+            className={`filter-btn ${extraCount > 0 ? "is-set" : ""}`}
+            aria-expanded={moreOpen}
+            aria-controls="leads-more-filters"
+            onClick={() => setMoreOpen((o) => !o)}
+          >
+            Plus de filtres
+            {extraCount > 0 && <span className="count">{extraCount}</span>}
+            <Icon name="filter" />
+          </button>
+          {anyFilter && (
+            <button type="button" className="filter-clear" onClick={() => update({})}>
+              Effacer
+            </button>
+          )}
+          <button
+            type="button"
+            className={`filter-btn ${viewsOpen ? "is-set" : ""}`}
+            aria-expanded={viewsOpen}
+            aria-controls="leads-views"
+            onClick={() => setViewsOpen((o) => !o)}
+          >
+            Vues
+            <Icon name="chevron-down" />
+          </button>
+        </form>
+      </header>
+
+      {moreOpen && (
+        <div className="mb-3">
+          <Card>
+            <form
+              id="leads-more-filters"
+              aria-label="Autres filtres"
+              className="grid grid-cols-1 gap-3 md:grid-cols-4"
+              onSubmit={(e) => e.preventDefault()}
+            >
+              <LabeledSelect
+                label="Segment"
+                value={filters.segment}
+                onChange={(v) => update({ ...filters, segment: v as never })}
+              >
+                <option value="with_website">{opt(f?.segment, "with_website", "Avec site web")}</option>
+                <option value="no_website">{opt(f?.segment, "no_website", "Sans site web")}</option>
+              </LabeledSelect>
+              <LabeledSelect
+                label="Service"
+                value={filters.service}
+                onChange={(v) => update({ ...filters, service: v as never })}
+              >
+                {["Google Ads", "Création de site", "Refonte de site"].map((v) => (
+                  <option key={v} value={v}>
+                    {opt(f?.service, v)}
+                  </option>
+                ))}
+              </LabeledSelect>
+              <LabeledSelect
+                label="Validation e-mail"
+                value={filters.validation}
+                onChange={(v) => update({ ...filters, validation: v as never })}
+              >
+                {["Pas Validé", "Validé", "Rejeté"].map((v) => (
+                  <option key={v} value={v}>
+                    {opt(f?.validation, v)}
+                  </option>
+                ))}
+              </LabeledSelect>
+              <LabeledSelect
+                label="Envoi e-mail"
+                value={filters.emailStatus}
+                onChange={(v) => update({ ...filters, emailStatus: v as never })}
+              >
+                {["Envoyé", "Délivré", "Ouvert", "Bounce", "Désinscrit"].map((v) => (
+                  <option key={v} value={v}>
+                    {opt(f?.emailStatus, v)}
+                  </option>
+                ))}
+                <option value={NONE}>{opt(f?.emailStatus, "none", "Pas envoyé")}</option>
+              </LabeledSelect>
+            </form>
+          </Card>
+        </div>
+      )}
+      <div id="leads-views" className={viewsOpen ? "" : "hidden"}>
+        <SavedViews filters={filters} onApply={(f) => update(f)} />
       </div>
-      <p className="mb-4 text-sm text-ds-muted" aria-live="polite">
-        {f ? `${f.total.toLocaleString("fr-FR")} prospects au total` : "Chargement…"}
-        {list.data ? ` — ${list.data.total.toLocaleString("fr-FR")} correspondent aux filtres` : ""}
-      </p>
 
       {f?.total === 0 && (
         <p className="mb-4 rounded-lg bg-ds-surface p-4 text-sm" role="note">
@@ -168,9 +317,9 @@ export function LeadsPage() {
         ))}
       </nav>
 
-      <SavedViews filters={filters} onApply={(f) => update(f)} />
       {bulkOpen && list.data && (
         <BulkBar
+          names={list.data.items.filter((l) => selected.includes(l.id)).map((l) => l.company.name)}
           ids={selected}
           filters={filters}
           total={list.data.total}
@@ -182,121 +331,6 @@ export function LeadsPage() {
         />
       )}
 
-      <div className="mb-3 md:hidden">
-        <Button
-          variant="secondary"
-          aria-expanded={filtersOpen}
-          aria-controls="leads-filters"
-          onClick={() => setFiltersOpen((o) => !o)}
-        >
-          {filtersOpen ? "Masquer les filtres" : "Afficher les filtres"}
-        </Button>
-      </div>
-      <div id="leads-filters" className={filtersOpen ? "" : "hidden md:block"}>
-        <Card>
-          <form
-            aria-label="Filtres des leads"
-            className="grid gap-3 md:grid-cols-3 lg:grid-cols-4"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <Filter label="Rechercher" className="lg:col-span-2">
-              {(id) => (
-                <input
-                  id={id}
-                  type="search"
-                  className="input"
-                  placeholder="Entreprise, nom, e-mail, site, téléphone…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              )}
-            </Filter>
-            <Select
-              label="Qualification"
-              value={filters.qualification}
-              onChange={(v) => update({ ...filters, qualification: v as never })}
-            >
-              {["Chaud", "Tiède", "Froid"].map((v) => (
-                <option key={v} value={v}>
-                  {opt(f?.qualification, v)}
-                </option>
-              ))}
-              <option value={NONE}>{opt(f?.qualification, "none", "Non qualifié")}</option>
-            </Select>
-            <Select
-              label="Segment"
-              value={filters.segment}
-              onChange={(v) => update({ ...filters, segment: v as never })}
-            >
-              <option value="with_website">{opt(f?.segment, "with_website", "Avec site web")}</option>
-              <option value="no_website">{opt(f?.segment, "no_website", "Sans site web")}</option>
-            </Select>
-            <Select
-              label="Service"
-              value={filters.service}
-              onChange={(v) => update({ ...filters, service: v as never })}
-            >
-              {["Google Ads", "Création de site", "Refonte de site"].map((v) => (
-                <option key={v} value={v}>
-                  {opt(f?.service, v)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label="Étape"
-              value={filters.stage}
-              onChange={(v) => update({ ...filters, stage: v as never })}
-            >
-              <option value={NONE}>{opt(f?.stage, "none", "Aucune")}</option>
-              {Object.keys(f?.stage ?? {})
-                .filter((k) => k !== "none")
-                .map((v) => (
-                  <option key={v} value={v}>
-                    {opt(f?.stage, v)}
-                  </option>
-                ))}
-            </Select>
-            <Select
-              label="Validation e-mail"
-              value={filters.validation}
-              onChange={(v) => update({ ...filters, validation: v as never })}
-            >
-              {["Pas Validé", "Validé", "Rejeté"].map((v) => (
-                <option key={v} value={v}>
-                  {opt(f?.validation, v)}
-                </option>
-              ))}
-            </Select>
-            {can("MANAGER") && (
-              <Select
-                label="Responsable"
-                value={filters.owner}
-                onChange={(v) => update({ ...filters, owner: v })}
-              >
-                <option value={NONE}>Sans responsable</option>
-                {(owners.data ?? []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-            <Select
-              label="Envoi e-mail"
-              value={filters.emailStatus}
-              onChange={(v) => update({ ...filters, emailStatus: v as never })}
-            >
-              {["Envoyé", "Délivré", "Ouvert", "Bounce", "Désinscrit"].map((v) => (
-                <option key={v} value={v}>
-                  {opt(f?.emailStatus, v)}
-                </option>
-              ))}
-              <option value={NONE}>{opt(f?.emailStatus, "none", "Pas envoyé")}</option>
-            </Select>
-          </form>
-        </Card>
-      </div>
-
       <Card>
         {list.isPending && <Spinner />}
         {list.isError && <ErrorAlert message={errorMessage(list.error)} />}
@@ -304,10 +338,25 @@ export function LeadsPage() {
           <>
             <ul aria-label="Prospects" className="m-0 flex list-none flex-col gap-2 p-0 md:hidden">
               {list.data.items.map((l) => (
-                <li key={`m-${l.id}`}>
+                <li key={`m-${l.id}`} className="flex items-stretch gap-2">
+                  {bulkOpen && (
+                    <label className="flex items-center px-1">
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5"
+                        aria-label={`Sélectionner ${l.company.name}`}
+                        checked={selected.includes(l.id)}
+                        onChange={(e) =>
+                          setSelected((cur) =>
+                            e.target.checked ? [...cur, l.id].slice(0, 500) : cur.filter((x) => x !== l.id),
+                          )
+                        }
+                      />
+                    </label>
+                  )}
                   <button
                     type="button"
-                    className="flex w-full flex-col gap-1 rounded-xl border border-ds-line p-3 text-left"
+                    className="flex min-w-0 flex-1 flex-col gap-1 rounded-xl border border-ds-line p-3 text-left"
                     onClick={() => openLead(l.id)}
                   >
                     <span className="font-semibold">{l.company.name}</span>
@@ -500,7 +549,32 @@ function Filter({
   );
 }
 
+/** Filtre compact de la barre d'outils : le nom du critère est dans le premier choix (« Étape : toutes »). */
 function Select({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (v: string | undefined) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <select
+      aria-label={label}
+      className={`select u-w-auto ${value ? "is-set" : ""}`}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || undefined)}
+    >
+      <option value="">{label}</option>
+      {children}
+    </select>
+  );
+}
+
+function LabeledSelect({
   label,
   value,
   onChange,

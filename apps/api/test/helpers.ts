@@ -1,14 +1,17 @@
 import type { Role } from "@gac/shared";
 import { sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import type { AiClient } from "../src/ai/anthropic";
 import { buildApp } from "../src/app";
 import { type Config, loadConfig } from "../src/config";
 import { createDb } from "../src/db/client";
 import { users } from "../src/db/schema";
+import type { SiteFetcher } from "../src/enrich/safe-fetch";
 import { one } from "../src/lib/assert";
 import { hashPassword } from "../src/lib/password";
 import type { DnsResolver } from "../src/mail/address-check";
 import type { MailSender } from "../src/mail/brevo";
+import type { SourcingProvider } from "../src/sourcing/provider";
 
 export const DEFAULT_PASSWORD = "Un-mot-de-passe-solide-1";
 let APP_ORIGIN = "http://localhost:5173";
@@ -38,6 +41,9 @@ export async function createTestApp(
   overrides: Record<string, string> = {},
   dnsResolver?: DnsResolver,
   mailSender?: MailSender | null,
+  sourcingProvider?: SourcingProvider | null,
+  aiClient?: AiClient | null,
+  siteFetcher?: SiteFetcher | null,
 ): Promise<TestApp> {
   const config = loadConfig(testEnv(overrides));
   APP_ORIGIN = config.APP_ORIGIN; // les en-têtes Origin des tests suivent la configuration
@@ -47,6 +53,9 @@ export async function createTestApp(
     db,
     dnsResolver,
     mailSender: mailSender === undefined ? null : mailSender,
+    sourcingProvider: sourcingProvider === undefined ? null : sourcingProvider,
+    aiClient: aiClient === undefined ? null : aiClient,
+    siteFetcher: siteFetcher === undefined ? null : siteFetcher,
   });
   await app.ready();
   return {
@@ -63,7 +72,7 @@ export async function createTestApp(
 /** Vide toutes les tables (la base de test est jetable). */
 export async function resetDb(t: TestApp): Promise<void> {
   await t.db.execute(
-    sql`truncate table settings, lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
+    sql`truncate table sourcing_runs, settings, lead_events, email_messages, suppressions, leads, contacts, companies, audit_events, sessions, users restart identity cascade`,
   );
 }
 

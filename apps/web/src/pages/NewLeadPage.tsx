@@ -36,7 +36,11 @@ export function NewLeadPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Nouveau lead</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Nouveau lead</h1>
+        </div>
+      </header>
       <p className="mb-4 max-w-3xl text-sm text-ds-muted">
         Pour un prospect trouvé en dehors de l'import. Le prospect arrive à l'étape « Nouveau » ; s'il existe
         déjà, il n'est pas dupliqué.

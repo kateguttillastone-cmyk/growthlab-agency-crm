@@ -4,6 +4,7 @@ import { ThemeSwitch } from "../components/ThemeSwitch";
 import { Button, Card, ErrorAlert, Field } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { savePreferences } from "../lib/preferences";
 import { readReducedMotion, setReducedMotion } from "../lib/theme";
 
 export function ProfilePage() {
@@ -38,7 +39,11 @@ export function ProfilePage() {
 
   return (
     <>
-      <h1 className="mb-6 text-2xl font-extrabold">Mon profil</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Mon profil</h1>
+        </div>
+      </header>
       <Card>
         <dl className="grid max-w-md grid-cols-[8rem_1fr] gap-2 text-sm">
           <dt className="font-semibold">Nom</dt>
@@ -61,6 +66,7 @@ export function ProfilePage() {
             onChange={(e) => {
               setReduced(e.target.checked);
               setReducedMotion(e.target.checked);
+              savePreferences({ reducedMotion: e.target.checked });
             }}
           />
           Réduire les animations (les déplacements deviennent de simples fondus)

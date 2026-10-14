@@ -41,6 +41,8 @@ export const users = pgTable(
     failedLoginCount: integer("failed_login_count").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Préférences d'affichage (thème, animations) : voir `preferencesSchema`. */
+    preferences: jsonb("preferences").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -145,6 +147,11 @@ export const companies = pgTable(
     hasMetaPixel: boolean("has_meta_pixel"),
     hasGoogleAds: boolean("has_google_ads"),
     hasSsl: boolean("has_ssl"),
+    /** Balise « viewport » trouvée à l'analyse du site (adapté au mobile). */
+    hasViewport: boolean("has_viewport"),
+    /** Résultat de la dernière analyse du site : ok | unreachable. Null = jamais analysé. */
+    siteStatus: text("site_status"),
+    siteCheckedAt: timestamp("site_checked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -327,3 +334,34 @@ export const savedViews = pgTable(
 export type CompanyRow = typeof companies.$inferSelect;
 export type ContactRow = typeof contacts.$inferSelect;
 export type LeadRow = typeof leads.$inferSelect;
+
+/**
+ * Recherche de prospects (sourcing) : critères, état, coût et résultat. Le fournisseur travaille en arrière-plan ; chaque
+ * cycle de la boucle relit l'état ici (`provider_run_id`) : un redémarrage du serveur ne perd aucune recherche.
+ */
+export const sourcingRuns = pgTable(
+  "sourcing_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    criteria: jsonb("criteria").$type<Record<string, unknown>>().notNull(),
+    /** queued | running | succeeded | failed | cancelled */
+    state: text("state").notNull().default("queued"),
+    estimatedCost: numeric("estimated_cost", { precision: 10, scale: 2, mode: "number" }).notNull(),
+    cost: numeric("cost", { precision: 10, scale: 2, mode: "number" }),
+    progress: integer("progress"),
+    found: integer("found"),
+    created: integer("created"),
+    duplicates: integer("duplicates"),
+    rejected: integer("rejected"),
+    error: text("error"),
+    providerRunId: text("provider_run_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("sourcing_runs_state_idx").on(t.state),
+    index("sourcing_runs_created_idx").on(t.createdAt.desc()),
+  ],
+);

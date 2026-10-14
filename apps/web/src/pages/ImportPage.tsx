@@ -2,6 +2,7 @@ import type { ImportResult } from "@gac/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
+import { Icon } from "../components/Icon";
 import { Button, Card, ErrorAlert } from "../components/ui";
 import { api, errorMessage } from "../lib/api";
 import { formatBytes, nothingNew, reportRows, sortedWarnings } from "../lib/imports";
@@ -18,6 +19,7 @@ export function ImportPage() {
   const [tz, setTz] = useState("-04:00");
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [over, setOver] = useState(false);
 
   const send = (mode: "preview" | "apply", f: File, zone: string, confirmHash?: string) => {
     const form = new FormData();
@@ -27,6 +29,11 @@ export function ImportPage() {
     form.set("file", f);
     return api<ImportResult>("/imports/airtable", { method: "POST", form });
   };
+
+  function pick(f: File) {
+    setFile(f);
+    void analyse(f);
+  }
 
   async function analyse(f: File, zone = tz) {
     setError(null);
@@ -68,7 +75,11 @@ export function ImportPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Import de l'ancienne base</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Import de l'ancienne base</h1>
+        </div>
+      </header>
       <p className="mb-6 max-w-3xl text-sm text-ds-muted">
         Envoyez l'export CSV de la table Airtable. Le fichier est d'abord <strong>simulé</strong> : vous
         relisez le rapport, puis vous confirmez. Rien n'est écrit avant votre confirmation, le fichier n'est
@@ -86,24 +97,41 @@ export function ImportPage() {
       {phase !== "done" && (
         <Card title="1. Choisir le fichier">
           <div className="space-y-4">
-            <div>
-              <label htmlFor={fileId} className="mb-1 block text-sm font-medium">
-                Export CSV (maximum 10 Mo, 20 000 lignes)
-              </label>
+            <label
+              htmlFor={fileId}
+              className={`dropzone cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 ${over ? "is-over" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (!busy) setOver(true);
+              }}
+              onDragLeave={() => setOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setOver(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f && !busy) pick(f);
+              }}
+            >
+              <span className="dropzone-icon">
+                <Icon name="upload" size={24} />
+              </span>
+              <b>Déposez l'export CSV ici</b>
+              <span className="t-small text-ds-muted">
+                ou cliquez pour choisir un fichier (maximum 10 Mo, 20 000 lignes)
+              </span>
               <input
                 id={fileId}
                 type="file"
                 accept=".csv,text/csv"
                 disabled={busy}
-                className="block w-full max-w-xl rounded border border-ds-line bg-ds-surface px-2 py-2 text-sm"
+                className="sr-only"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
-                  setFile(f);
-                  if (f) void analyse(f);
+                  if (f) pick(f);
                   else reset();
                 }}
               />
-            </div>
+            </label>
             <details>
               <summary className="cursor-pointer text-sm font-medium">Options</summary>
               <div className="mt-3">

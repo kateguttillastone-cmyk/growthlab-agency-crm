@@ -34,6 +34,7 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const detail = useQuery({
     queryKey: ["leads", "detail", id],
@@ -44,11 +45,41 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
     mutationFn: (patch: UpdateLeadInput) => api<LeadDetail>(`/leads/${id}`, { method: "PATCH", body: patch }),
     onSuccess: (updated) => {
       setError(null);
+      setSavedAt(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
       qc.setQueryData(["leads", "detail", id], updated);
       void qc.invalidateQueries({ queryKey: ["leads", "list"] });
       void qc.invalidateQueries({ queryKey: ["leads", "facets"] });
     },
     onError: (e) => setError(errorMessage(e)),
+  });
+
+  const aiStatus = useQuery({
+    queryKey: ["ai", "status"],
+    queryFn: () => api<{ configured: boolean }>("/ai/status"),
+    enabled: can("MANAGER"),
+    staleTime: 30_000,
+  });
+  const [scoreInfo, setScoreInfo] = useState<string | null>(null);
+  const score = useMutation({
+    mutationFn: () =>
+      api<{ noWebsite: boolean; qualification: string | null; service: string; emailWritten: boolean }>(
+        `/leads/${id}/score`,
+        { method: "POST" },
+      ),
+    onSuccess: (r) => {
+      setError(null);
+      setScoreInfo(
+        r.noWebsite
+          ? `Prospect sans site web : service « ${r.service} » enregistré (pas d'e-mail rédigé).`
+          : `Qualifié : ${r.qualification}, service « ${r.service} ».${r.emailWritten ? " E-mail rédigé : à relire dans E-mails." : " L'e-mail existant n'a pas été modifié."}`,
+      );
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      void qc.invalidateQueries({ queryKey: ["emails"] });
+    },
+    onError: (e) => {
+      setScoreInfo(null);
+      setError(errorMessage(e));
+    },
   });
 
   // Accessibilité : le focus entre dans la fiche, Échap la ferme, le focus revient où il était.
@@ -102,6 +133,25 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
         {detail.isPending && <Spinner />}
         {detail.isError && <ErrorAlert message={errorMessage(detail.error)} />}
         <ErrorAlert message={error} />
+        <p role="status" aria-live="polite" className="t-small text-ds-muted">
+          {save.isPending
+            ? "Enregistrement…"
+            : savedAt
+              ? `Enregistré à ${savedAt} (chaque champ s'enregistre seul)`
+              : ""}
+        </p>
+        {scoreInfo && (
+          <p role="status" className="alert alert--good mb-4">
+            {scoreInfo}
+          </p>
+        )}
+        {d && aiStatus.data?.configured && can("MANAGER") && (
+          <div className="mb-4">
+            <Button variant="secondary" disabled={score.isPending} onClick={() => score.mutate()}>
+              {score.isPending ? "Analyse et rédaction en cours…" : "Qualifier et rédiger l'e-mail (IA)"}
+            </Button>
+          </div>
+        )}
 
         {d && (
           <div className="space-y-6">
