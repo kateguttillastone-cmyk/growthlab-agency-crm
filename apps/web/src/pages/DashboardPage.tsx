@@ -30,7 +30,11 @@ export function DashboardPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-2xl font-extrabold">Bonjour {user?.name}</h1>
+      <header className="pagebar pagebar--compact mb-4">
+        <div className="pagebar-title">
+          <h1 className="t-page">Bonjour {user?.name}</h1>
+        </div>
+      </header>
       <p className="mb-6 text-sm text-ds-muted">
         Vue d'ensemble de la prospection. La période porte sur la date de détection des leads ; un lead sans
         date est exclu d'une période bornée.

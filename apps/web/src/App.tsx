@@ -1,5 +1,5 @@
 import type { Role } from "@gac/shared";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Spinner } from "./components/ui";
 import { useAuth } from "./lib/auth";
@@ -20,8 +20,11 @@ import { UsersPage } from "./pages/UsersPage";
 
 function RequireAuth() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <Spinner />;
-  if (!user) return <Navigate to="/login" replace />;
+  // session expirée : on revient à la page d'origine après la reconnexion
+  if (!user)
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
   return <Layout />;
 }
 

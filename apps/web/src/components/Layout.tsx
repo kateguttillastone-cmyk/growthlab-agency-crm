@@ -136,7 +136,7 @@ export function Layout() {
   const more = visible.filter((d) => !bottom.includes(d));
   const doLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/login", { replace: true, state: null });
   };
   const groups = (["Pilotage", "Prospection", "Administration"] as const).map((g) => ({
     title: g,
