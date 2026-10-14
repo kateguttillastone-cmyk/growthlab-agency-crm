@@ -96,3 +96,29 @@ progress::-moz-progress-bar {
   color: var(--gac-sun);
   box-shadow: inset 0 0 0 1px rgba(239, 235, 255, 0.18);
 }
+
+/* Filtres compacts de la barre d'outils de page */
+.u-w-240 {
+  width: 240px;
+  max-width: 100%;
+}
+.select.u-w-auto {
+  width: auto;
+  max-width: 100%;
+  height: 36px;
+  font-weight: 600;
+}
+.select.is-set {
+  border-color: var(--gac-accent);
+  background-color: var(--gac-accent-bg);
+}
+@media (max-width: 767px) {
+  .pagebar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "title" "actions" "filters" "state";
+  }
+  .pagebar-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
