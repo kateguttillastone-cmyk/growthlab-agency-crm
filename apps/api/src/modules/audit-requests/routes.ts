@@ -15,7 +15,13 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { auditRequests, leadEvents, users } from "../../db/schema";
-import { cleanText, normalizeDomain, normalizeEmail, normalizePhone } from "../../import/normalize";
+import {
+  cleanBlock,
+  cleanText,
+  normalizeDomain,
+  normalizeEmail,
+  normalizePhone,
+} from "../../import/normalize";
 import { authOf } from "../../lib/assert";
 import { audit } from "../../lib/audit";
 import { createLead } from "../../lib/create-lead";
@@ -24,6 +30,20 @@ import { effectiveConfig } from "../settings/effective";
 import { processNewRequest, sendAck } from "./ack";
 
 const idParams = z.object({ id: z.uuid() });
+
+/** Retire les caractères de contrôle (dont NUL, que PostgreSQL refuse) d'un texte venu du public. */
+function stripControl(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  let out = "";
+  for (const ch of value) {
+    const c = ch.codePointAt(0) ?? 0;
+    if (c === 9 || c === 10 || c === 13 || (c >= 32 && c !== 127)) out += ch;
+  }
+  return out;
+}
+
+/** Au plus ce nombre de demandes par heure, tous visiteurs confondus : garde-fou contre un envoi massif. */
+const MAX_REQUESTS_PER_HOUR = 300;
 type Row = typeof auditRequests.$inferSelect;
 
 export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
@@ -41,6 +61,19 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
   }
 
   // ── Formulaire du site (public) ─────────────────────────────────────────────────────────────────────────────────────
+  // Un formulaire HTML classique envoie « application/x-www-form-urlencoded » : on l'accepte comme le JSON.
+  app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
+    try {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of new URLSearchParams(String(body))) out[k] = v;
+      if ("consent" in out)
+        out.consent = ["on", "true", "1", "oui", "yes"].includes(String(out.consent).toLowerCase());
+      done(null, out);
+    } catch (e) {
+      done(e as Error);
+    }
+  });
+
   app.options("/public/audit-requests", async (req, reply) => {
     cors(req, reply);
     return reply
@@ -59,7 +92,14 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
     },
     async (req, reply) => {
       cors(req, reply);
-      const b = req.body;
+      const b = {
+        ...req.body,
+        companyName: stripControl(req.body.companyName) ?? "",
+        website: stripControl(req.body.website) ?? "",
+        phone: stripControl(req.body.phone),
+        subject: stripControl(req.body.subject),
+        message: stripControl(req.body.message),
+      };
       // Robot : le champ piège est rempli. On répond comme si tout allait bien, sans rien enregistrer.
       if (b.hp?.trim()) return reply.code(201).send({ ok: true });
 
@@ -74,6 +114,19 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
           "Site web illisible : indiquez son adresse (ex. monsite.fr)",
         );
 
+      // Garde-fou global : un déluge de demandes est refusé (les vraies demandes réessaieront plus tard).
+      const [recent] = await db
+        .select({ n: count() })
+        .from(auditRequests)
+        .where(gte(auditRequests.createdAt, sql`now() - interval '1 hour'`));
+      if ((recent?.n ?? 0) >= MAX_REQUESTS_PER_HOUR) {
+        throw new AppError(
+          429,
+          "RATE_LIMITED",
+          "Trop de demandes en ce moment : réessayez dans quelques minutes",
+        );
+      }
+
       // Double clic ou renvoi : la même demande (mêmes réponses) dans les dix dernières minutes n'est enregistrée qu'une fois.
       const [dup] = await db
         .select({ id: auditRequests.id })
@@ -83,7 +136,7 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
             eq(auditRequests.email, email),
             sql`lower(${auditRequests.website}) = ${website.toLowerCase()}`,
             sql`coalesce(${auditRequests.subject}, '') = ${cleanText(b.subject) ?? ""}`,
-            sql`coalesce(${auditRequests.message}, '') = ${cleanText(b.message) ?? ""}`,
+            sql`coalesce(${auditRequests.message}, '') = ${cleanBlock(b.message) ?? ""}`,
             gte(auditRequests.createdAt, sql`now() - interval '10 minutes'`),
           ),
         )
@@ -98,7 +151,7 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
           email,
           phone: cleanText(b.phone),
           subject: cleanText(b.subject),
-          message: cleanText(b.message),
+          message: cleanBlock(b.message),
           consentText: AUDIT_CONSENT_TEXT,
         })
         .returning({ id: auditRequests.id });
@@ -107,7 +160,7 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
         action: "audit_request.received",
         entityType: "audit_request",
         entityId: row.id,
-        ip: req.ip,
+        // pas d'adresse IP : donnée personnelle inutile à la conservation de la demande
       });
       // L'accusé et l'alerte partent après la réponse : le visiteur n'attend pas le fournisseur d'e-mails.
       const id = row.id;
@@ -266,7 +319,9 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
       const [row] = await db.select().from(auditRequests).where(eq(auditRequests.id, id)).limit(1);
       if (!row) throw notFound("Demande introuvable");
       if (row.ackStatus === "sent") throw conflict("L'accusé de réception est déjà parti");
-      await sendAck({ db, config: await effectiveConfig(db, config), sender: app.mailSender }, row);
+      await sendAck({ db, config: await effectiveConfig(db, config), sender: app.mailSender }, row, {
+        force: true,
+      });
       await audit(db, {
         actorId: authOf(req).user.id,
         action: "audit_request.ack_resent",

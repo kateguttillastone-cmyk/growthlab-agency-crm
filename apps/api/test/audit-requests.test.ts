@@ -99,6 +99,18 @@ describe("demandes d'audit du site", () => {
     expect(notify?.text).toContain("Demande de devis Pack Ads");
   });
 
+  it("refuse de démarrer si une origine du formulaire est mal écrite", async () => {
+    const { loadConfig } = await import("../src/config");
+    const { testEnv } = await import("./helpers");
+    expect(() => loadConfig(testEnv({ AUDIT_FORM_ORIGINS: "pas une adresse" }))).toThrow(/origine valable/);
+    expect(() => loadConfig(testEnv({ AUDIT_FORM_ORIGINS: "http://monsite.com" }))).toThrow(
+      /origine valable/,
+    );
+    expect(
+      loadConfig(testEnv({ AUDIT_FORM_ORIGINS: "https://a.com/, https://b.com" })).AUDIT_FORM_ORIGINS,
+    ).toEqual(["https://a.com", "https://b.com"]);
+  });
+
   it("refuse un envoi sans consentement, sans e-mail valable ou sans site", async () => {
     expect((await post(form({ consent: false }))).statusCode).toBe(400);
     expect((await post(form({ email: "pas-un-mail" }))).statusCode).toBe(400);
@@ -188,6 +200,73 @@ describe("demandes d'audit du site", () => {
     expect((await get("/audit-requests/summary", c)).json()).toEqual({ pending: 1 });
     // « Convertie » ne s'obtient que par la conversion
     expect((await patch(`/audit-requests/${id}`, c, { status: "Convertie" })).statusCode).toBe(409);
+  });
+
+  it("accepte un formulaire HTML classique (urlencoded) et garde les paragraphes du message", async () => {
+    const body = new URLSearchParams({
+      companyName: "Garage Durand",
+      website: "garage-durand.test",
+      email: "durand@garage-durand.test",
+      message: "Bonjour\n\nDeuxième paragraphe",
+      consent: "on",
+    }).toString();
+    const res = await t.app.inject({
+      method: "POST",
+      url: "/public/audit-requests",
+      payload: body,
+      headers: { origin: SITE, "content-type": "application/x-www-form-urlencoded" },
+    });
+    expect(res.statusCode).toBe(201);
+    const [row] = await t.db.select().from(auditRequests);
+    expect(row?.message).toBe("Bonjour\n\nDeuxième paragraphe");
+    expect(row?.consentText).toContain("GrowthLab Agencycom");
+    // case non cochée dans un formulaire HTML : refusé
+    const refused = await t.app.inject({
+      method: "POST",
+      url: "/public/audit-requests",
+      payload: new URLSearchParams({ companyName: "X Y", website: "x.test", email: "x@x.test" }).toString(),
+      headers: { origin: SITE, "content-type": "application/x-www-form-urlencoded" },
+    });
+    expect(refused.statusCode).toBe(400);
+  });
+
+  it("nettoie les caractères de contrôle, ne stocke pas l'adresse IP et ne laisse pas un saut de ligne dans l'objet", async () => {
+    const res = await post(
+      form({ companyName: "Boulangerie\u0000 Dupont\r\nBcc: x@y.test", subject: "Objet\nsur deux lignes" }),
+    );
+    expect(res.statusCode).toBe(201);
+    const [row] = await t.db.select().from(auditRequests);
+    expect(row?.companyName).toBe("Boulangerie Dupont Bcc: x@y.test");
+    expect(row?.subject).toBe("Objet sur deux lignes");
+    const { auditEvents } = await import("../src/db/schema");
+    const events = await t.db.select().from(auditEvents);
+    expect(events.find((e) => e.action === "audit_request.received")?.ip).toBeNull();
+  });
+
+  it("n'écrit pas en rafale à un tiers : au-delà de 3 demandes par jour avec la même adresse, plus d'accusé", async () => {
+    for (let i = 0; i < 5; i++) {
+      await post(form({ subject: `Demande ${i}`, message: `Message ${i}` }));
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    await settled(t, sender, 1);
+    await new Promise((r) => setTimeout(r, 300));
+    const toVisitor = sender.sent.filter((m) => m.to === "contact@boulangerie-dupont.test");
+    expect(toVisitor).toHaveLength(3);
+    const rows = await t.db.select().from(auditRequests);
+    expect(rows).toHaveLength(5);
+    expect(rows.filter((r) => r.ackError?.includes("Trop de demandes"))).toHaveLength(2);
+  });
+
+  it("refuse un déluge de demandes (garde-fou global par heure)", async () => {
+    await t.db.insert(auditRequests).values(
+      Array.from({ length: 300 }, (_, i) => ({
+        companyName: `Entreprise ${i}`,
+        website: `site${i}.test`,
+        email: `u${i}@exemple.test`,
+        consentText: "x",
+      })),
+    );
+    expect((await post(form())).statusCode).toBe(429);
   });
 
   it("convertit en lead Chaud sans doublon et rattache la demande à un prospect déjà connu", async () => {
