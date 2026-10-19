@@ -202,6 +202,24 @@ describe("demandes d'audit du site", () => {
     expect((await patch(`/audit-requests/${id}`, c, { status: "Convertie" })).statusCode).toBe(409);
   });
 
+  it("n'affiche « exclue » ou « déjà prospect » que pour l'adresse réellement concernée", async () => {
+    // une autre adresse est exclue et connue comme prospect : la demande d'une adresse sans rapport doit rester neutre
+    await t.db.insert(suppressions).values({ email: "autre@exemple.test", reason: "bounce" });
+    const [c] = await t.db
+      .insert(companies)
+      .values({ name: "Autre société", nameKey: "autre societe", domain: "autre.test" })
+      .returning();
+    await t.db.insert(contacts).values({ companyId: c?.id ?? "", email: "autre@exemple.test", nameKey: "" });
+    await post(form({ email: "neutre@exemple.test" }));
+    await settled(t, sender, 1);
+    const list = (await get("/audit-requests", await as("AGENT"))).json();
+    expect(list.items[0]).toMatchObject({
+      email: "neutre@exemple.test",
+      suppressed: false,
+      knownLeadId: null,
+    });
+  });
+
   it("accepte un formulaire HTML classique (urlencoded) et garde les paragraphes du message", async () => {
     const body = new URLSearchParams({
       companyName: "Garage Durand",

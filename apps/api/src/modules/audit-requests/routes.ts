@@ -170,10 +170,13 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
   );
 
   // ── Traitement par l'équipe ─────────────────────────────────────────────────────────────────────────────────────────
-  const suppressed = sql<boolean>`exists (select 1 from suppressions s where s.email = ${auditRequests.email}
+  // ATTENTION : écrire « audit_requests.email » en toutes lettres. Une colonne Drizzle interpolée ici est rendue SANS
+  // préfixe de table dans une requête à une seule table, et la sous-requête la comparerait à sa propre colonne
+  // (« s.email = s.email », toujours vrai) : toutes les demandes seraient « exclues » et « déjà prospect ».
+  const suppressed = sql<boolean>`exists (select 1 from suppressions s where s.email = audit_requests.email
     and s.reason in ('bounce', 'complaint', 'manual'))`;
   const knownLead = sql<string | null>`(select l.id from leads l join contacts c on c.id = l.contact_id
-    where c.email = ${auditRequests.email} limit 1)`;
+    where c.email = audit_requests.email limit 1)`;
 
   const toDto = (row: Row, extra: { suppressed: boolean; knownLeadId: string | null }): AuditRequest => ({
     id: row.id,
