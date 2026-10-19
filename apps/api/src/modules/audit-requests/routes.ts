@@ -55,7 +55,14 @@ export async function auditRequestsRoutes(app: FastifyInstance): Promise<void> {
   function cors(req: FastifyRequest, reply: FastifyReply): void {
     const origin = req.headers.origin;
     if (!origin) return;
-    if (!config.AUDIT_FORM_ORIGINS.includes(origin)) throw forbidden("Origine non autorisée");
+    if (!config.AUDIT_FORM_ORIGINS.includes(origin)) {
+      // L'origine d'un site n'est pas une donnée personnelle : on la journalise pour savoir quoi ajouter à AUDIT_FORM_ORIGINS.
+      req.log.warn(
+        { origin: origin.slice(0, 200) },
+        "formulaire d'audit : origine refusée (à ajouter à AUDIT_FORM_ORIGINS ?)",
+      );
+      throw forbidden("Origine non autorisée");
+    }
     reply.header("access-control-allow-origin", origin);
     reply.header("vary", "Origin");
   }
