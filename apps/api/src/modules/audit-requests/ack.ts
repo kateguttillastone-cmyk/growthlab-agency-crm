@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Config } from "../../config";
 import type { Db } from "../../db/client";
 import { auditRequests, suppressions } from "../../db/schema";
@@ -115,7 +115,14 @@ export async function processNewRequest({ db, config: base, sender }: AckDeps, i
   }
 }
 
-export async function sendAck({ db, config, sender }: AckDeps, row: RequestRow): Promise<void> {
+/** Au plus ce nombre de demandes d'une même adresse en 24 h reçoivent un accusé : évite d'écrire en rafale à un tiers. */
+const MAX_ACK_PER_EMAIL_PER_DAY = 3;
+
+export async function sendAck(
+  { db, config, sender }: AckDeps,
+  row: RequestRow,
+  opts: { force?: boolean } = {},
+): Promise<void> {
   const set = async (v: Partial<typeof auditRequests.$inferInsert>) => {
     await db
       .update(auditRequests)
@@ -130,6 +137,26 @@ export async function sendAck({ db, config, sender }: AckDeps, row: RequestRow):
   if (blocked) {
     await set({ ackStatus: "skipped", ackError: "Adresse exclue : aucun e-mail envoyé" });
     return;
+  }
+  // Quelqu'un peut saisir l'adresse d'un tiers : au-delà de quelques demandes par jour, plus d'accusé automatique.
+  if (!opts.force) {
+    const [same] = await db
+      .select({ n: count() })
+      .from(auditRequests)
+      .where(
+        and(
+          eq(auditRequests.email, row.email),
+          gte(auditRequests.createdAt, sql`now() - interval '24 hours'`),
+        ),
+      );
+    if ((same?.n ?? 0) > MAX_ACK_PER_EMAIL_PER_DAY) {
+      await set({
+        ackStatus: "skipped",
+        ackError:
+          "Trop de demandes avec cette adresse en 24 h : accusé non envoyé (à renvoyer à la main si besoin)",
+      });
+      return;
+    }
   }
   const dest = route(config, sender, row.email);
   if (!dest || !sender) {

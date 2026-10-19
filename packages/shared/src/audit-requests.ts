@@ -14,8 +14,12 @@ export type AuditRequestStatus = (typeof AUDIT_REQUEST_STATUSES)[number];
 export const AUDIT_ACK_STATUSES = ["pending", "sent", "skipped", "failed"] as const;
 export type AuditAckStatus = (typeof AUDIT_ACK_STATUSES)[number];
 
-/** Texte de consentement du formulaire du site : conservé tel quel avec la demande. */
-export const AUDIT_CONSENT_TEXT = "J'accepte d'être contacté·e au sujet de ma demande.";
+/**
+ * Texte de consentement affiché par le formulaire du site, conservé tel quel avec chaque demande (preuve du
+ * consentement). À mettre à jour si le texte du site change.
+ */
+export const AUDIT_CONSENT_TEXT =
+  "J'accepte d'être contacté·e par GrowthLab Agencycom au sujet de ma demande.";
 
 const text = (max: number) => z.string().trim().max(max);
 

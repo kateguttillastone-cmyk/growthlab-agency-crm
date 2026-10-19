@@ -12,7 +12,7 @@ Le site de GrowthLab propose un formulaire « Demander mon audit gratuit ». Cha
 ## Parcours
 
 1. Le visiteur remplit le formulaire (entreprise, site, e-mail, téléphone facultatif, objet, message, case de consentement).
-2. Le site envoie les réponses en JSON à `POST <adresse du CRM>/api/public/audit-requests`. Réponse `201 {"ok":true}`.
+2. Le site envoie les réponses à `POST <adresse du CRM>/api/public/audit-requests`, en **JSON** ou en **formulaire HTML classique** (`application/x-www-form-urlencoded`, case cochée = `consent=on`). Réponse `201 {"ok":true}`. Les noms de champs sont ceux du tableau ci-dessous : si l'outil du site impose d'autres noms, il faut une petite correspondance côté site.
 3. Le CRM enregistre la demande avec la preuve du consentement (texte et date), puis, **après avoir répondu au visiteur** :
    - envoie l'**accusé de réception** au visiteur ;
    - envoie une **alerte** à l'équipe (`AUDIT_NOTIFY_EMAIL`).
@@ -64,11 +64,14 @@ Dans tous les cas la **demande est conservée**. Un accusé non parti se renvoie
 
 ## Protections
 
-- Origine contrôlée (CORS) : seuls les sites de `AUDIT_FORM_ORIGINS` peuvent envoyer depuis un navigateur.
-- Limitation du débit par adresse IP, champ piège, validation stricte de chaque champ (le navigateur n'est jamais cru).
+- Origine contrôlée (CORS) : seuls les sites de `AUDIT_FORM_ORIGINS` peuvent envoyer depuis un navigateur. Une origine mal écrite empêche le serveur de démarrer, avec un message qui la nomme.
+- Limitation du débit par adresse IP, champ piège, validation stricte de chaque champ (le navigateur n'est jamais cru), caractères de contrôle retirés.
+- Garde-fou global : au-delà de 300 demandes par heure, toutes provenances confondues, les nouvelles sont refusées (429).
 - Même demande (mêmes réponses) dans les 10 minutes : enregistrée une seule fois.
-- Consentement obligatoire, conservé avec la demande (texte et date) ; l'adresse IP n'est pas stockée avec la demande.
+- **Pas d'e-mail en rafale à un tiers** : quelqu'un peut saisir l'adresse de quelqu'un d'autre. Au-delà de 3 demandes par jour avec la même adresse, la demande est gardée mais l'accusé n'est plus envoyé automatiquement (« Renvoyer l'accusé » reste possible).
+- Consentement obligatoire, conservé avec la demande (texte exact et date). **Le texte conservé est celui de `AUDIT_CONSENT_TEXT` (`packages/shared/src/audit-requests.ts`) : à garder identique à la phrase affichée sur le site.**
+- L'adresse IP n'est conservée ni avec la demande ni dans le journal d'audit.
 
 ## RGPD
 
-Base : consentement du visiteur (case cochée). À prévoir côté entreprise : durée de conservation des demandes (par exemple suppression ou anonymisation après un délai fixé) et mention dans la politique de confidentialité du site. Une désinscription ultérieure passe par la liste « Adresses exclues ».
+Base : consentement du visiteur (case cochée). À prévoir côté entreprise : durée de conservation des demandes et mention dans la politique de confidentialité du site. **Le CRM ne supprime rien automatiquement** : une demande reste en base tant que personne ne la supprime. Une durée de conservation (par exemple 12 ou 24 mois) est à décider, puis à appliquer (outil de purge à prévoir). Une désinscription ultérieure passe par la liste « Adresses exclues ».
