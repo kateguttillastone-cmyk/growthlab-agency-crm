@@ -31,6 +31,14 @@ const STATUS_PILL: Record<AuditRequestStatus, string> = {
   Rejetée: "pill--neutral",
 };
 
+/** Un accusé « en cours » depuis plus de 5 minutes ne l'est plus : le serveur a dû s'interrompre. */
+function ackOf(r: AuditRequest): { text: string; pill: string } {
+  if (r.ackStatus === "pending" && Date.now() - new Date(r.createdAt).getTime() > 5 * 60_000) {
+    return { text: "Accusé non confirmé", pill: "pill--warning" };
+  }
+  return ACK_LABEL[r.ackStatus];
+}
+
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 
@@ -126,7 +134,7 @@ export function AuditRequestsPage() {
             <>
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {items.map((r) => {
-                  const ack = ACK_LABEL[r.ackStatus];
+                  const ack = ackOf(r);
                   return (
                     <li key={r.id}>
                       <button
@@ -202,7 +210,7 @@ function Detail({ request: r, onChanged }: { request: AuditRequest; onChanged: (
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const site = safeUrl(r.website);
-  const ack = ACK_LABEL[r.ackStatus];
+  const ack = ackOf(r);
 
   const patch = useMutation({
     mutationFn: (body: { status?: AuditRequestStatus; note?: string | null; ownerId?: string | null }) =>
@@ -302,7 +310,21 @@ function Detail({ request: r, onChanged }: { request: AuditRequest; onChanged: (
         <span className={`pill ${ack.pill}`}>{ack.text}</span>
         {r.ackSentAt && <span className="t-small text-ds-muted">le {fmt(r.ackSentAt)}</span>}
         {r.ackStatus !== "sent" && !r.suppressed && (
-          <Button variant="secondary" disabled={resend.isPending} onClick={() => resend.mutate()}>
+          <Button
+            variant="secondary"
+            disabled={resend.isPending}
+            onClick={() => {
+              // Résultat incertain : l'e-mail est peut-être déjà parti, on ne renvoie qu'après vérification dans Brevo.
+              if (
+                r.ackError?.startsWith("Résultat incertain") &&
+                !window.confirm(
+                  "Le résultat du premier envoi est incertain : l'e-mail est peut-être déjà parti. Vérifiez dans Brevo avant de renvoyer. Renvoyer quand même ?",
+                )
+              )
+                return;
+              resend.mutate();
+            }}
+          >
             {resend.isPending ? "Envoi…" : "Renvoyer l'accusé"}
           </Button>
         )}

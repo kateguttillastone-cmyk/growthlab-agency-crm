@@ -72,13 +72,26 @@ const schema = z.object({
   AUDIT_FORM_ORIGINS: z
     .string()
     .optional()
-    .transform((v) =>
-      (v ?? "")
+    .transform((v, ctx) => {
+      const origins: string[] = [];
+      for (const raw of (v ?? "")
         .split(",")
         .map((o) => o.trim())
-        .filter(Boolean)
-        .map((o) => new URL(o).origin),
-    ),
+        .filter(Boolean)) {
+        try {
+          const url = new URL(raw);
+          if (url.protocol !== "https:" && url.hostname !== "localhost") throw new Error("https attendu");
+          origins.push(url.origin);
+        } catch {
+          ctx.addIssue({
+            code: "custom",
+            message: `« ${raw} » n'est pas une origine valable (attendu : https://www.exemple.com, sans chemin)`,
+          });
+          return z.NEVER;
+        }
+      }
+      return origins;
+    }),
   /** Adresse de l'équipe prévenue à chaque nouvelle demande d'audit (vide = pas d'alerte). */
   AUDIT_NOTIFY_EMAIL: z
     .string()
