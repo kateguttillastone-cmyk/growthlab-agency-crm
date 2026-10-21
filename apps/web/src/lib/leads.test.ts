@@ -66,6 +66,12 @@ describe("liens issus des données", () => {
 describe("historique", () => {
   it("décrit un changement, automatique ou non", () => {
     expect(describeEvent({ type: "imported", data: null })).toBe("Importé depuis l'ancienne base");
+    expect(describeEvent({ type: "company_registry", data: { status: "to_confirm" } })).toBe(
+      "Registre officiel : fermeture à confirmer",
+    );
+    expect(describeEvent({ type: "company_registry", data: { manual: true, decision: "dismiss" } })).toBe(
+      "Entreprise déclarée en activité",
+    );
     expect(describeEvent({ type: "field_changed", data: { field: "comment", from: null, to: "ok" } })).toBe(
       "Commentaire : — → ok",
     );

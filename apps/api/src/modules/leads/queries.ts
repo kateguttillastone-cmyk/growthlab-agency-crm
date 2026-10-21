@@ -1,5 +1,5 @@
 import { type LeadListQuery, NONE } from "@gac/shared";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { companies, contacts, emailMessages, leads } from "../../db/schema";
 
 /** Échappe les caractères spéciaux de LIKE (\, % et _) : la recherche est une recherche de texte, pas un motif. */
@@ -44,6 +44,13 @@ export function leadFilters(f: LeadFilter): SQL | undefined {
   if (f.city) where.push(ilike(companies.city, `${likePattern(f.city).slice(1)}`));
   if (f.hasPhone !== undefined) where.push(f.hasPhone ? isNotNull(companies.phone) : isNull(companies.phone));
   if (f.owner) where.push(f.owner === NONE ? isNull(leads.ownerId) : eq(leads.ownerId, f.owner));
+  if (f.registry === "open") {
+    const open = or(isNull(companies.registryStatus), ne(companies.registryStatus, "closed"));
+    if (open) where.push(open);
+  }
+  if (f.registry === "closed") where.push(inArray(companies.registryStatus, ["closed", "to_confirm"]));
+  if (f.registry === "confirmed") where.push(eq(companies.registryStatus, "closed"));
+  if (f.registry === "to_confirm") where.push(eq(companies.registryStatus, "to_confirm"));
   if (f.hasEmail !== undefined) where.push(f.hasEmail ? isNotNull(contacts.email) : isNull(contacts.email));
   return where.length ? and(...where) : undefined;
 }

@@ -53,6 +53,18 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
     onError: (e) => setError(errorMessage(e)),
   });
 
+  const decide = useMutation({
+    mutationFn: (decision: "confirm" | "dismiss") =>
+      api<LeadDetail>(`/leads/${id}/registry`, { method: "POST", body: { decision } }),
+    onSuccess: (updated) => {
+      setError(null);
+      qc.setQueryData(["leads", "detail", id], updated);
+      void qc.invalidateQueries({ queryKey: ["leads", "list"] });
+      void qc.invalidateQueries({ queryKey: ["leads", "facets"] });
+    },
+    onError: (e) => setError(errorMessage(e)),
+  });
+
   const aiStatus = useQuery({
     queryKey: ["ai", "status"],
     queryFn: () => api<{ configured: boolean }>("/ai/status"),
@@ -140,6 +152,44 @@ export function LeadDrawer({ id, onClose }: { id: string; onClose: () => void })
               ? `Enregistré à ${savedAt} (chaque champ s'enregistre seul)`
               : ""}
         </p>
+        {d && (d.company.registryStatus === "closed" || d.company.registryStatus === "to_confirm") && (
+          <div
+            role="status"
+            className={`alert ${d.company.registryStatus === "closed" ? "alert--critical" : "alert--warning"} mb-4 flex-col`}
+          >
+            <span className="alert-title">
+              {d.company.registryStatus === "closed" ? "Entreprise fermée" : "Fermeture à confirmer"}
+            </span>
+            <span>
+              {d.company.registryStatus === "closed"
+                ? `Le registre officiel la déclare fermée${
+                    d.company.registryClosedOn ? ` depuis le ${formatDate(d.company.registryClosedOn)}` : ""
+                  }.`
+                : "Le registre ne montre que des sociétés fermées proches de ce nom (homonyme, ancienne entité ou autre ville ?). Vérifiez avant de décider."}
+              {d.companyDetail.registrySiren ? ` SIREN ${d.companyDetail.registrySiren}.` : ""}
+            </span>
+            {can("MANAGER") && (
+              <span className="flex flex-wrap gap-2">
+                {d.company.registryStatus === "to_confirm" && (
+                  <Button
+                    variant="secondary"
+                    disabled={decide.isPending}
+                    onClick={() => decide.mutate("confirm")}
+                  >
+                    Confirmer : entreprise fermée
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  disabled={decide.isPending}
+                  onClick={() => decide.mutate("dismiss")}
+                >
+                  Elle est en activité
+                </Button>
+              </span>
+            )}
+          </div>
+        )}
         {scoreInfo && (
           <p role="status" className="alert alert--good mb-4">
             {scoreInfo}

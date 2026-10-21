@@ -6,6 +6,7 @@ import {
   EMAIL_STATUSES,
   PIPELINE_STAGES,
   QUALIFICATIONS,
+  REGISTRY_STATUSES,
   SEGMENTS,
   SERVICES,
   SUPPRESSION_REASONS,
@@ -55,6 +56,11 @@ export const leadListQuerySchema = z.object({
   hasEmail: bool.optional(),
   /** Identifiant d'un responsable, ou « none » (sans responsable). */
   owner: z.union([z.uuid(), z.literal(NONE)]).optional(),
+  /**
+   * Entreprises fermées au registre : `open` = sans les fermetures confirmées (liste de travail), `closed` = section
+   * « Entreprises fermées » (confirmées + à confirmer), `confirmed` / `to_confirm` = l'une ou l'autre.
+   */
+  registry: z.enum(["open", "closed", "confirmed", "to_confirm"]).optional(),
 });
 export type LeadListQuery = z.infer<typeof leadListQuerySchema>;
 
@@ -70,6 +76,9 @@ const companySummary = z.object({
   phone: z.string().nullable(),
   googleRating: z.number().nullable(),
   googleReviews: z.number().nullable(),
+  /** Situation au registre officiel (null = pas encore contrôlée) et date de fermeture le cas échéant (AAAA-MM-JJ). */
+  registryStatus: z.enum(REGISTRY_STATUSES).nullable(),
+  registryClosedOn: z.string().nullable(),
 });
 
 const contactSummary = z.object({
@@ -149,6 +158,9 @@ export const leadDetailSchema = leadSummarySchema.extend({
     hasMetaPixel: z.boolean().nullable(),
     hasGoogleAds: z.boolean().nullable(),
     hasSsl: z.boolean().nullable(),
+    /** SIREN de la société trouvée au registre, et date du dernier contrôle. */
+    registrySiren: z.string().nullable(),
+    registryCheckedAt: z.string().nullable(),
   }),
   emailMessage: z
     .object({
@@ -217,6 +229,8 @@ export const leadFacetsSchema = z.object({
   validation: z.record(z.string(), z.number()),
   emailStatus: z.record(z.string(), z.number()),
   callState: z.record(z.string(), z.number()),
+  /** Entreprises par situation au registre (`active`, `closed`, `to_confirm`, `none` = pas contrôlée). */
+  registry: z.record(z.string(), z.number()),
 });
 export type LeadFacets = z.infer<typeof leadFacetsSchema>;
 
@@ -341,3 +355,28 @@ export const createSavedViewSchema = z.object({
     .record(z.string().max(40), z.string().max(200))
     .refine((f) => Object.keys(f).length <= 20, "Trop de critères"),
 });
+
+/** Contrôle des entreprises au registre officiel (API publique recherche-entreprises, sans clé). */
+export const registryCheckRequestSchema = z.object({
+  /** Nombre maximal d'entreprises contrôlées par appel (le reste se fait à l'appel suivant). */
+  limit: z.number().int().min(1).max(200).default(50),
+});
+
+export const registryCheckResultSchema = z.object({
+  checked: z.number(),
+  active: z.number(),
+  /** Fermetures sûres (même nom, même ville, aucune société active du même nom). */
+  closed: z.number(),
+  /** Fermetures probables : une personne doit confirmer. */
+  toConfirm: z.number(),
+  /** Entreprises absentes du registre (marque, société étrangère, nom différent) : conservées, non marquées. */
+  notFound: z.number(),
+  /** Appels en échec (réseau, limite de débit) : l'entreprise reste à contrôler. */
+  failed: z.number(),
+  remaining: z.number(),
+});
+export type RegistryCheckResult = z.infer<typeof registryCheckResultSchema>;
+
+/** Décision d'une personne sur une fermeture à confirmer : `confirm` = fermée, `dismiss` = toujours en activité. */
+export const registryDecisionSchema = z.object({ decision: z.enum(["confirm", "dismiss"]) });
+export type RegistryDecisionInput = z.infer<typeof registryDecisionSchema>;

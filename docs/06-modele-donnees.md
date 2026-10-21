@@ -191,6 +191,25 @@ erDiagram
 - Gabarit unique côté serveur (`apps/api/src/mail/template.ts`) : l'aperçu de l'interface et l'envoi futur l'utilisent tous
   deux. Expéditeur, agenda et signature : variables `MAIL_FROM_NAME`, `MAIL_FROM_ADDRESS`, `MAIL_AGENDA_TEXT`, `MAIL_SIGNATURE`.
 
+## Entreprises fermées (registre officiel)
+
+- `companies.registry_status` (`active`, `closed`, `to_confirm` ; `null` = pas contrôlée ou introuvable), `registry_siren`,
+  `registry_closed_on`, `registry_checked_at`, `registry_manual`. **Aucune entreprise ni aucun lead n'est supprimé** : une
+  fermeture marque l'entreprise, qui sort de la liste de travail et apparaît dans la vue rapide « Entreprises fermées ».
+- `POST /leads/registry-check` (responsables, 10 appels/min, 50 entreprises par appel par défaut, 200 au maximum) interroge l'API
+  publique `recherche-entreprises.api.gouv.fr` (sans clé, environ 7 appels/s tolérés ; on reste à 2 en parallèle). Les entreprises
+  `country = 'FR'` en activité sont recontrôlées chaque mois ; une fermeture constatée ne l'est plus.
+- Règle de décision (`apps/api/src/enrich/registry.ts`, testée) : une société **active** du même nom suffit à conclure « en
+  activité » ; « fermée » exige un **nom identique ET la même ville** ; sinon `to_confirm` (homonyme, ancienne entité, autre ville)
+  et une personne tranche. Aucune société trouvée (marque, société étrangère) : rien n'est marqué.
+- `POST /leads/:id/registry` `{ decision: "confirm" | "dismiss" }` (responsables) : confirmer la fermeture ou déclarer l'entreprise
+  en activité. La décision est définitive pour les contrôles automatiques (`registry_manual`). Historique : `lead_events`
+  `company_registry`.
+- Liste : `registry=open` (liste de travail, sans les fermées confirmées — appliqué par l'interface par défaut), `closed`
+  (confirmées + à confirmer), `confirmed`, `to_confirm`. Sans paramètre, l'API ne filtre pas (comportement inchangé).
+- **Pas encore branché** : l'envoi d'e-mails (phase 4) et le sourcing (phase 5) ne tiennent pas encore compte de ce statut ; à faire
+  avant l'activation de l'envoi réel.
+
 ## Fiabilité des adresses (phase 4b)
 
 - `contacts.email_check` (`valid`, `invalid_syntax`, `no_mail_server`, `disposable`) et `email_checked_at` ; `null` = pas encore

@@ -1,6 +1,6 @@
-import type { LeadFacets, LeadSummary, Page } from "@gac/shared";
+import type { LeadFacets, LeadSummary, Page, RegistryCheckResult } from "@gac/shared";
 import { NONE } from "@gac/shared";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Icon } from "../components/Icon";
@@ -22,6 +22,7 @@ import {
   PRESETS,
   QUALIFICATION_STYLE,
   toQueryString,
+  withDefaultScope,
 } from "../lib/leads";
 
 const PAGE_SIZE = 50;
@@ -50,6 +51,8 @@ export function LeadsPage() {
   const [viewsOpen, setViewsOpen] = useState(false);
   const [params, setParams] = useSearchParams();
   const filters = filtersFromParams(params);
+  // Ce que la liste, l'export et les actions groupées visent réellement (les fermées confirmées sont écartées).
+  const scope = withDefaultScope(filters);
   const page = Math.max(1, Number(params.get("page")) || 1);
   const openId = params.get("lead");
   const sort = filters.sort ?? "detectedAt";
@@ -82,7 +85,7 @@ export function LeadsPage() {
     return () => clearTimeout(timer);
   }, [search, setParams]);
 
-  const qs = toQueryString(filters, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const qs = toQueryString(scope, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const list = useQuery({
     queryKey: ["leads", "list", qs],
     queryFn: () => api<Page<LeadSummary>>(`/leads?${qs}`),
@@ -92,6 +95,22 @@ export function LeadsPage() {
     queryKey: ["leads", "facets"],
     queryFn: () => api<LeadFacets>("/leads/facets"),
     staleTime: 60_000,
+  });
+
+  const [registryMsg, setRegistryMsg] = useState<string | null>(null);
+  const registryCheck = useMutation({
+    mutationFn: () => api<RegistryCheckResult>("/leads/registry-check", { method: "POST", body: {} }),
+    onSuccess: async (r) => {
+      setRegistryMsg(
+        `${r.checked} entreprise${r.checked > 1 ? "s" : ""} contrôlée${r.checked > 1 ? "s" : ""} : ${r.closed} fermée${
+          r.closed > 1 ? "s" : ""
+        }, ${r.toConfirm} à confirmer, ${r.active} en activité, ${r.notFound} absente${r.notFound > 1 ? "s" : ""} du registre${
+          r.failed ? `, ${r.failed} en échec` : ""
+        }${r.remaining ? `. Il en reste ${r.remaining} : relancez le contrôle.` : "."}`,
+      );
+      await qc.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (e) => setRegistryMsg(errorMessage(e)),
   });
 
   const preset = activePreset(filters);
@@ -127,9 +146,19 @@ export function LeadsPage() {
         </div>
         <div className="pagebar-actions">
           {can("MANAGER") && (
-            <a className="btn btn--secondary" href={`/api/leads/export?${toQueryString(filters)}`} download>
+            <a className="btn btn--secondary" href={`/api/leads/export?${toQueryString(scope)}`} download>
               Exporter en CSV
             </a>
+          )}
+          {can("MANAGER") && (
+            <Button
+              variant="secondary"
+              disabled={registryCheck.isPending}
+              title="Interroge le registre officiel des entreprises : les fermées sont marquées, jamais supprimées"
+              onClick={() => registryCheck.mutate()}
+            >
+              {registryCheck.isPending ? "Contrôle en cours…" : "Vérifier le registre"}
+            </Button>
           )}
           {can("AGENT") && (
             <Button variant="secondary" aria-pressed={bulkOpen} onClick={() => setBulkOpen((o) => !o)}>
@@ -298,6 +327,12 @@ export function LeadsPage() {
         </p>
       )}
 
+      {registryMsg && (
+        <p className="mb-3 rounded-lg bg-ds-surface p-3 text-sm" role="status">
+          {registryMsg}
+        </p>
+      )}
+
       <nav aria-label="Vues rapides" className="mb-4 flex flex-wrap gap-2">
         {PRESETS.map((p) => (
           <button
@@ -313,6 +348,9 @@ export function LeadsPage() {
             }`}
           >
             {p.label}
+            {p.id === "closed" &&
+              f?.registry &&
+              ` (${(f.registry.closed ?? 0) + (f.registry.to_confirm ?? 0)})`}
           </button>
         ))}
       </nav>
@@ -321,7 +359,7 @@ export function LeadsPage() {
         <BulkBar
           names={list.data.items.filter((l) => selected.includes(l.id)).map((l) => l.company.name)}
           ids={selected}
-          filters={filters}
+          filters={scope}
           total={list.data.total}
           onClear={() => setSelected([])}
           onDone={async () => {
@@ -367,6 +405,7 @@ export function LeadsPage() {
                       <span className="pill pill--outline">{l.qualification ?? "À qualifier"}</span>
                       {l.stage && <span className="pill pill--neutral">{l.stage}</span>}
                       {l.email?.status && <span className="pill pill--info">{l.email.status}</span>}
+                      <RegistryPill status={l.company.registryStatus} closedOn={l.company.registryClosedOn} />
                     </span>
                     {l.company.phone && <span className="num text-sm">{displayPhone(l.company.phone)}</span>}
                   </button>
@@ -455,6 +494,10 @@ export function LeadsPage() {
                         >
                           {l.company.name}
                         </button>
+                        <RegistryPill
+                          status={l.company.registryStatus}
+                          closedOn={l.company.registryClosedOn}
+                        />
                         <span className="block text-xs text-ds-muted">{contactName(l.contact) || "—"}</span>
                       </th>
                       <td className="py-2 pr-4">
@@ -599,5 +642,26 @@ function LabeledSelect({
         </select>
       )}
     </Filter>
+  );
+}
+
+/** Pastille « Fermée » / « Fermeture à confirmer » ; rien pour une entreprise en activité ou non contrôlée. */
+function RegistryPill({
+  status,
+  closedOn,
+}: {
+  status: LeadSummary["company"]["registryStatus"];
+  closedOn: string | null;
+}) {
+  if (status !== "closed" && status !== "to_confirm") return null;
+  const label = status === "closed" ? "Fermée" : "Fermeture à confirmer";
+  const date = closedOn ? ` le ${formatDate(closedOn)}` : "";
+  return (
+    <span
+      className={`pill ${status === "closed" ? "pill--critical" : "pill--warning"} ml-2`}
+      title={`${label}${date}`}
+    >
+      {label}
+    </span>
   );
 }

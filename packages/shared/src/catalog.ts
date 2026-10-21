@@ -54,6 +54,19 @@ export const ADDRESS_CHECK_LABELS: Record<AddressCheck, string> = {
 /** Une adresse dans l'un de ces états ne peut pas être validée pour l'envoi. */
 export const isBlockingCheck = (c: AddressCheck | null | undefined): boolean => !!c && c !== "valid";
 
+/**
+ * Situation de l'entreprise au registre officiel (SIRENE). `null` = pas encore contrôlée.
+ * `to_confirm` : le registre ne propose que des sociétés fermées dont le nom ou la ville diffère légèrement ;
+ * une personne tranche (homonyme, ancienne entité…) avant que l'entreprise soit considérée comme fermée.
+ */
+export const REGISTRY_STATUSES = ["active", "closed", "to_confirm"] as const;
+export type RegistryStatus = (typeof REGISTRY_STATUSES)[number];
+export const REGISTRY_STATUS_LABELS: Record<RegistryStatus, string> = {
+  active: "en activité",
+  closed: "fermée",
+  to_confirm: "fermeture à confirmer",
+};
+
 export const SUPPRESSION_REASONS = ["unsubscribe", "bounce", "complaint", "manual"] as const;
 export type SuppressionReason = (typeof SUPPRESSION_REASONS)[number];
 

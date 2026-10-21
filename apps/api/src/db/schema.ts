@@ -7,6 +7,7 @@ import {
   EMAIL_STATUSES,
   PIPELINE_STAGES,
   QUALIFICATIONS,
+  REGISTRY_STATUSES,
   SERVICES,
   SUPPRESSION_REASONS,
   VALIDATION_STATUSES,
@@ -104,6 +105,7 @@ export const leadService = pgEnum("lead_service", SERVICES);
 export const validationStatus = pgEnum("validation_status", VALIDATION_STATUSES);
 export const emailStatus = pgEnum("email_status", EMAIL_STATUSES);
 export const addressCheck = pgEnum("address_check", ADDRESS_CHECKS);
+export const registryStatus = pgEnum("registry_status", REGISTRY_STATUSES);
 export const suppressionReason = pgEnum("suppression_reason", SUPPRESSION_REASONS);
 export const auditRequestStatus = pgEnum("audit_request_status", AUDIT_REQUEST_STATUSES);
 export const auditAckStatus = pgEnum("audit_ack_status", AUDIT_ACK_STATUSES);
@@ -156,6 +158,14 @@ export const companies = pgTable(
     /** Résultat de la dernière analyse du site : ok | unreachable. Null = jamais analysé. */
     siteStatus: text("site_status"),
     siteCheckedAt: timestamp("site_checked_at", { withTimezone: true }),
+    /** Situation au registre officiel (SIRENE). Null = pas de société trouvée ou pas encore contrôlée (voir registryCheckedAt). */
+    registryStatus: registryStatus("registry_status"),
+    registrySiren: text("registry_siren"),
+    /** Date de fermeture déclarée au registre (AAAA-MM-JJ). */
+    registryClosedOn: date("registry_closed_on", { mode: "string" }),
+    registryCheckedAt: timestamp("registry_checked_at", { withTimezone: true }),
+    /** Vrai quand une personne a tranché : les contrôles automatiques ne modifient plus la situation. */
+    registryManual: boolean("registry_manual").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -165,6 +175,7 @@ export const companies = pgTable(
       .on(t.nameKey, sql`coalesce(${t.phone}, '')`)
       .where(sql`${t.domain} is null`),
     index("companies_sector_idx").on(t.sector),
+    index("companies_registry_idx").on(t.registryStatus).where(sql`${t.registryStatus} is not null`),
   ],
 );
 
