@@ -3,6 +3,9 @@ import {
   leadFacetsSchema,
   leadListQuerySchema,
   leadSummarySchema,
+  registryCheckRequestSchema,
+  registryCheckResultSchema,
+  registryDecisionSchema,
   updateLeadSchema,
 } from "@gac/shared";
 import { count, eq, sql } from "drizzle-orm";
@@ -11,9 +14,11 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { companies, contacts, emailMessages, leads } from "../../db/schema";
 import { authOf } from "../../lib/assert";
+import { audit } from "../../lib/audit";
 import { toSummary } from "./dto";
 import { leadFilters, leadOrder } from "./queries";
 import { leadReader } from "./read";
+import { decideRegistry, runRegistryCheck } from "./registry-check";
 import { updateLead } from "./update";
 
 const idParams = z.object({ id: z.uuid() });
@@ -29,6 +34,7 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
   const r = app.withTypeProvider<ZodTypeProvider>();
   const viewer = app.requireRole("VIEWER");
   const agent = app.requireRole("AGENT");
+  const manager = app.requireRole("MANAGER");
 
   const { joined, detail } = leadReader(db);
 
@@ -73,18 +79,29 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
       const base = sql`from leads l`;
       const withCompany = sql`from leads l join companies c on c.id = l.company_id`;
       const withMessage = sql`from leads l left join email_messages m on m.lead_id = l.id and m.sequence_no = 1`;
-      const [total, qualification, stage, service, segment, source, validation, emailStatus, callState] =
-        await Promise.all([
-          db.select({ n: count() }).from(leads),
-          group(sql`coalesce(l.qualification::text, 'none')`, base),
-          group(sql`coalesce(l.stage::text, 'none')`, base),
-          group(sql`coalesce(l.service::text, 'none')`, base),
-          group(sql`case when c.domain is null then 'no_website' else 'with_website' end`, withCompany),
-          group(sql`l.source`, base),
-          group(sql`coalesce(m.validation::text, 'none')`, withMessage),
-          group(sql`coalesce(m.status::text, 'none')`, withMessage),
-          group(sql`coalesce(l.call_state::text, 'none')`, base),
-        ]);
+      const [
+        total,
+        qualification,
+        stage,
+        service,
+        segment,
+        source,
+        validation,
+        emailStatus,
+        callState,
+        registry,
+      ] = await Promise.all([
+        db.select({ n: count() }).from(leads),
+        group(sql`coalesce(l.qualification::text, 'none')`, base),
+        group(sql`coalesce(l.stage::text, 'none')`, base),
+        group(sql`coalesce(l.service::text, 'none')`, base),
+        group(sql`case when c.domain is null then 'no_website' else 'with_website' end`, withCompany),
+        group(sql`l.source`, base),
+        group(sql`coalesce(m.validation::text, 'none')`, withMessage),
+        group(sql`coalesce(m.status::text, 'none')`, withMessage),
+        group(sql`coalesce(l.call_state::text, 'none')`, base),
+        group(sql`coalesce(c.registry_status::text, 'none')`, withCompany),
+      ]);
       return {
         total: total[0]?.n ?? 0,
         qualification,
@@ -95,7 +112,30 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
         validation,
         emailStatus,
         callState,
+        registry,
       };
+    },
+  );
+
+  /** Contrôle des entreprises au registre officiel : les fermées sont marquées (jamais supprimées). */
+  r.post(
+    "/leads/registry-check",
+    {
+      preHandler: manager,
+      schema: { body: registryCheckRequestSchema, response: { 200: registryCheckResultSchema } },
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    },
+    async (req) => {
+      const actor = authOf(req).user;
+      const result = await runRegistryCheck(db, { limit: req.body.limit, actorId: actor.id });
+      await audit(db, {
+        actorId: actor.id,
+        action: "leads.registry_check",
+        entityType: "company",
+        data: { ...result },
+        ip: req.ip,
+      });
+      return result;
     },
   );
 
@@ -103,6 +143,28 @@ export async function leadsRoutes(app: FastifyInstance): Promise<void> {
     "/leads/:id",
     { preHandler: viewer, schema: { params: idParams, response: { 200: leadDetailSchema } } },
     async (req) => detail(req.params.id),
+  );
+
+  /** Une personne tranche sur la situation de l'entreprise du lead : fermée (`confirm`) ou en activité (`dismiss`). */
+  r.post(
+    "/leads/:id/registry",
+    {
+      preHandler: manager,
+      schema: { params: idParams, body: registryDecisionSchema, response: { 200: leadDetailSchema } },
+    },
+    async (req) => {
+      const actor = authOf(req).user;
+      await decideRegistry(db, req.params.id, req.body.decision, actor.id);
+      await audit(db, {
+        actorId: actor.id,
+        action: "leads.registry_decision",
+        entityType: "lead",
+        entityId: req.params.id,
+        data: { decision: req.body.decision },
+        ip: req.ip,
+      });
+      return detail(req.params.id);
+    },
   );
 
   r.patch(

@@ -25,6 +25,7 @@ Schémas exacts : `packages/shared/src` (utilisés par l'API et l'interface).
 | E-mails : relecture | aperçu, modification, validation, rejet | `POST /emails/preview`, `PATCH /leads/:id/email` | R |
 | E-mails : lots | simuler, appliquer, **annuler** | `POST /emails/bulk`, `POST /emails/bulk/:lot/undo` | R |
 | E-mails : adresses | contrôle avant envoi | `POST /emails/address-check` | R |
+| Leads : entreprises fermées | vue rapide, pastille, contrôle du registre, confirmer / « en activité » | `GET /leads?registry=`, `POST /leads/registry-check`, `POST /leads/:id/registry` | R |
 | E-mails : envoi | état, pause, reprise, test | `GET /emails/send-status`, `POST /emails/send-pause`, `POST /emails/test-send` | R / Adm |
 | E-mails : envoi incertain | **remettre dans la file** ou **marquer comme envoyé** | `POST /leads/:id/email/release`, `…/mark-sent` | Adm |
 | Adresses exclues | liste, recherche, motif, ajout | `GET /suppressions`, `POST /suppressions` | R |

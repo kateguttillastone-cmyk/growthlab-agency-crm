@@ -26,7 +26,13 @@ export type LeadFilters = Partial<
     | "sort"
     | "order"
   >
-> & { hasEmail?: "true" | "false"; owner?: string; source?: string };
+> & {
+  hasEmail?: "true" | "false";
+  owner?: string;
+  source?: string;
+  /** Absent = liste de travail (sans les fermetures confirmées). */
+  registry?: "open" | "closed" | "confirmed" | "to_confirm";
+};
 
 const KEYS = [
   "q",
@@ -42,6 +48,7 @@ const KEYS = [
   "hasEmail",
   "owner",
   "source",
+  "registry",
 ] as const;
 
 const ALLOWED: Partial<Record<(typeof KEYS)[number], readonly string[]>> = {
@@ -55,6 +62,7 @@ const ALLOWED: Partial<Record<(typeof KEYS)[number], readonly string[]>> = {
   sort: ["detectedAt", "company", "qualification", "employees", "rating", "traffic"],
   order: ["asc", "desc"],
   hasEmail: ["true", "false"],
+  registry: ["open", "closed", "confirmed", "to_confirm"],
 };
 
 /** Lit les filtres depuis l'adresse ; toute valeur inconnue est ignorée (une adresse modifiée à la main ne casse rien). */
@@ -110,7 +118,16 @@ export const PRESETS: LeadPreset[] = [
     hint: "Adresses en échec : à corriger ou retirer",
     filters: { emailStatus: "Bounce" },
   },
+  {
+    id: "closed",
+    label: "Entreprises fermées",
+    hint: "Fermées au registre officiel, ou fermeture à confirmer",
+    filters: { registry: "closed" },
+  },
 ];
+
+/** Filtres réellement appliqués : sans choix explicite, la liste de travail écarte les fermetures confirmées. */
+export const withDefaultScope = (f: LeadFilters): LeadFilters => ({ ...f, registry: f.registry ?? "open" });
 
 /** Vue rapide correspondant exactement aux filtres (hors tri et recherche), s'il y en a une. */
 export function activePreset(f: LeadFilters): string | null {
@@ -215,6 +232,17 @@ export function describeEvent(e: { type: string; data: Record<string, unknown> |
   }
   if (e.type === "email_validation") {
     return `Validation de l'e-mail : ${String(d.from ?? "—")} → ${String(d.to ?? "—")}${d.bulk ? " (groupée)" : ""}`;
+  }
+  if (e.type === "company_registry") {
+    if (d.manual) {
+      return d.decision === "confirm"
+        ? "Fermeture de l'entreprise confirmée"
+        : "Entreprise déclarée en activité";
+    }
+    const on = typeof d.closedOn === "string" ? ` (depuis le ${formatDate(d.closedOn)})` : "";
+    return d.status === "closed"
+      ? `Entreprise fermée d'après le registre officiel${on}`
+      : "Registre officiel : fermeture à confirmer";
   }
   const show = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
   const label = FIELD_LABELS[String(d.field)] ?? String(d.field ?? e.type);

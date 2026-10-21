@@ -31,6 +31,8 @@ export function toSummary({ lead, company, contact, message, blockedReason }: Jo
       phone: company.phone,
       googleRating: company.googleRating,
       googleReviews: company.googleReviews,
+      registryStatus: company.registryStatus,
+      registryClosedOn: company.registryClosedOn,
     },
     contact: contact && {
       id: contact.id,
@@ -98,6 +100,8 @@ export function toDetail(
       hasMetaPixel: company.hasMetaPixel,
       hasGoogleAds: company.hasGoogleAds,
       hasSsl: company.hasSsl,
+      registrySiren: company.registrySiren,
+      registryCheckedAt: company.registryCheckedAt?.toISOString() ?? null,
     },
     emailMessage: message && {
       subject: message.subject,
