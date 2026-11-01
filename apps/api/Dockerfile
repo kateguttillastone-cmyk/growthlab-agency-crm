@@ -1,6 +1,6 @@
 # Contexte de construction : la RACINE du dépôt (workspace pnpm).
 #   docker build -f apps/api/Dockerfile .
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 RUN corepack enable
 WORKDIR /repo
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
@@ -13,7 +13,7 @@ RUN pnpm --filter @gac/api build \
  && pnpm --filter @gac/api deploy --prod --legacy /out \
  && cp -r apps/api/dist apps/api/drizzle /out/
 
-FROM node:22-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /out/node_modules ./node_modules
